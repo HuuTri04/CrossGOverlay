@@ -1,0 +1,11 @@
+bin/
+obj/
+build/
+.vs/
+*.user
+*.suo
+artifacts/
+publish/
+TestResults/
+*.log
+*.README.md

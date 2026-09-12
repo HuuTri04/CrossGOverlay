@@ -1,0 +1,47 @@
+<Window x:Class="CrosshairOverlay.Views.ImportCodeWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:loc="clr-namespace:CrosshairOverlay.Localization"
+        Title="{loc:Loc Import_Title}"
+        Icon="pack://application:,,,/images/app.ico"
+        Width="600" Height="460"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource WindowBg}">
+
+    <Grid Margin="18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" TextWrapping="Wrap" Margin="0,0,0,12"
+                   Style="{StaticResource FieldLabel}" Text="{loc:Loc Import_Intro}"/>
+
+        <TextBox Grid.Row="1" x:Name="CodeBox" FontFamily="Consolas" FontSize="12.5"
+                 TextChanged="OnCodeChanged" AcceptsReturn="False"/>
+
+        <TextBlock Grid.Row="2" x:Name="StatusText" Margin="0,12,0,0" TextWrapping="Wrap"
+                   FontSize="12.5"/>
+
+        <Border Grid.Row="3" Style="{StaticResource Card}" Margin="0,12,0,0" VerticalAlignment="Top">
+            <StackPanel>
+                <TextBlock Text="{loc:Loc Import_Result}" Style="{StaticResource SectionHeader}"
+                           Margin="0,0,0,8"/>
+                <TextBlock x:Name="DetailText" TextWrapping="Wrap" FontFamily="Consolas" FontSize="11.5"
+                           Text="—"/>
+                <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,12,0,0"
+                           Text="{loc:Loc Import_Accuracy}"/>
+            </StackPanel>
+        </Border>
+
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+            <Button x:Name="OkButton" Content="{loc:Loc Import_Create}" Style="{StaticResource AccentButton}"
+                    IsEnabled="False" Click="OnAccept" Margin="0,0,8,0" MinWidth="110"/>
+            <Button Content="{loc:Loc Import_Cancel}" IsCancel="True" Click="OnCancel" MinWidth="90"/>
+        </StackPanel>
+    </Grid>
+</Window>

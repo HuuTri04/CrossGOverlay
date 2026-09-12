@@ -1,0 +1,623 @@
+<Window x:Class="CrosshairOverlay.Views.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ctl="clr-namespace:CrosshairOverlay.Controls"
+        xmlns:loc="clr-namespace:CrosshairOverlay.Localization"
+        xmlns:core="clr-namespace:CrosshairOverlay.Core"
+        Title="{x:Static core:AppInfo.DisplayName}"
+        Icon="pack://application:,,,/images/app.ico"
+        Width="1180" Height="760" MinWidth="960" MinHeight="620"
+        Background="{StaticResource WindowBg}"
+        WindowStartupLocation="CenterScreen"
+        TextOptions.TextFormattingMode="Ideal">
+
+    <Grid Margin="18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Margin="0,0,0,14">
+            <!-- Góc thương hiệu: ô logo, tên ứng dụng, huy hiệu phiên bản, dòng mô tả ngắn. -->
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Border Width="36" Height="36" CornerRadius="{StaticResource RadiusCard}"
+                        Background="{StaticResource PanelBg}"
+                        BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1"
+                        Margin="0,0,12,0">
+                    <Image Source="pack://application:,,,/images/BrandingLogo.ico" Margin="5"
+                           RenderOptions.BitmapScalingMode="HighQuality"/>
+                </Border>
+
+                <StackPanel VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{x:Static core:AppInfo.DisplayName}"
+                                   FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <Border Background="#2600ED64" BorderBrush="{StaticResource Accent}"
+                                BorderThickness="1" CornerRadius="{StaticResource RadiusInput}"
+                                Padding="7,1" Margin="10,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="{x:Static core:AppInfo.DisplayVersion}"
+                                       FontSize="10.5" FontWeight="SemiBold"
+                                       Foreground="{StaticResource AccentBright}"/>
+                        </Border>
+                    </StackPanel>
+                    <TextBlock Text="{loc:Loc App_Subtitle}" Style="{StaticResource FieldLabel}"
+                               FontSize="11.5" Margin="0,2,0,0"/>
+                </StackPanel>
+            </StackPanel>
+
+            <CheckBox Content="{loc:Loc Shell_EnableOverlay}" HorizontalAlignment="Right"
+                      VerticalAlignment="Center"
+                      IsChecked="{Binding OverlayEnabled, Mode=TwoWay}"/>
+        </Grid>
+
+        <TabControl Grid.Row="1">
+
+            <!-- ============================================ TAB CROSSHAIR -->
+            <TabItem Header="{loc:Loc Tab_Crosshair}">
+                <Grid Margin="0,14,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="240"/>
+                        <ColumnDefinition Width="14"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="14"/>
+                        <ColumnDefinition Width="340"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0" Style="{StaticResource Card}" Padding="12">
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Top" Text="{loc:Loc Preset_Header}"
+                                       Style="{StaticResource SectionHeader}" Margin="2,0,0,8"/>
+
+                            <UniformGrid DockPanel.Dock="Bottom" Columns="2" Margin="0,12,0,0">
+                                <Button Content="{loc:Loc Preset_New}" Command="{Binding NewPresetCommand}"
+                                        Margin="0,0,3,4"/>
+                                <Button Content="{loc:Loc Preset_Duplicate}" Command="{Binding DuplicatePresetCommand}"
+                                        IsEnabled="{Binding SelectedPreset, Converter={StaticResource NotNullToBool}}"
+                                        Margin="3,0,0,4"/>
+                                <Button Content="{loc:Loc Preset_Import}" Command="{Binding ImportPresetCommand}"
+                                        Margin="0,4,3,4"/>
+                                <Button Content="{loc:Loc Preset_Export}" Command="{Binding ExportPresetCommand}"
+                                        IsEnabled="{Binding SelectedPreset, Converter={StaticResource NotNullToBool}}"
+                                        Margin="3,4,0,4"/>
+                                <Button Content="{loc:Loc Preset_FromGameCode}" Command="{Binding ImportCodeCommand}"
+                                        Style="{StaticResource AccentButton}"
+                                        ToolTip="{loc:Loc Preset_FromGameCodeTip}" Margin="0,4,3,0"/>
+                                <Button Content="{loc:Loc Preset_ExportCode}" Command="{Binding ExportCodeCommand}"
+                                        IsEnabled="{Binding SelectedPreset, Converter={StaticResource NotNullToBool}}"
+                                        ToolTip="{loc:Loc Preset_ExportCodeTip}" Margin="3,4,0,4"/>
+                                <Button Content="{loc:Loc Preset_Delete}" Command="{Binding DeletePresetCommand}"
+                                        IsEnabled="{Binding SelectedPreset, Converter={StaticResource NotNullToBool}}"
+                                        Style="{StaticResource DangerButton}" Margin="0,4,3,0"/>
+                            </UniformGrid>
+
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <ListBox ItemsSource="{Binding Presets}"
+                                         SelectedItem="{Binding SelectedPreset, Mode=TwoWay}"
+                                         DisplayMemberPath="Name"/>
+                            </ScrollViewer>
+                        </DockPanel>
+                    </Border>
+
+                    <Border Grid.Column="2" Style="{StaticResource Card}" Padding="0">
+                        <DockPanel>
+                            <Border DockPanel.Dock="Bottom" Background="{StaticResource PanelBg}"
+                                    CornerRadius="0,0,6,6" Padding="16,12">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock Grid.Column="0" Text="{loc:Loc Preview_Zoom}"
+                                               Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
+                                    <Slider Grid.Column="1" Margin="12,0" Minimum="1" Maximum="16"
+                                            VerticalAlignment="Center"
+                                            Value="{Binding Editor.PreviewZoom, Mode=TwoWay}"/>
+
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal">
+                                        <CheckBox Content="{loc:Loc Preview_Checkerboard}" Margin="0,0,16,0"
+                                                  IsChecked="{Binding Editor.ShowCheckerboard, Mode=TwoWay}"/>
+                                        <CheckBox Content="{loc:Loc Preview_DarkBackground}"
+                                                  IsChecked="{Binding Editor.UseDarkPreviewBackground, Mode=TwoWay}"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <ctl:CrosshairPreview
+                                Profile="{Binding Editor.Profile}"
+                                Renderer="{Binding Editor.Renderer}"
+                                Zoom="{Binding Editor.PreviewZoom}"
+                                ShowCheckerboard="{Binding Editor.ShowCheckerboard}"
+                                UseDarkBackground="{Binding Editor.UseDarkPreviewBackground}"/>
+                        </DockPanel>
+                    </Border>
+
+                    <Border Grid.Column="4" Style="{StaticResource Card}" Padding="6,0,6,0">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="10,0">
+                            <StackPanel Margin="0,4,8,16">
+
+                                <TextBlock Text="{loc:Loc Editor_General}" Style="{StaticResource SectionHeader}"
+                                           Margin="0,12,0,6"/>
+
+                                <TextBlock Text="{loc:Loc Editor_PresetName}" Style="{StaticResource FieldLabel}"
+                                           Margin="0,0,0,4"/>
+                                <TextBox Text="{Binding Editor.Profile.Name, Mode=TwoWay,
+                                                UpdateSourceTrigger=PropertyChanged}"/>
+
+                                <TextBlock Text="{loc:Loc Editor_Shape}" Style="{StaticResource FieldLabel}"
+                                           Margin="0,12,0,4"/>
+                                <ComboBox ItemsSource="{Binding Editor.Shapes}"
+                                          DisplayMemberPath="Label" SelectedValuePath="Value"
+                                          SelectedValue="{Binding Editor.Profile.Shape, Mode=TwoWay}"/>
+
+                                <TextBlock Text="{loc:Loc Editor_Color}" Style="{StaticResource FieldLabel}"
+                                           Margin="0,12,0,4"/>
+                                <ctl:ColorPickerButton SelectedColor="{Binding Editor.Profile.Color, Mode=TwoWay}"/>
+
+                                <ctl:SliderField Label="{loc:Loc Editor_Opacity}" Minimum="0.05" Maximum="1"
+                                                 Margin="0,8,0,0"
+                                                 Value="{Binding Editor.Profile.Opacity, Mode=TwoWay}"/>
+                                <ctl:SliderField Label="{loc:Loc Editor_Scale}" Minimum="0.2" Maximum="5"
+                                                 Value="{Binding Editor.Profile.Scale, Mode=TwoWay}"/>
+                                <ctl:SliderField Label="{loc:Loc Editor_Rotation}" Minimum="-180" Maximum="180"
+                                                 Value="{Binding Editor.Profile.Rotation, Mode=TwoWay}"/>
+
+                                <StackPanel Visibility="{Binding Editor.ShowLineSettings,
+                                            Converter={StaticResource BoolToVisibility}}">
+                                    <TextBlock Text="{loc:Loc Editor_Lines}" Style="{StaticResource SectionHeader}"/>
+                                    <CheckBox Content="{loc:Loc Editor_ShowLines}" Margin="0,0,0,6"
+                                              IsChecked="{Binding Editor.Profile.Lines.Enabled, Mode=TwoWay}"/>
+                                    <ctl:SliderField Label="{loc:Loc Editor_Length}" Minimum="0" Maximum="100"
+                                                     Value="{Binding Editor.Profile.Lines.Length, Mode=TwoWay}"/>
+                                    <ctl:SliderField Label="{loc:Loc Editor_Thickness}" Minimum="1" Maximum="20"
+                                                     Value="{Binding Editor.Profile.Lines.Thickness, Mode=TwoWay}"/>
+                                    <ctl:SliderField Label="{loc:Loc Editor_Gap}" Minimum="0" Maximum="60"
+                                                     Value="{Binding Editor.Profile.Lines.Gap, Mode=TwoWay}"/>
+                                    <CheckBox Content="{loc:Loc Editor_RoundedCaps}" Margin="0,8,0,4"
+                                              IsChecked="{Binding Editor.Profile.Lines.RoundedCaps, Mode=TwoWay}"/>
+                                    <UniformGrid Columns="2" Margin="0,2,0,0">
+                                        <CheckBox Content="{loc:Loc Editor_Top}" Margin="0,4"
+                                                  IsChecked="{Binding Editor.Profile.Lines.ShowTop, Mode=TwoWay}"/>
+                                        <CheckBox Content="{loc:Loc Editor_Bottom}" Margin="0,4"
+                                                  IsChecked="{Binding Editor.Profile.Lines.ShowBottom, Mode=TwoWay}"/>
+                                        <CheckBox Content="{loc:Loc Editor_Left}" Margin="0,4"
+                                                  IsChecked="{Binding Editor.Profile.Lines.ShowLeft, Mode=TwoWay}"/>
+                                        <CheckBox Content="{loc:Loc Editor_Right}" Margin="0,4"
+                                                  IsChecked="{Binding Editor.Profile.Lines.ShowRight, Mode=TwoWay}"/>
+                                    </UniformGrid>
+                                </StackPanel>
+
+                                <TextBlock Text="{loc:Loc Editor_CenterDot}" Style="{StaticResource SectionHeader}"/>
+                                <CheckBox Content="{loc:Loc Editor_ShowCenterDot}" Margin="0,0,0,6"
+                                          IsChecked="{Binding Editor.Profile.CenterDot.Enabled, Mode=TwoWay}"/>
+                                <ctl:SliderField Label="{loc:Loc Editor_Size}" Minimum="1" Maximum="30"
+                                                 Value="{Binding Editor.Profile.CenterDot.Size, Mode=TwoWay}"/>
+                                <CheckBox Content="{loc:Loc Editor_UseProfileColor}" Margin="0,8,0,4"
+                                          IsChecked="{Binding Editor.Profile.CenterDot.UseProfileColor, Mode=TwoWay}"/>
+                                <ctl:ColorPickerButton
+                                    SelectedColor="{Binding Editor.Profile.CenterDot.Color, Mode=TwoWay}"/>
+
+                                <StackPanel Visibility="{Binding Editor.ShowRingSettings,
+                                            Converter={StaticResource BoolToVisibility}}">
+                                    <TextBlock Text="{loc:Loc Editor_Ring}" Style="{StaticResource SectionHeader}"/>
+                                    <CheckBox Content="{loc:Loc Editor_ShowRing}" Margin="0,0,0,6"
+                                              IsChecked="{Binding Editor.Profile.Ring.Enabled, Mode=TwoWay}"/>
+                                    <ctl:SliderField Label="{loc:Loc Editor_Radius}" Minimum="1" Maximum="120"
+                                                     Value="{Binding Editor.Profile.Ring.Radius, Mode=TwoWay}"/>
+                                    <ctl:SliderField Label="{loc:Loc Editor_Thickness}" Minimum="1" Maximum="20"
+                                                     Value="{Binding Editor.Profile.Ring.Thickness, Mode=TwoWay}"/>
+                                    <CheckBox Content="{loc:Loc Editor_Filled}" Margin="0,8,0,0"
+                                              IsChecked="{Binding Editor.Profile.Ring.Filled, Mode=TwoWay}"/>
+                                </StackPanel>
+
+                                <StackPanel Visibility="{Binding Editor.ShowOutlineSettings,
+                                            Converter={StaticResource BoolToVisibility}}">
+                                    <TextBlock Text="{loc:Loc Editor_Outline}" Style="{StaticResource SectionHeader}"/>
+                                    <CheckBox Content="{loc:Loc Editor_ShowOutline}" Margin="0,0,0,6"
+                                              IsChecked="{Binding Editor.Profile.Outline.Enabled, Mode=TwoWay}"/>
+                                    <ctl:SliderField Label="{loc:Loc Editor_Thickness}" Minimum="1" Maximum="10"
+                                                     Value="{Binding Editor.Profile.Outline.Thickness, Mode=TwoWay}"/>
+                                    <ctl:SliderField Label="{loc:Loc Editor_Opacity}" Minimum="0.05" Maximum="1"
+                                                     Value="{Binding Editor.Profile.Outline.Opacity, Mode=TwoWay}"/>
+                                    <ctl:ColorPickerButton Margin="0,6,0,0"
+                                        SelectedColor="{Binding Editor.Profile.Outline.Color, Mode=TwoWay}"/>
+                                </StackPanel>
+
+                                <StackPanel Visibility="{Binding Editor.ShowImageSettings,
+                                            Converter={StaticResource BoolToVisibility}}">
+                                    <TextBlock Text="{loc:Loc Editor_Image}" Style="{StaticResource SectionHeader}"/>
+                                    <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
+                                               Margin="0,0,0,6" Text="{Binding Editor.ImagePathDisplay}"/>
+                                    <UniformGrid Columns="2">
+                                        <Button Content="{loc:Loc Editor_BrowseImage}"
+                                                Command="{Binding Editor.BrowseImageCommand}" Margin="0,0,3,0"/>
+                                        <Button Content="{loc:Loc Editor_ClearImage}"
+                                                Command="{Binding Editor.ClearImageCommand}" Margin="3,0,0,0"/>
+                                    </UniformGrid>
+                                    <ctl:SliderField Label="{loc:Loc Editor_ImageScale}" Minimum="0.1" Maximum="8"
+                                                     Margin="0,8,0,0"
+                                                     Value="{Binding Editor.Profile.Image.Scale, Mode=TwoWay}"/>
+                                    <ctl:SliderField Label="{loc:Loc Editor_Opacity}" Minimum="0.05" Maximum="1"
+                                                     Value="{Binding Editor.Profile.Image.Opacity, Mode=TwoWay}"/>
+                                    <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
+                                               Margin="0,8,0,0" Foreground="{StaticResource TextMuted}"
+                                               Text="{loc:Loc Editor_ImageOutlineNote}"/>
+                                </StackPanel>
+
+                                <TextBlock Text="{loc:Loc Editor_Position}" Style="{StaticResource SectionHeader}"/>
+                                <ctl:SliderField Label="{loc:Loc Editor_OffsetX}" Minimum="-200" Maximum="200"
+                                                 Value="{Binding Editor.Profile.OffsetX, Mode=TwoWay}"/>
+                                <ctl:SliderField Label="{loc:Loc Editor_OffsetY}" Minimum="-200" Maximum="200"
+                                                 Value="{Binding Editor.Profile.OffsetY, Mode=TwoWay}"/>
+                                <UniformGrid Columns="2" Margin="0,8,0,0">
+                                    <Button Content="{loc:Loc Editor_ResetOffset}"
+                                            Command="{Binding Editor.ResetOffsetCommand}" Margin="0,0,3,0"/>
+                                    <Button Content="{loc:Loc Editor_ResetRotation}"
+                                            Command="{Binding Editor.ResetRotationCommand}" Margin="3,0,0,0"/>
+                                </UniformGrid>
+
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Border>
+                </Grid>
+            </TabItem>
+
+            <!-- ============================================ TAB CHUNG -->
+            <TabItem Header="{loc:Loc Tab_General}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,14,0,0">
+                    <Border Style="{StaticResource Card}" VerticalAlignment="Top" MaxWidth="640"
+                            HorizontalAlignment="Left" Margin="0,0,0,16">
+                        <StackPanel>
+
+                            <TextBlock Text="{loc:Loc General_Monitor}" Style="{StaticResource SectionHeader}"
+                                       Margin="0,0,0,6"/>
+                            <ComboBox ItemsSource="{Binding General.MonitorModes}"
+                                      DisplayMemberPath="Label" SelectedValuePath="Value"
+                                      Width="340" HorizontalAlignment="Left"
+                                      SelectedValue="{Binding General.MonitorMode, Mode=TwoWay}"/>
+
+                            <StackPanel Margin="0,10,0,0"
+                                        Visibility="{Binding General.ShowMonitorPicker,
+                                                     Converter={StaticResource BoolToVisibility}}">
+                                <ComboBox ItemsSource="{Binding General.AvailableMonitors}"
+                                          SelectedItem="{Binding General.PinnedMonitor, Mode=TwoWay}"
+                                          DisplayMemberPath="DeviceName"
+                                          Width="340" HorizontalAlignment="Left"/>
+                            </StackPanel>
+
+                            <ItemsControl ItemsSource="{Binding General.AvailableMonitors}" Margin="0,12,0,0">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Style="{StaticResource FieldLabel}" FontFamily="Consolas"
+                                                   FontSize="11" Margin="0,2">
+                                            <Run Text="{Binding DeviceName, Mode=OneWay}"/>
+                                            <Run Text="{Binding Bounds, Mode=OneWay, StringFormat='· {0}'}"/>
+                                            <Run Text="{Binding DpiScaleX, Mode=OneWay, StringFormat='· DPI {0:0.##}x'}"/>
+                                        </TextBlock>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <Button Content="{loc:Loc General_RefreshMonitors}" HorizontalAlignment="Left"
+                                    Margin="0,12,0,0" Command="{Binding General.RefreshMonitorsCommand}"/>
+
+                            <TextBlock Text="{loc:Loc General_App}" Style="{StaticResource SectionHeader}"/>
+
+                            <TextBlock Text="{loc:Loc General_Language}" Style="{StaticResource FieldLabel}"
+                                       Margin="0,0,0,4"/>
+                            <ComboBox ItemsSource="{Binding General.Languages}" Width="340"
+                                      HorizontalAlignment="Left"
+                                      DisplayMemberPath="Label" SelectedValuePath="Value"
+                                      SelectedValue="{Binding General.LanguageCode, Mode=TwoWay}"/>
+
+                            <CheckBox Content="{loc:Loc General_StartWithWindows}" Margin="0,14,0,4"
+                                      IsChecked="{Binding General.StartWithWindows, Mode=TwoWay}"/>
+                            <TextBlock Text="{Binding General.StartupHint}" Style="{StaticResource FieldLabel}"
+                                       TextWrapping="Wrap" Margin="25,0,0,4"/>
+                            <CheckBox Content="{loc:Loc General_StartMinimized}" Margin="0,6"
+                                      IsChecked="{Binding General.Settings.StartMinimizedToTray, Mode=TwoWay}"
+                                      Command="{Binding General.PersistSettingsCommand}"/>
+                            <CheckBox Content="{loc:Loc General_WarnExclusive}" Margin="0,6"
+                                      IsChecked="{Binding General.Settings.WarnOnExclusiveFullscreen, Mode=TwoWay}"
+                                      Command="{Binding General.PersistSettingsCommand}"/>
+                            <CheckBox Content="{loc:Loc Update_AutoCheck}" Margin="0,6"
+                                      IsChecked="{Binding General.Settings.CheckForUpdates, Mode=TwoWay}"
+                                      Command="{Binding General.PersistSettingsCommand}"/>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                                <Button Content="{loc:Loc Update_CheckNow}"
+                                        Command="{Binding General.CheckForUpdatesCommand}"/>
+                                <TextBlock Text="{Binding General.UpdateStatus}" Margin="14,0,0,0"
+                                           VerticalAlignment="Center" TextWrapping="Wrap"
+                                           Style="{StaticResource FieldLabel}"/>
+                            </StackPanel>
+
+                        </StackPanel>
+                    </Border>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ============================================ TAB PHÍM TẮT -->
+            <TabItem Header="{loc:Loc Tab_Hotkeys}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,14,0,0">
+                    <Border Style="{StaticResource Card}" VerticalAlignment="Top" MaxWidth="760"
+                            HorizontalAlignment="Left" Margin="0,0,0,16">
+                        <StackPanel>
+
+                            <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
+                                       Margin="0,0,0,12" Text="{loc:Loc Hotkeys_Intro}"/>
+
+                            <ItemsControl ItemsSource="{Binding Hotkeys.Rows}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,5">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="180"/>
+                                                <ColumnDefinition Width="210"/>
+                                                <ColumnDefinition Width="80"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <TextBlock Grid.Column="0" Text="{Binding Label}"
+                                                       Style="{StaticResource FieldLabel}"/>
+
+                                            <ctl:HotkeyInputBox Grid.Column="1" Margin="0,0,12,0"
+                                                HotkeyKey="{Binding Binding.Key, Mode=TwoWay}"
+                                                HotkeyMouseButton="{Binding Binding.MouseButton, Mode=TwoWay}"
+                                                HotkeyModifiers="{Binding Binding.Modifiers, Mode=TwoWay}"/>
+
+                                            <CheckBox Grid.Column="2" Content="{loc:Loc Hotkeys_Enabled}"
+                                                      VerticalAlignment="Center"
+                                                      IsChecked="{Binding Binding.Enabled, Mode=TwoWay}"/>
+
+                                            <TextBlock Grid.Column="3" VerticalAlignment="Center"
+                                                       TextWrapping="Wrap" FontSize="11.5"
+                                                       Foreground="{StaticResource Danger}"
+                                                       Text="{Binding Binding.RegistrationError}"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                                <Button Content="{loc:Loc Hotkeys_Apply}" Style="{StaticResource AccentButton}"
+                                        Command="{Binding Hotkeys.ApplyHotkeysCommand}" Margin="0,0,10,0"/>
+                                <Button Content="{loc:Loc Hotkeys_Reset}"
+                                        Command="{Binding Hotkeys.ResetToDefaultsCommand}"/>
+                            </StackPanel>
+
+                            <TextBlock Margin="0,14,0,0" TextWrapping="Wrap" FontSize="12.5"
+                                       Text="{Binding Hotkeys.StatusMessage}"/>
+
+                        </StackPanel>
+                    </Border>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ============================================ TAB GAME -->
+            <TabItem Header="{loc:Loc Tab_Games}">
+                <Grid Margin="0,14,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="300"/>
+                        <ColumnDefinition Width="14"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0" Style="{StaticResource Card}" Padding="12">
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Top" Text="{loc:Loc Games_Header}"
+                                       Style="{StaticResource SectionHeader}" Margin="0,0,0,8"/>
+
+                            <StackPanel DockPanel.Dock="Bottom" Margin="0,12,0,0">
+                                <Button Content="{loc:Loc Games_AddEmpty}" Style="{StaticResource AccentButton}"
+                                        Command="{Binding Games.BeginNewProfileCommand}" Margin="0,0,0,6"/>
+                                <Button Content="{loc:Loc Games_AddFromCurrent}"
+                                        Command="{Binding Games.AddFromCurrentWindowCommand}" Margin="0,0,0,6"/>
+                                <Button Content="{loc:Loc Games_AddMock}"
+                                        Command="{Binding Games.AddMockTargetCommand}"
+                                        ToolTip="{loc:Loc Games_AddMockTip}" Margin="0,0,0,6"/>
+                                <Button Content="{loc:Loc Games_Remove}" Style="{StaticResource DangerButton}"
+                                        Command="{Binding Games.RemoveProfileCommand}"/>
+                            </StackPanel>
+
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <ListBox ItemsSource="{Binding Games.Profiles}"
+                                         SelectedItem="{Binding Games.SelectedProfile, Mode=TwoWay}"
+                                         DisplayMemberPath="Name"/>
+                            </ScrollViewer>
+                        </DockPanel>
+                    </Border>
+
+                    <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
+                        <StackPanel Margin="0,0,8,16">
+
+                            <Border Style="{StaticResource Card}">
+                                <StackPanel>
+                                    <CheckBox Content="{loc:Loc Games_AutoSwitch}"
+                                              IsChecked="{Binding Games.AutoSwitchEnabled, Mode=TwoWay}"/>
+                                    <CheckBox Content="{loc:Loc Games_OnlyMatched}" Margin="0,10,0,0"
+                                              IsChecked="{Binding Games.ShowOnlyInMatchedGames, Mode=TwoWay}"/>
+                                    <TextBlock Text="{Binding Games.Hint}" Style="{StaticResource FieldLabel}"
+                                               TextWrapping="Wrap" Margin="0,12,0,0"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- ===== Khung tạo profile mới, mở ngay tại chỗ ===== -->
+                            <Border Style="{StaticResource Card}" Margin="0,14,0,0"
+                                    BorderBrush="{StaticResource AccentBright}"
+                                    Visibility="{Binding Games.IsCreatingProfile,
+                                                 Converter={StaticResource BoolToVisibility}}">
+                                <StackPanel>
+                                    <TextBlock Text="{loc:Loc Games_NewProfile}"
+                                               Style="{StaticResource SectionHeader}" Margin="0,0,0,10"/>
+
+                                    <TextBlock Text="{loc:Loc Games_RunningHeader}"
+                                               Style="{StaticResource FieldLabel}" FontWeight="SemiBold"/>
+                                    <TextBlock Text="{loc:Loc Games_RunningHint}" Style="{StaticResource FieldLabel}"
+                                               TextWrapping="Wrap" Margin="0,4,0,8"
+                                               Foreground="{StaticResource TextMuted}"/>
+
+                                    <Border Style="{StaticResource InnerCard}" Padding="6" Height="180">
+                                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                            <ListBox ItemsSource="{Binding Games.RunningApps}"
+                                                     SelectedItem="{Binding Games.SelectedRunningApp, Mode=TwoWay}"
+                                                     DisplayMemberPath="Display"/>
+                                        </ScrollViewer>
+                                    </Border>
+
+                                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                        <Button Content="{loc:Loc Games_UseSelected}"
+                                                Command="{Binding Games.UseSelectedRunningAppCommand}"
+                                                IsEnabled="{Binding Games.SelectedRunningApp,
+                                                            Converter={StaticResource NotNullToBool}}"
+                                                Margin="0,0,10,0"/>
+                                        <Button Content="{loc:Loc Games_RefreshRunning}"
+                                                Command="{Binding Games.ScanRunningAppsCommand}"/>
+                                    </StackPanel>
+
+                                    <StackPanel DataContext="{Binding Games.Draft}" Margin="0,16,0,0">
+                                        <TextBlock Text="{loc:Loc Games_DisplayName}"
+                                                   Style="{StaticResource FieldLabel}" Margin="0,0,0,4"/>
+                                        <TextBox Text="{Binding Name, Mode=TwoWay,
+                                                        UpdateSourceTrigger=PropertyChanged}"/>
+
+                                        <TextBlock Text="{loc:Loc Games_MatchMode}"
+                                                   Style="{StaticResource FieldLabel}" Margin="0,10,0,4"/>
+                                        <ComboBox ItemsSource="{Binding DataContext.Games.MatchModes,
+                                                                RelativeSource={RelativeSource AncestorType=Window}}"
+                                                  DisplayMemberPath="Label" SelectedValuePath="Value"
+                                                  SelectedValue="{Binding MatchMode, Mode=TwoWay}"/>
+
+                                        <TextBlock Text="{loc:Loc Games_Pattern}"
+                                                   Style="{StaticResource FieldLabel}" Margin="0,10,0,4"/>
+                                        <TextBox Text="{Binding Pattern, Mode=TwoWay,
+                                                        UpdateSourceTrigger=PropertyChanged}"/>
+
+                                        <TextBlock Text="{loc:Loc Games_Behavior}"
+                                                   Style="{StaticResource FieldLabel}" Margin="0,10,0,4"/>
+                                        <ComboBox ItemsSource="{Binding DataContext.Games.Behaviors,
+                                                                RelativeSource={RelativeSource AncestorType=Window}}"
+                                                  DisplayMemberPath="Label" SelectedValuePath="Value"
+                                                  SelectedValue="{Binding Behavior, Mode=TwoWay}"/>
+
+                                        <TextBlock Text="{loc:Loc Games_Preset}"
+                                                   Style="{StaticResource FieldLabel}" Margin="0,10,0,4"/>
+                                        <ComboBox ItemsSource="{Binding DataContext.Games.Presets,
+                                                                RelativeSource={RelativeSource AncestorType=Window}}"
+                                                  DisplayMemberPath="Name" SelectedValuePath="Id"
+                                                  SelectedValue="{Binding PresetId, Mode=TwoWay}"/>
+                                    </StackPanel>
+
+                                    <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                                        <Button Content="{loc:Loc Games_Save}" Style="{StaticResource AccentButton}"
+                                                Command="{Binding Games.SaveNewProfileCommand}" Margin="0,0,10,0"/>
+                                        <Button Content="{loc:Loc Games_CancelNew}"
+                                                Command="{Binding Games.CancelNewProfileCommand}"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- ===== Bảng chẩn đoán ===== -->
+                            <Border Style="{StaticResource InnerCard}" Margin="0,14,0,0">
+                                <StackPanel>
+                                    <TextBlock Text="{loc:Loc Games_Diagnostics}"
+                                               Style="{StaticResource SectionHeader}" Margin="0,0,0,8"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="140"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock Grid.Row="0" Grid.Column="0" Text="{loc:Loc Games_Process}"
+                                                   Style="{StaticResource FieldLabel}" Margin="0,3"/>
+                                        <TextBlock Grid.Row="0" Grid.Column="1" Margin="0,3" TextWrapping="Wrap"
+                                                   FontFamily="Consolas" FontSize="11.5"
+                                                   Text="{Binding Games.DetectedProcess}"/>
+
+                                        <TextBlock Grid.Row="1" Grid.Column="0" Text="{loc:Loc Games_WindowTitle}"
+                                                   Style="{StaticResource FieldLabel}" Margin="0,3"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="1" Margin="0,3" TextWrapping="Wrap"
+                                                   FontFamily="Consolas" FontSize="11.5"
+                                                   Text="{Binding Games.DetectedTitle}"/>
+
+                                        <TextBlock Grid.Row="2" Grid.Column="0" Text="{loc:Loc Games_DisplayMode}"
+                                                   Style="{StaticResource FieldLabel}" Margin="0,3"/>
+                                        <TextBlock Grid.Row="2" Grid.Column="1" Margin="0,3" TextWrapping="Wrap"
+                                                   FontFamily="Consolas" FontSize="11.5"
+                                                   Text="{Binding Games.DetectedDisplayMode}"/>
+
+                                        <TextBlock Grid.Row="3" Grid.Column="0" Text="{loc:Loc Games_MatchedProfile}"
+                                                   Style="{StaticResource FieldLabel}" Margin="0,3"/>
+                                        <TextBlock Grid.Row="3" Grid.Column="1" Margin="0,3" TextWrapping="Wrap"
+                                                   FontFamily="Consolas" FontSize="11.5"
+                                                   Foreground="{StaticResource AccentBright}"
+                                                   Text="{Binding Games.DetectedMatch}"/>
+                                    </Grid>
+
+                                    <TextBlock TextWrapping="Wrap" Margin="0,12,0,0" FontSize="11.5"
+                                               Foreground="{StaticResource Warning}"
+                                               Visibility="{Binding Games.ProcessNameBlocked,
+                                                            Converter={StaticResource BoolToVisibility}}"
+                                               Text="{loc:Loc Games_AdminWarning}"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- ===== Chi tiết profile đang chọn ===== -->
+                            <Border Style="{StaticResource Card}" Margin="0,14,0,0"
+                                    Visibility="{Binding Games.SelectedProfile,
+                                                 Converter={StaticResource NotNullToVisibility}}">
+                                <StackPanel MaxWidth="460" HorizontalAlignment="Left"
+                                            DataContext="{Binding Games.SelectedProfile}">
+
+                                    <TextBlock Text="{loc:Loc Games_Details}" Style="{StaticResource SectionHeader}"
+                                               Margin="0,0,0,8"/>
+
+                                    <TextBlock Text="{loc:Loc Games_DisplayName}"
+                                               Style="{StaticResource FieldLabel}" Margin="0,0,0,4"/>
+                                    <TextBox Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+
+                                    <TextBlock Text="{loc:Loc Games_MatchMode}"
+                                               Style="{StaticResource FieldLabel}" Margin="0,10,0,4"/>
+                                    <ComboBox ItemsSource="{Binding DataContext.Games.MatchModes,
+                                                            RelativeSource={RelativeSource AncestorType=Window}}"
+                                              DisplayMemberPath="Label" SelectedValuePath="Value"
+                                              SelectedValue="{Binding MatchMode, Mode=TwoWay}"/>
+
+                                    <TextBlock Text="{loc:Loc Games_Pattern}"
+                                               Style="{StaticResource FieldLabel}" Margin="0,10,0,4"/>
+                                    <TextBox Text="{Binding Pattern, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+
+                                    <TextBlock Text="{loc:Loc Games_Behavior}"
+                                               Style="{StaticResource FieldLabel}" Margin="0,10,0,4"/>
+                                    <ComboBox ItemsSource="{Binding DataContext.Games.Behaviors,
+                                                            RelativeSource={RelativeSource AncestorType=Window}}"
+                                              DisplayMemberPath="Label" SelectedValuePath="Value"
+                                              SelectedValue="{Binding Behavior, Mode=TwoWay}"/>
+
+                                    <TextBlock Text="{loc:Loc Games_Preset}"
+                                               Style="{StaticResource FieldLabel}" Margin="0,10,0,4"/>
+                                    <ComboBox ItemsSource="{Binding DataContext.Games.Presets,
+                                                            RelativeSource={RelativeSource AncestorType=Window}}"
+                                              DisplayMemberPath="Name" SelectedValuePath="Id"
+                                              SelectedValue="{Binding PresetId, Mode=TwoWay}"/>
+
+                                    <CheckBox Content="{loc:Loc Games_EnableProfile}" Margin="0,14,0,0"
+                                              IsChecked="{Binding Enabled, Mode=TwoWay}"/>
+                                </StackPanel>
+                            </Border>
+
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </TabItem>
+
+        </TabControl>
+    </Grid>
+</Window>

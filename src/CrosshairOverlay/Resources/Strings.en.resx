@@ -1,0 +1,295 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+
+  <data name="App_Subtitle"><value>crosshair overlay</value></data>
+  <data name="Shell_EnableOverlay"><value>Overlay on</value></data>
+  <data name="Tab_Crosshair"><value>Crosshair</value></data>
+  <data name="Tab_General"><value>General</value></data>
+  <data name="Tab_Hotkeys"><value>Hotkeys</value></data>
+  <data name="Tab_Games"><value>Games</value></data>
+
+  <data name="Preset_Header"><value>PRESETS</value></data>
+  <data name="Preset_New"><value>New</value></data>
+  <data name="Preset_Duplicate"><value>Duplicate</value></data>
+  <data name="Preset_Import"><value>Import</value></data>
+  <data name="Preset_Export"><value>Export</value></data>
+  <data name="Preset_Delete"><value>Delete</value></data>
+  <data name="Preset_FromGameCode"><value>Import code</value></data>
+  <data name="Preset_FromGameCodeTip"><value>Paste a crosshair code from CS2 or Valorant</value></data>
+  <data name="Preset_CopySuffix"><value>(Copy)</value></data>
+  <data name="Preset_DefaultName"><value>New Crosshair</value></data>
+  <data name="Preset_DeleteTitle"><value>Delete preset</value></data>
+  <data name="Preset_DeleteConfirm"><value>Delete '{0}'? This cannot be undone.</value></data>
+  <data name="Preset_ExportTitle"><value>Export preset</value></data>
+  <data name="Preset_ExportDone"><value>Wrote '{0}' to:
+{1}</value></data>
+  <data name="Preset_FileFilter"><value>Crosshair preset (*.json)|*.json|All files (*.*)|*.*</value></data>
+  <data name="Preset_ErrorCreate"><value>Could not create a new preset.</value></data>
+  <data name="Preset_ErrorDuplicate"><value>Could not duplicate the preset.</value></data>
+  <data name="Preset_ErrorDelete"><value>Could not delete the preset.</value></data>
+  <data name="Preset_ErrorImport"><value>Could not import '{0}'. The file may not be a valid preset.</value></data>
+  <data name="Preset_ErrorExport"><value>Could not export the preset.</value></data>
+  <data name="Preset_ErrorFromCode"><value>Could not create a preset from that crosshair code.</value></data>
+  <data name="Preset_ExportCode"><value>Export code</value></data>
+  <data name="Preset_ExportCodeTip"><value>Build a share code from the selected preset and copy it to the clipboard</value></data>
+  <data name="Preset_CodeCopiedTitle"><value>Share code copied</value></data>
+  <data name="Preset_CodeCopiedBody"><value>The code is on your clipboard:
+
+{0}</value></data>
+  <data name="Preset_CodeLossy"><value>
+
+Note: the code format can only describe a cross, a centre dot and an outline. This preset contains things it cannot carry (circle, square box, diagonal arms, rotation, or a scale other than 1) — those will be lost when someone imports the code.</value></data>
+  <data name="Preset_ClipboardFailed"><value>Could not write to the clipboard — another application is holding it. Try again.</value></data>
+
+  <data name="Preview_Zoom"><value>Zoom</value></data>
+  <data name="Preview_Checkerboard"><value>Checkerboard</value></data>
+  <data name="Preview_DarkBackground"><value>Dark background</value></data>
+
+  <data name="Editor_General"><value>GENERAL</value></data>
+  <data name="Editor_PresetName"><value>Preset name</value></data>
+  <data name="Editor_Shape"><value>Shape</value></data>
+  <data name="Editor_Color"><value>Colour</value></data>
+  <data name="Editor_Opacity"><value>Opacity</value></data>
+  <data name="Editor_Scale"><value>Scale</value></data>
+  <data name="Editor_Rotation"><value>Rotation (deg)</value></data>
+  <data name="Editor_Lines"><value>ARMS</value></data>
+  <data name="Editor_ShowLines"><value>Show arms</value></data>
+  <data name="Editor_Length"><value>Length</value></data>
+  <data name="Editor_Thickness"><value>Thickness</value></data>
+  <data name="Editor_Gap"><value>Gap</value></data>
+  <data name="Editor_RoundedCaps"><value>Rounded ends</value></data>
+  <data name="Editor_Top"><value>Top</value></data>
+  <data name="Editor_Bottom"><value>Bottom</value></data>
+  <data name="Editor_Left"><value>Left</value></data>
+  <data name="Editor_Right"><value>Right</value></data>
+  <data name="Editor_CenterDot"><value>CENTRE DOT</value></data>
+  <data name="Editor_ShowCenterDot"><value>Show centre dot</value></data>
+  <data name="Editor_Size"><value>Size</value></data>
+  <data name="Editor_UseProfileColor"><value>Use main colour</value></data>
+  <data name="Editor_Ring"><value>RING / BOX</value></data>
+  <data name="Editor_ShowRing"><value>Show ring</value></data>
+  <data name="Editor_Radius"><value>Radius</value></data>
+  <data name="Editor_Filled"><value>Filled</value></data>
+  <data name="Editor_Outline"><value>OUTLINE</value></data>
+  <data name="Editor_ShowOutline"><value>Show outline</value></data>
+  <data name="Editor_Image"><value>CUSTOM IMAGE</value></data>
+  <data name="Editor_NoImage"><value>(no image selected)</value></data>
+  <data name="Editor_BrowseImage"><value>Choose image…</value></data>
+  <data name="Editor_ClearImage"><value>Clear image</value></data>
+  <data name="Editor_ImageScale"><value>Image scale</value></data>
+  <data name="Editor_ImageOutlineNote"><value>Bitmap images cannot be outlined — use a PNG that already has one.</value></data>
+  <data name="Editor_ImageFilter"><value>Images (*.png;*.jpg;*.jpeg;*.bmp;*.gif)|*.png;*.jpg;*.jpeg;*.bmp;*.gif|All files (*.*)|*.*</value></data>
+  <data name="Editor_Position"><value>POSITION</value></data>
+  <data name="Editor_OffsetX"><value>Offset X</value></data>
+  <data name="Editor_OffsetY"><value>Offset Y</value></data>
+  <data name="Editor_ResetOffset"><value>Re-centre</value></data>
+  <data name="Editor_ResetRotation"><value>Clear rotation</value></data>
+
+  <data name="Shape_Cross"><value>Cross (4 arms)</value></data>
+  <data name="Shape_TShape"><value>T-shape (no top arm)</value></data>
+  <data name="Shape_XShape"><value>X-shape (4 diagonal arms)</value></data>
+  <data name="Shape_Dot"><value>Centre dot</value></data>
+  <data name="Shape_Circle"><value>Circle</value></data>
+  <data name="Shape_CircleDot"><value>Circle + dot</value></data>
+  <data name="Shape_Square"><value>Square box</value></data>
+  <data name="Shape_CustomImage"><value>Custom image</value></data>
+
+  <data name="General_Monitor"><value>DISPLAY</value></data>
+  <data name="General_RefreshMonitors"><value>Rescan displays</value></data>
+  <data name="General_App"><value>APPLICATION</value></data>
+  <data name="General_Language"><value>Language</value></data>
+  <data name="General_StartWithWindows"><value>Start with Windows</value></data>
+  <data name="General_StartMinimized"><value>Start minimised to the system tray</value></data>
+  <data name="General_WarnExclusive"><value>Warn when a game runs in Exclusive Fullscreen</value></data>
+  <data name="General_StartupEnabled"><value>Added to the Windows startup list.</value></data>
+  <data name="General_StartupDisabled"><value>Removed from the Windows startup list.</value></data>
+  <data name="General_StartupFailed"><value>Could not write to the registry — group policy may be blocking it.</value></data>
+  <data name="MonitorMode_Follow"><value>Follow the active window</value></data>
+  <data name="MonitorMode_Primary"><value>Always use the primary display</value></data>
+  <data name="MonitorMode_Specific"><value>Pin to a specific display</value></data>
+  <data name="Language_Auto"><value>Match system</value></data>
+
+  <data name="Hotkeys_Intro"><value>Click a box and press the combination you want. Press Esc to clear it. After editing, press "Apply" to register with Windows.</value></data>
+  <data name="Hotkeys_Enabled"><value>On</value></data>
+  <data name="Hotkeys_Apply"><value>Apply</value></data>
+  <data name="Hotkeys_Reset"><value>Restore defaults</value></data>
+  <data name="Hotkeys_AllOk"><value>Registered {0} hotkeys.</value></data>
+  <data name="Hotkeys_SomeFailed"><value>{0} hotkeys active. Failed — {1}</value></data>
+  <data name="Hotkeys_Unassigned"><value>(unassigned)</value></data>
+  <data name="Hotkeys_Prompt"><value>Press a key combination…</value></data>
+  <data name="Hotkeys_ConflictTitle"><value>Hotkey conflict</value></data>
+  <data name="Hotkeys_ConflictBody"><value>Could not register: {0}. Pick a different combination on the Hotkeys tab.</value></data>
+  <data name="Hotkeys_ErrTaken"><value>Another application already owns this combination.</value></data>
+  <data name="Hotkeys_ErrRejected"><value>Windows refused the registration (error {0}).</value></data>
+  <data name="Hotkeys_ErrUnmappable"><value>That key has no Windows virtual-key equivalent.</value></data>
+  <data name="Hotkeys_ErrRawInput"><value>Raw Input could not be registered, so mouse buttons cannot be used as hotkeys.</value></data>
+  <data name="Action_ToggleOverlay"><value>Toggle overlay</value></data>
+  <data name="Action_NextPreset"><value>Next preset</value></data>
+  <data name="Action_PreviousPreset"><value>Previous preset</value></data>
+  <data name="Action_ShowSettings"><value>Open Settings window</value></data>
+  <data name="Action_Exit"><value>Quit application</value></data>
+
+  <data name="Games_Header"><value>GAME PROFILES</value></data>
+  <data name="Games_AddFromCurrent"><value>Add from last active window</value></data>
+  <data name="Games_AddMock"><value>Add test target: notepad.exe</value></data>
+  <data name="Games_AddMockTip"><value>Creates a rule pointing at Notepad so you can test automatic preset switching without launching a heavy game.</value></data>
+  <data name="Games_AddEmpty"><value>Add blank</value></data>
+  <data name="Games_Remove"><value>Remove</value></data>
+  <data name="Games_NewName"><value>New game</value></data>
+  <data name="Games_MockName"><value>MOCK — Notepad</value></data>
+  <data name="Games_AutoSwitch"><value>Switch preset automatically by running game</value></data>
+  <data name="Games_OnlyMatched"><value>Only show the overlay when a game profile matches</value></data>
+  <data name="Games_Diagnostics"><value>LIVE DETECTION</value></data>
+  <data name="Games_Process"><value>Process</value></data>
+  <data name="Games_WindowTitle"><value>Window title</value></data>
+  <data name="Games_DisplayMode"><value>Display mode</value></data>
+  <data name="Games_MatchedProfile"><value>Matched profile</value></data>
+  <data name="Games_AdminWarning"><value>This window runs as Administrator, so Windows will not reveal its process name. Matching by WINDOW TITLE still works normally.</value></data>
+  <data name="Games_Details"><value>DETAILS</value></data>
+  <data name="Games_DisplayName"><value>Display name</value></data>
+  <data name="Games_MatchMode"><value>Match by</value></data>
+  <data name="Games_Pattern"><value>Match value</value></data>
+  <data name="Games_Behavior"><value>On match</value></data>
+  <data name="Games_Preset"><value>Preset to apply</value></data>
+  <data name="Games_EnableProfile"><value>Enable this profile</value></data>
+  <data name="Games_None"><value>—</value></data>
+  <data name="Games_Blocked"><value>(blocked — process runs as administrator)</value></data>
+  <data name="Games_NoMatch"><value>(no profile matches)</value></data>
+  <data name="Games_HintNoWindow"><value>No window detected yet. Launch the game, Alt-Tab back here, then try again.</value></data>
+  <data name="Games_HintNoProcessName"><value>Could not read that window's process name.</value></data>
+  <data name="Games_HintExists"><value>'{0}' is already in the list.</value></data>
+  <data name="Games_HintAdded"><value>Added '{0}'.</value></data>
+  <data name="Games_HintMockExists"><value>'{0}' is already there. Open Notepad to watch the preset switch.</value></data>
+  <data name="Games_HintMockAdded"><value>Added '{0}'. Open Notepad — the preset should switch to '{1}'; move to any other window and it should switch back.</value></data>
+  <data name="Games_HintAdminNoTitle"><value>That window runs as administrator and has no title, so no rule can be built. Run the app as administrator to read its process name.</value></data>
+  <data name="Games_HintAdminTitle"><value>That window runs as administrator, so its process name is unreadable. A WINDOW TITLE rule was created instead — that works without elevation. Shorten the title text if the game changes it often.</value></data>
+  <data name="MatchMode_ProcessName"><value>Process name (e.g. cs2.exe)</value></data>
+  <data name="MatchMode_WindowTitle"><value>Window title contains</value></data>
+  <data name="MatchMode_ExecutablePath"><value>Full executable path</value></data>
+  <data name="Behavior_ShowPreset"><value>Show the assigned preset</value></data>
+  <data name="Behavior_HideOverlay"><value>Hide the overlay</value></data>
+  <data name="Display_Windowed"><value>Windowed</value></data>
+  <data name="Display_Borderless"><value>Borderless fullscreen</value></data>
+  <data name="Display_LikelyExclusive"><value>Likely Exclusive Fullscreen</value></data>
+
+  <data name="Import_Title"><value>Import crosshair code</value></data>
+  <data name="Import_Intro"><value>Paste a crosshair code from CS2 (CSGO-xxxxx-xxxxx-…) or Valorant (0;P;c;5;…). The format is detected automatically.</value></data>
+  <data name="Import_Result"><value>DECODED VALUES</value></data>
+  <data name="Import_Accuracy"><value>Structure (shape, colour, centre dot, outline) converts exactly. Sizes are approximate because the games use different units — adjust the Scale slider after importing if needed.</value></data>
+  <data name="Import_Create"><value>Create preset</value></data>
+  <data name="Import_Cancel"><value>Cancel</value></data>
+  <data name="Import_Detected"><value>✓ Detected: {0}</value></data>
+  <data name="Import_FailedCs2"><value>Looks like a CS2 code but could not be decoded: {0}</value></data>
+  <data name="Import_FailedValorant"><value>Looks like a Valorant code but could not be decoded: {0}</value></data>
+  <data name="Import_NameCs2"><value>Imported from CS2</value></data>
+  <data name="Import_NameValorant"><value>Imported from Valorant</value></data>
+  <data name="Import_FieldShape"><value>Shape</value></data>
+  <data name="Import_FieldColor"><value>Colour</value></data>
+  <data name="Import_FieldLength"><value>Arm length</value></data>
+  <data name="Import_FieldThickness"><value>Arm thickness</value></data>
+  <data name="Import_FieldGap"><value>Gap</value></data>
+  <data name="Import_FieldDot"><value>Centre dot</value></data>
+  <data name="Import_FieldOutline"><value>Outline</value></data>
+  <data name="Import_FieldOpacity"><value>Opacity</value></data>
+  <data name="Import_On"><value>on, size {0}</value></data>
+  <data name="Import_OutlineOn"><value>on, {0} thick</value></data>
+  <data name="Import_Off"><value>off</value></data>
+  <data name="Import_ErrEmpty"><value>The code is empty.</value></data>
+  <data name="Import_ErrNoValidChars"><value>The code contains no valid characters.</value></data>
+  <data name="Import_ErrBadChar"><value>Character '{0}' is not part of the share-code alphabet.</value></data>
+  <data name="Import_ErrTooLong"><value>The code is longer than the share-code format allows.</value></data>
+  <data name="Import_ErrBadFormat"><value>That is not a valid Valorant code.</value></data>
+  <data name="Import_ErrNothingRead"><value>No settings could be read from that code.</value></data>
+
+  <data name="Tray_Open"><value>Open Settings</value></data>
+  <data name="Tray_Toggle"><value>Overlay on</value></data>
+  <data name="Tray_Exit"><value>Quit</value></data>
+  <data name="Tray_TooltipOff"><value>{0} — off</value></data>
+  <data name="Tray_RunningInTray"><value>Running in the system tray.</value></data>
+  <data name="Fullscreen_WarnTitle"><value>The overlay may not be visible</value></data>
+  <data name="Fullscreen_WarnBody"><value>{0} is likely running in Exclusive Fullscreen. Switch the game to Borderless Windowed to see the crosshair.</value></data>
+  <data name="Error_StartupFailed"><value>Startup failed</value></data>
+  <data name="Error_UiThread"><value>Error on the UI thread</value></data>
+  <data name="Error_Background"><value>Error in a background task</value></data>
+  <data name="Error_Fatal"><value>Fatal error</value></data>
+  <data name="Error_LogHint"><value>Detailed log: {0}</value></data>
+
+  <data name="Dialog_Ok"><value>OK</value></data>
+  <data name="Dialog_Yes"><value>Yes</value></data>
+  <data name="Dialog_No"><value>No</value></data>
+  <data name="Dialog_Cancel"><value>Cancel</value></data>
+
+  <data name="Update_Title"><value>A new version is available</value></data>
+  <data name="Update_Body"><value>Version {0} has been released; you are running {1}.
+
+Download and update now? The app will restart itself.</value></data>
+  <data name="Update_Primary"><value>Update now</value></data>
+  <data name="Update_Later"><value>Later</value></data>
+  <data name="Update_FailedTitle"><value>Update failed</value></data>
+  <data name="Update_FailedBody"><value>Could not download the update: {0}
+
+You can download it manually from the releases page.</value></data>
+  <data name="Update_CheckNow"><value>Check for updates</value></data>
+  <data name="Update_UpToDate"><value>You are on the latest version ({0}).</value></data>
+  <data name="Update_CheckFailed"><value>Could not check for updates — try again later.</value></data>
+  <data name="Update_AutoCheck"><value>Check for updates on startup</value></data>
+
+  <data name="Games_RunningHeader"><value>RUNNING APPLICATIONS</value></data>
+  <data name="Games_RunningHint"><value>Only processes with a visible window are listed. Pick one, then press "Use this one".</value></data>
+  <data name="Games_RefreshRunning"><value>Rescan</value></data>
+  <data name="Games_UseSelected"><value>Use this one</value></data>
+  <data name="Games_NewProfile"><value>NEW PROFILE</value></data>
+  <data name="Games_Save"><value>Save profile</value></data>
+  <data name="Games_CancelNew"><value>Cancel</value></data>
+  <data name="Games_NeedPattern"><value>Enter a match value, or pick a running application.</value></data>
+</root>

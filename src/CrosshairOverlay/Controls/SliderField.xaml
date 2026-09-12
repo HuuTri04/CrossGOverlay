@@ -1,0 +1,33 @@
+<UserControl x:Class="CrosshairOverlay.Controls.SliderField"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Name="Root">
+    <Grid Margin="0,5">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="88"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+
+        <TextBlock Grid.Column="0" Style="{DynamicResource FieldLabel}"
+                   Text="{Binding Label, ElementName=Root}"
+                   TextTrimming="CharacterEllipsis"
+                   ToolTip="{Binding Label, ElementName=Root}"/>
+
+        <Slider Grid.Column="1" VerticalAlignment="Center" Margin="6,0,10,0"
+                Minimum="{Binding Minimum, ElementName=Root}"
+                Maximum="{Binding Maximum, ElementName=Root}"
+                Value="{Binding Value, ElementName=Root, Mode=TwoWay}"/>
+
+        <!--
+            Ô nhập số: UpdateSourceTrigger=PropertyChanged để gõ tới đâu preview đổi tới đó.
+            Bind vào Text chứ không bind thẳng vào Value — bind số kèm định dạng sẽ liên tục
+            viết đè lên thứ người dùng đang gõ và nhảy con trỏ.
+        -->
+        <TextBox Grid.Column="2" Style="{DynamicResource NumericBox}"
+                 Text="{Binding Text, ElementName=Root, Mode=TwoWay,
+                        UpdateSourceTrigger=PropertyChanged}"
+                 LostFocus="OnBoxLostFocus"
+                 PreviewKeyDown="OnBoxKeyDown"/>
+    </Grid>
+</UserControl>

@@ -1,0 +1,86 @@
+<UserControl x:Class="CrosshairOverlay.Controls.ColorPickerButton"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid>
+        <Button x:Name="OpenButton" Click="OnOpenClick" Padding="6" HorizontalContentAlignment="Stretch">
+            <StackPanel Orientation="Horizontal">
+                <Border x:Name="Swatch" Width="22" Height="16" CornerRadius="3"
+                        BorderBrush="#55FFFFFF" BorderThickness="1"/>
+                <TextBlock x:Name="HexLabel" Margin="8,0,2,0" VerticalAlignment="Center"
+                           FontFamily="Consolas" FontSize="11.5"/>
+            </StackPanel>
+        </Button>
+
+        <Popup x:Name="PickerPopup" StaysOpen="False" AllowsTransparency="True"
+               Placement="Bottom" PlacementTarget="{Binding ElementName=OpenButton}"
+               PopupAnimation="Fade">
+            <Border Background="{DynamicResource CardBg}" BorderBrush="{DynamicResource BorderBrushSoft}"
+                    BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,6,0,0" Width="250">
+                <StackPanel>
+
+                    <TextBlock Text="MÀU THƯỜNG DÙNG" Style="{DynamicResource SectionHeader}" Margin="0,0,0,6"/>
+                    <ItemsControl x:Name="SwatchList">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Width="24" Height="24" Margin="0,0,5,5" CornerRadius="4"
+                                        Background="{Binding Brush}" Cursor="Hand"
+                                        BorderBrush="#33FFFFFF" BorderThickness="1"
+                                        MouseLeftButtonUp="OnSwatchClick" Tag="{Binding Color}"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock Text="TINH CHỈNH" Style="{DynamicResource SectionHeader}"/>
+
+                    <Grid Margin="0,2,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="18"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="34"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="26"/>
+                            <RowDefinition Height="26"/>
+                            <RowDefinition Height="26"/>
+                            <RowDefinition Height="26"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="R" Style="{DynamicResource FieldLabel}"/>
+                        <Slider Grid.Row="0" Grid.Column="1" x:Name="RedSlider" Minimum="0" Maximum="255"
+                                ValueChanged="OnChannelChanged"/>
+                        <TextBlock Grid.Row="0" Grid.Column="2" x:Name="RedValue"
+                                   Style="{DynamicResource FieldLabel}" HorizontalAlignment="Right"/>
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="G" Style="{DynamicResource FieldLabel}"/>
+                        <Slider Grid.Row="1" Grid.Column="1" x:Name="GreenSlider" Minimum="0" Maximum="255"
+                                ValueChanged="OnChannelChanged"/>
+                        <TextBlock Grid.Row="1" Grid.Column="2" x:Name="GreenValue"
+                                   Style="{DynamicResource FieldLabel}" HorizontalAlignment="Right"/>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="B" Style="{DynamicResource FieldLabel}"/>
+                        <Slider Grid.Row="2" Grid.Column="1" x:Name="BlueSlider" Minimum="0" Maximum="255"
+                                ValueChanged="OnChannelChanged"/>
+                        <TextBlock Grid.Row="2" Grid.Column="2" x:Name="BlueValue"
+                                   Style="{DynamicResource FieldLabel}" HorizontalAlignment="Right"/>
+
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="A" Style="{DynamicResource FieldLabel}"/>
+                        <Slider Grid.Row="3" Grid.Column="1" x:Name="AlphaSlider" Minimum="0" Maximum="255"
+                                ValueChanged="OnChannelChanged"/>
+                        <TextBlock Grid.Row="3" Grid.Column="2" x:Name="AlphaValue"
+                                   Style="{DynamicResource FieldLabel}" HorizontalAlignment="Right"/>
+                    </Grid>
+
+                    <TextBlock Text="MÃ HEX" Style="{DynamicResource SectionHeader}"/>
+                    <TextBox x:Name="HexBox" FontFamily="Consolas" KeyDown="OnHexKeyDown"
+                             LostFocus="OnHexCommit"/>
+
+                </StackPanel>
+            </Border>
+        </Popup>
+    </Grid>
+</UserControl>

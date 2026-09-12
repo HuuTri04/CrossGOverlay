@@ -1,0 +1,308 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+
+  <!-- ===== Khung ứng dụng ===== -->
+  <data name="App_Subtitle"><value>overlay tâm ngắm</value></data>
+  <data name="Shell_EnableOverlay"><value>Bật overlay</value></data>
+  <data name="Tab_Crosshair"><value>Crosshair</value></data>
+  <data name="Tab_General"><value>Chung</value></data>
+  <data name="Tab_Hotkeys"><value>Phím tắt</value></data>
+  <data name="Tab_Games"><value>Game</value></data>
+
+  <!-- ===== Thư viện preset ===== -->
+  <data name="Preset_Header"><value>PRESET</value></data>
+  <data name="Preset_New"><value>Mới</value></data>
+  <data name="Preset_Duplicate"><value>Nhân bản</value></data>
+  <data name="Preset_Import"><value>Import</value></data>
+  <data name="Preset_Export"><value>Export</value></data>
+  <data name="Preset_Delete"><value>Xoá</value></data>
+  <data name="Preset_FromGameCode"><value>Nhập mã</value></data>
+  <data name="Preset_FromGameCodeTip"><value>Dán mã crosshair từ CS2 hoặc Valorant</value></data>
+  <data name="Preset_CopySuffix"><value>(Bản sao)</value></data>
+  <data name="Preset_DefaultName"><value>Crosshair mới</value></data>
+  <data name="Preset_DeleteTitle"><value>Xoá preset</value></data>
+  <data name="Preset_DeleteConfirm"><value>Xoá '{0}'? Thao tác này không hoàn tác được.</value></data>
+  <data name="Preset_ExportTitle"><value>Export preset</value></data>
+  <data name="Preset_ExportDone"><value>Đã ghi '{0}' ra:
+{1}</value></data>
+  <data name="Preset_FileFilter"><value>Preset crosshair (*.json)|*.json|Tất cả file (*.*)|*.*</value></data>
+  <data name="Preset_ErrorCreate"><value>Không tạo được preset mới.</value></data>
+  <data name="Preset_ErrorDuplicate"><value>Không nhân bản được preset.</value></data>
+  <data name="Preset_ErrorDelete"><value>Không xoá được preset.</value></data>
+  <data name="Preset_ErrorImport"><value>Không import được '{0}'. File có thể không phải preset hợp lệ.</value></data>
+  <data name="Preset_ErrorExport"><value>Không export được preset.</value></data>
+  <data name="Preset_ErrorFromCode"><value>Không tạo được preset từ mã crosshair.</value></data>
+  <data name="Preset_ExportCode"><value>Xuất mã</value></data>
+  <data name="Preset_ExportCodeTip"><value>Dựng mã chia sẻ từ preset đang chọn và chép vào clipboard</value></data>
+  <data name="Preset_CodeCopiedTitle"><value>Đã chép mã chia sẻ</value></data>
+  <data name="Preset_CodeCopiedBody"><value>Mã đã nằm trong clipboard:
+
+{0}</value></data>
+  <data name="Preset_CodeLossy"><value>
+
+Lưu ý: định dạng mã chỉ mô tả được chữ thập, chấm giữa và viền. Preset này có thành phần không biểu diễn được (vòng tròn, khung vuông, nhánh chéo, góc xoay hoặc tỉ lệ khác 1) — những phần đó sẽ mất khi người khác nhập mã.</value></data>
+  <data name="Preset_ClipboardFailed"><value>Không ghi được vào clipboard — ứng dụng khác đang giữ nó. Hãy thử lại.</value></data>
+
+  <!-- ===== Khung xem trước ===== -->
+  <data name="Preview_Zoom"><value>Phóng</value></data>
+  <data name="Preview_Checkerboard"><value>Nền ca-rô</value></data>
+  <data name="Preview_DarkBackground"><value>Nền tối</value></data>
+
+  <!-- ===== Trình chỉnh sửa ===== -->
+  <data name="Editor_General"><value>CHUNG</value></data>
+  <data name="Editor_PresetName"><value>Tên preset</value></data>
+  <data name="Editor_Shape"><value>Hình dạng</value></data>
+  <data name="Editor_Color"><value>Màu</value></data>
+  <data name="Editor_Opacity"><value>Độ mờ</value></data>
+  <data name="Editor_Scale"><value>Tỉ lệ</value></data>
+  <data name="Editor_Rotation"><value>Xoay (độ)</value></data>
+  <data name="Editor_Lines"><value>NHÁNH</value></data>
+  <data name="Editor_ShowLines"><value>Hiện nhánh</value></data>
+  <data name="Editor_Length"><value>Độ dài</value></data>
+  <data name="Editor_Thickness"><value>Độ dày</value></data>
+  <data name="Editor_Gap"><value>Khoảng hở</value></data>
+  <data name="Editor_RoundedCaps"><value>Bo tròn đầu nhánh</value></data>
+  <data name="Editor_Top"><value>Trên</value></data>
+  <data name="Editor_Bottom"><value>Dưới</value></data>
+  <data name="Editor_Left"><value>Trái</value></data>
+  <data name="Editor_Right"><value>Phải</value></data>
+  <data name="Editor_CenterDot"><value>CHẤM GIỮA</value></data>
+  <data name="Editor_ShowCenterDot"><value>Hiện chấm giữa</value></data>
+  <data name="Editor_Size"><value>Kích thước</value></data>
+  <data name="Editor_UseProfileColor"><value>Dùng màu chung</value></data>
+  <data name="Editor_Ring"><value>VÒNG / KHUNG</value></data>
+  <data name="Editor_ShowRing"><value>Hiện vòng</value></data>
+  <data name="Editor_Radius"><value>Bán kính</value></data>
+  <data name="Editor_Filled"><value>Tô đặc</value></data>
+  <data name="Editor_Outline"><value>VIỀN</value></data>
+  <data name="Editor_ShowOutline"><value>Hiện viền</value></data>
+  <data name="Editor_Image"><value>ẢNH TUỲ CHỈNH</value></data>
+  <data name="Editor_NoImage"><value>(chưa chọn ảnh)</value></data>
+  <data name="Editor_BrowseImage"><value>Chọn ảnh…</value></data>
+  <data name="Editor_ClearImage"><value>Bỏ ảnh</value></data>
+  <data name="Editor_ImageScale"><value>Tỉ lệ ảnh</value></data>
+  <data name="Editor_ImageOutlineNote"><value>Ảnh bitmap không vẽ được viền — dùng ảnh PNG đã có sẵn viền.</value></data>
+  <data name="Editor_ImageFilter"><value>Ảnh (*.png;*.jpg;*.jpeg;*.bmp;*.gif)|*.png;*.jpg;*.jpeg;*.bmp;*.gif|Tất cả file (*.*)|*.*</value></data>
+  <data name="Editor_Position"><value>VỊ TRÍ</value></data>
+  <data name="Editor_OffsetX"><value>Lệch ngang</value></data>
+  <data name="Editor_OffsetY"><value>Lệch dọc</value></data>
+  <data name="Editor_ResetOffset"><value>Về giữa</value></data>
+  <data name="Editor_ResetRotation"><value>Hết xoay</value></data>
+
+  <!-- ===== Hình dạng ===== -->
+  <data name="Shape_Cross"><value>Chữ thập (4 nhánh)</value></data>
+  <data name="Shape_TShape"><value>Chữ T (bỏ nhánh trên)</value></data>
+  <data name="Shape_XShape"><value>Chữ X (4 nhánh chéo)</value></data>
+  <data name="Shape_Dot"><value>Chấm giữa</value></data>
+  <data name="Shape_Circle"><value>Vòng tròn</value></data>
+  <data name="Shape_CircleDot"><value>Vòng tròn + chấm</value></data>
+  <data name="Shape_Square"><value>Khung vuông</value></data>
+  <data name="Shape_CustomImage"><value>Ảnh tuỳ chỉnh</value></data>
+
+  <!-- ===== Tab Chung ===== -->
+  <data name="General_Monitor"><value>MÀN HÌNH</value></data>
+  <data name="General_RefreshMonitors"><value>Quét lại màn hình</value></data>
+  <data name="General_App"><value>ỨNG DỤNG</value></data>
+  <data name="General_Language"><value>Ngôn ngữ</value></data>
+  <data name="General_StartWithWindows"><value>Khởi động cùng Windows</value></data>
+  <data name="General_StartMinimized"><value>Khởi động thu nhỏ vào khay hệ thống</value></data>
+  <data name="General_WarnExclusive"><value>Cảnh báo khi game chạy Exclusive Fullscreen</value></data>
+  <data name="General_StartupEnabled"><value>Đã thêm vào danh sách khởi động của Windows.</value></data>
+  <data name="General_StartupDisabled"><value>Đã gỡ khỏi danh sách khởi động của Windows.</value></data>
+  <data name="General_StartupFailed"><value>Không ghi được vào registry — có thể bị chính sách hệ thống chặn.</value></data>
+  <data name="MonitorMode_Follow"><value>Bám theo cửa sổ đang active</value></data>
+  <data name="MonitorMode_Primary"><value>Luôn dùng màn hình chính</value></data>
+  <data name="MonitorMode_Specific"><value>Ghim vào một màn hình cụ thể</value></data>
+  <data name="Language_Auto"><value>Theo hệ thống</value></data>
+
+  <!-- ===== Tab Phím tắt ===== -->
+  <data name="Hotkeys_Intro"><value>Bấm vào ô rồi gõ tổ hợp phím muốn gán. Nhấn Esc để xoá gán. Sau khi sửa xong phải bấm "Áp dụng" để đăng ký với Windows.</value></data>
+  <data name="Hotkeys_Enabled"><value>Bật</value></data>
+  <data name="Hotkeys_Apply"><value>Áp dụng</value></data>
+  <data name="Hotkeys_Reset"><value>Về mặc định</value></data>
+  <data name="Hotkeys_AllOk"><value>Đã đăng ký {0} phím tắt.</value></data>
+  <data name="Hotkeys_SomeFailed"><value>{0} phím tắt hoạt động. Thất bại — {1}</value></data>
+  <data name="Hotkeys_Unassigned"><value>(chưa gán)</value></data>
+  <data name="Hotkeys_Prompt"><value>Gõ tổ hợp phím…</value></data>
+  <data name="Hotkeys_ConflictTitle"><value>Phím tắt bị trùng</value></data>
+  <data name="Hotkeys_ConflictBody"><value>Không đăng ký được: {0}. Đổi tổ hợp khác trong tab Phím tắt.</value></data>
+  <data name="Hotkeys_ErrTaken"><value>Tổ hợp phím đã bị ứng dụng khác chiếm.</value></data>
+  <data name="Hotkeys_ErrRejected"><value>Windows từ chối đăng ký (mã lỗi {0}).</value></data>
+  <data name="Hotkeys_ErrUnmappable"><value>Phím không quy đổi được sang mã phím của Windows.</value></data>
+  <data name="Hotkeys_ErrRawInput"><value>Không đăng ký được Raw Input nên nút chuột không dùng làm phím tắt được.</value></data>
+  <data name="Action_ToggleOverlay"><value>Bật/tắt overlay</value></data>
+  <data name="Action_NextPreset"><value>Preset kế tiếp</value></data>
+  <data name="Action_PreviousPreset"><value>Preset trước đó</value></data>
+  <data name="Action_ShowSettings"><value>Mở cửa sổ Settings</value></data>
+  <data name="Action_Exit"><value>Thoát ứng dụng</value></data>
+
+  <!-- ===== Tab Game ===== -->
+  <data name="Games_Header"><value>PROFILE GAME</value></data>
+  <data name="Games_AddFromCurrent"><value>Thêm từ cửa sổ vừa dùng</value></data>
+  <data name="Games_AddMock"><value>Thêm bia thử: notepad.exe</value></data>
+  <data name="Games_AddMockTip"><value>Tạo rule trỏ tới Notepad để thử tính năng tự đổi preset mà không cần mở game nặng.</value></data>
+  <data name="Games_AddEmpty"><value>Thêm trống</value></data>
+  <data name="Games_Remove"><value>Xoá</value></data>
+  <data name="Games_NewName"><value>Game mới</value></data>
+  <data name="Games_MockName"><value>MOCK — Notepad</value></data>
+  <data name="Games_AutoSwitch"><value>Tự đổi preset theo game đang chạy</value></data>
+  <data name="Games_OnlyMatched"><value>Chỉ hiện overlay khi khớp một profile game</value></data>
+  <data name="Games_Diagnostics"><value>ĐANG NHẬN DIỆN — cập nhật theo thời gian thực</value></data>
+  <data name="Games_Process"><value>Tiến trình</value></data>
+  <data name="Games_WindowTitle"><value>Tiêu đề cửa sổ</value></data>
+  <data name="Games_DisplayMode"><value>Chế độ hiển thị</value></data>
+  <data name="Games_MatchedProfile"><value>Khớp profile</value></data>
+  <data name="Games_AdminWarning"><value>Cửa sổ này chạy quyền Administrator nên Windows không cho đọc tên tiến trình. So khớp theo TIÊU ĐỀ CỬA SỔ vẫn hoạt động bình thường.</value></data>
+  <data name="Games_Details"><value>CHI TIẾT</value></data>
+  <data name="Games_DisplayName"><value>Tên hiển thị</value></data>
+  <data name="Games_MatchMode"><value>Cách so khớp</value></data>
+  <data name="Games_Pattern"><value>Giá trị so khớp</value></data>
+  <data name="Games_Behavior"><value>Khi khớp thì</value></data>
+  <data name="Games_Preset"><value>Preset áp dụng</value></data>
+  <data name="Games_EnableProfile"><value>Bật profile này</value></data>
+  <data name="Games_None"><value>—</value></data>
+  <data name="Games_Blocked"><value>(bị chặn — tiến trình chạy quyền admin)</value></data>
+  <data name="Games_NoMatch"><value>(không khớp profile nào)</value></data>
+  <data name="Games_HintNoWindow"><value>Chưa nhận diện được cửa sổ nào. Hãy bật game lên, rồi Alt-Tab về đây và thử lại.</value></data>
+  <data name="Games_HintNoProcessName"><value>Không lấy được tên tiến trình của cửa sổ đó.</value></data>
+  <data name="Games_HintExists"><value>'{0}' đã có sẵn trong danh sách.</value></data>
+  <data name="Games_HintAdded"><value>Đã thêm '{0}'.</value></data>
+  <data name="Games_HintMockExists"><value>'{0}' đã có sẵn. Mở Notepad lên để xem preset tự đổi.</value></data>
+  <data name="Games_HintMockAdded"><value>Đã thêm '{0}'. Mở Notepad — preset phải đổi sang '{1}'; chuyển sang cửa sổ khác thì phải trả về preset cũ.</value></data>
+  <data name="Games_HintAdminNoTitle"><value>Cửa sổ đó chạy quyền admin và cũng không có tiêu đề — không tạo rule được. Hãy chạy ứng dụng với quyền admin để đọc được tên tiến trình.</value></data>
+  <data name="Games_HintAdminTitle"><value>Cửa sổ đó chạy quyền admin nên không đọc được tên tiến trình. Đã tạo rule so khớp theo TIÊU ĐỀ CỬA SỔ — cách này vẫn hoạt động ở quyền thường. Rút gọn chuỗi tiêu đề nếu game hay đổi nó.</value></data>
+  <data name="MatchMode_ProcessName"><value>Tên tiến trình (vd cs2.exe)</value></data>
+  <data name="MatchMode_WindowTitle"><value>Tiêu đề cửa sổ có chứa</value></data>
+  <data name="MatchMode_ExecutablePath"><value>Đường dẫn đầy đủ tới file exe</value></data>
+  <data name="Behavior_ShowPreset"><value>Hiện preset đã gán</value></data>
+  <data name="Behavior_HideOverlay"><value>Ẩn overlay</value></data>
+  <data name="Display_Windowed"><value>Cửa sổ thường</value></data>
+  <data name="Display_Borderless"><value>Borderless fullscreen</value></data>
+  <data name="Display_LikelyExclusive"><value>Nhiều khả năng Exclusive Fullscreen</value></data>
+
+  <!-- ===== Hộp thoại import mã ===== -->
+  <data name="Import_Title"><value>Import mã crosshair</value></data>
+  <data name="Import_Intro"><value>Dán mã crosshair từ CS2 (CSGO-xxxxx-xxxxx-…) hoặc Valorant (0;P;c;5;…). Ứng dụng tự nhận diện định dạng.</value></data>
+  <data name="Import_Result"><value>KẾT QUẢ ĐỌC ĐƯỢC</value></data>
+  <data name="Import_Accuracy"><value>Cấu trúc (hình dạng, màu, chấm giữa, viền) được chuyển đúng. Kích thước chỉ là xấp xỉ vì game dùng hệ đơn vị khác — chỉnh lại thanh Tỉ lệ sau khi import nếu cần.</value></data>
+  <data name="Import_Create"><value>Tạo preset</value></data>
+  <data name="Import_Cancel"><value>Huỷ</value></data>
+  <data name="Import_Detected"><value>✓ Nhận diện: {0}</value></data>
+  <data name="Import_FailedCs2"><value>Nhận diện là mã CS2 nhưng không đọc được: {0}</value></data>
+  <data name="Import_FailedValorant"><value>Nhận diện là mã Valorant nhưng không đọc được: {0}</value></data>
+  <data name="Import_NameCs2"><value>Import từ CS2</value></data>
+  <data name="Import_NameValorant"><value>Import từ Valorant</value></data>
+  <data name="Import_FieldShape"><value>Hình dạng</value></data>
+  <data name="Import_FieldColor"><value>Màu</value></data>
+  <data name="Import_FieldLength"><value>Độ dài nhánh</value></data>
+  <data name="Import_FieldThickness"><value>Độ dày nhánh</value></data>
+  <data name="Import_FieldGap"><value>Khoảng hở</value></data>
+  <data name="Import_FieldDot"><value>Chấm giữa</value></data>
+  <data name="Import_FieldOutline"><value>Viền</value></data>
+  <data name="Import_FieldOpacity"><value>Độ mờ</value></data>
+  <data name="Import_On"><value>bật, cỡ {0}</value></data>
+  <data name="Import_OutlineOn"><value>bật, dày {0}</value></data>
+  <data name="Import_Off"><value>tắt</value></data>
+  <data name="Import_ErrEmpty"><value>Mã rỗng.</value></data>
+  <data name="Import_ErrNoValidChars"><value>Mã không chứa ký tự hợp lệ nào.</value></data>
+  <data name="Import_ErrBadChar"><value>Ký tự '{0}' không thuộc bảng mã của share code.</value></data>
+  <data name="Import_ErrTooLong"><value>Mã quá dài so với định dạng share code.</value></data>
+  <data name="Import_ErrBadFormat"><value>Mã không đúng định dạng của Valorant.</value></data>
+  <data name="Import_ErrNothingRead"><value>Không đọc được thiết lập nào từ mã.</value></data>
+
+  <!-- ===== Khay hệ thống và thông báo ===== -->
+  <data name="Tray_Open"><value>Mở Settings</value></data>
+  <data name="Tray_Toggle"><value>Bật overlay</value></data>
+  <data name="Tray_Exit"><value>Thoát</value></data>
+  <data name="Tray_TooltipOff"><value>{0} — đang tắt</value></data>
+  <data name="Tray_RunningInTray"><value>Đang chạy trong khay hệ thống.</value></data>
+  <data name="Fullscreen_WarnTitle"><value>Overlay có thể không hiển thị</value></data>
+  <data name="Fullscreen_WarnBody"><value>{0} nhiều khả năng đang chạy Exclusive Fullscreen. Hãy đổi game sang chế độ Borderless Windowed để thấy crosshair.</value></data>
+  <data name="Error_StartupFailed"><value>Khởi động thất bại</value></data>
+  <data name="Error_UiThread"><value>Lỗi trên luồng giao diện</value></data>
+  <data name="Error_Background"><value>Lỗi trong tác vụ nền</value></data>
+  <data name="Error_Fatal"><value>Lỗi nghiêm trọng</value></data>
+  <data name="Error_LogHint"><value>Nhật ký chi tiết: {0}</value></data>
+
+  <!-- ===== Hộp thoại ===== -->
+  <data name="Dialog_Ok"><value>OK</value></data>
+  <data name="Dialog_Yes"><value>Có</value></data>
+  <data name="Dialog_No"><value>Không</value></data>
+  <data name="Dialog_Cancel"><value>Huỷ</value></data>
+
+  <!-- ===== Cập nhật ===== -->
+  <data name="Update_Title"><value>Đã có phiên bản mới</value></data>
+  <data name="Update_Body"><value>Phiên bản {0} đã phát hành, bạn đang dùng {1}.
+
+Tải về và cập nhật ngay bây giờ? Ứng dụng sẽ tự khởi động lại.</value></data>
+  <data name="Update_Primary"><value>Cập nhật ngay</value></data>
+  <data name="Update_Later"><value>Để sau</value></data>
+  <data name="Update_FailedTitle"><value>Cập nhật thất bại</value></data>
+  <data name="Update_FailedBody"><value>Không tải được bản cập nhật: {0}
+
+Bạn có thể tải thủ công từ trang phát hành.</value></data>
+  <data name="Update_CheckNow"><value>Kiểm tra cập nhật</value></data>
+  <data name="Update_UpToDate"><value>Bạn đang dùng phiên bản mới nhất ({0}).</value></data>
+  <data name="Update_CheckFailed"><value>Không kiểm tra được cập nhật — hãy thử lại sau.</value></data>
+  <data name="Update_AutoCheck"><value>Tự kiểm tra cập nhật khi khởi động</value></data>
+
+  <!-- ===== Danh sách tiến trình đang chạy ===== -->
+  <data name="Games_RunningHeader"><value>ỨNG DỤNG ĐANG CHẠY</value></data>
+  <data name="Games_RunningHint"><value>Chỉ liệt kê tiến trình có cửa sổ giao diện. Chọn một mục rồi bấm "Dùng mục này".</value></data>
+  <data name="Games_RefreshRunning"><value>Quét lại</value></data>
+  <data name="Games_UseSelected"><value>Dùng mục này</value></data>
+  <data name="Games_NewProfile"><value>PROFILE MỚI</value></data>
+  <data name="Games_Save"><value>Lưu profile</value></data>
+  <data name="Games_CancelNew"><value>Huỷ</value></data>
+  <data name="Games_NeedPattern"><value>Hãy nhập giá trị so khớp, hoặc chọn một ứng dụng đang chạy.</value></data>
+</root>

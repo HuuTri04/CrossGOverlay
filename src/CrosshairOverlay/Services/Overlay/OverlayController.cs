@@ -1,0 +1,305 @@
+using System.ComponentModel;
+using System.Runtime.InteropServices;
+using System.Windows;
+using System.Windows.Threading;
+using CrosshairOverlay.Core.Abstractions;
+using CrosshairOverlay.Core.Models;
+using CrosshairOverlay.Interop;
+using Microsoft.Extensions.Logging;
+
+namespace CrosshairOverlay.Services.Overlay;
+
+/// <inheritdoc cref="IOverlayController"/>
+public sealed class OverlayController : IOverlayController
+{
+    /// <summary>
+    /// Chu kỳ khẳng định lại vị trí topmost. Game vào fullscreen hoặc app khác bật topmost
+    /// có thể đẩy overlay xuống dưới; đây là cách sửa rẻ và thụ động — không đụng gì tới game.
+    /// </summary>
+    private static readonly TimeSpan TopmostReassertInterval = TimeSpan.FromSeconds(1.5);
+
+    private readonly ICrosshairRenderer _renderer;
+    private readonly IMonitorService _monitors;
+    private readonly ILogger<OverlayController> _logger;
+    private readonly Dispatcher _dispatcher;
+
+    private OverlayWindow? _window;
+    private DispatcherTimer? _topmostTimer;
+    private DispatcherOperation? _pendingRebuild;
+
+    private CrosshairProfile? _profile;
+    private MonitorInfo? _monitor;
+    private MonitorSelectionMode _selectionMode = MonitorSelectionMode.FollowForegroundWindow;
+    private string? _targetDeviceName;
+
+    private bool _visible;
+    private bool _placing;
+    private bool _disposed;
+
+    public OverlayController(
+        ICrosshairRenderer renderer,
+        IMonitorService monitors,
+        ILogger<OverlayController> logger)
+    {
+        _renderer = renderer;
+        _monitors = monitors;
+        _logger = logger;
+        _dispatcher = Dispatcher.CurrentDispatcher;
+    }
+
+    public bool IsVisible => _visible;
+
+    public CrosshairProfile? CurrentProfile => _profile;
+
+    public MonitorInfo? CurrentMonitor => _monitor;
+
+    public event EventHandler<OverlayVisibilityChangedEventArgs>? VisibilityChanged;
+
+    public void Initialize()
+    {
+        ThrowIfDisposed();
+        if (_window is not null) return;
+
+        _window = new OverlayWindow();
+        _window.EnsureHandle();          // áp extended styles TRƯỚC lần Show đầu tiên
+        _window.DpiChanged += OnWindowDpiChanged;
+
+        _monitors.DisplayConfigurationChanged += OnDisplayConfigurationChanged;
+
+        _topmostTimer = new DispatcherTimer(DispatcherPriority.Background, _dispatcher)
+        {
+            Interval = TopmostReassertInterval,
+        };
+        _topmostTimer.Tick += OnTopmostTimerTick;
+
+        _logger.LogInformation("Cửa sổ overlay đã khởi tạo, HWND={Handle:X}.", _window.Handle);
+    }
+
+    public void SetProfile(CrosshairProfile profile)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+        ThrowIfDisposed();
+
+        if (ReferenceEquals(_profile, profile)) return;
+
+        if (_profile is not null) HookProfile(_profile, subscribe: false);
+        _profile = profile;
+        HookProfile(_profile, subscribe: true);
+
+        _logger.LogDebug("Overlay đổi sang preset '{Name}' ({Id}).", profile.Name, profile.Id);
+        Invalidate();
+    }
+
+    public void SetVisible(bool visible)
+    {
+        ThrowIfDisposed();
+        if (_window is null) Initialize();
+        if (_visible == visible) return;
+
+        _visible = visible;
+
+        if (visible)
+        {
+            // ShowActivated=false + WS_EX_NOACTIVATE ⇒ Show() không kéo focus khỏi game.
+            _window!.Show();
+            Invalidate();
+            _topmostTimer!.Start();
+        }
+        else
+        {
+            _topmostTimer!.Stop();
+            _window!.Hide();
+        }
+
+        _logger.LogDebug("Overlay {State}.", visible ? "hiện" : "ẩn");
+        VisibilityChanged?.Invoke(this, new OverlayVisibilityChangedEventArgs(visible));
+    }
+
+    public void Toggle() => SetVisible(!_visible);
+
+    public void MoveToMonitor(MonitorInfo monitor)
+    {
+        ThrowIfDisposed();
+        _monitor = monitor;
+        _selectionMode = MonitorSelectionMode.Specific;
+        _targetDeviceName = monitor.DeviceName;
+        Invalidate();
+    }
+
+    public void SetMonitorSelection(MonitorSelectionMode mode, string? targetDeviceName)
+    {
+        ThrowIfDisposed();
+        _selectionMode = mode;
+        _targetDeviceName = targetDeviceName;
+        Invalidate();
+    }
+
+    public void Invalidate()
+    {
+        if (_disposed || _window is null || _profile is null) return;
+
+        // Gộp nhiều thay đổi trong cùng một lượt (vd kéo slider bắn liên tiếp) thành một lần
+        // dựng lại duy nhất ở ưu tiên Render.
+        if (_pendingRebuild is { Status: DispatcherOperationStatus.Pending }) return;
+
+        _pendingRebuild = _dispatcher.BeginInvoke(DispatcherPriority.Render, new Action(Rebuild));
+    }
+
+    // ------------------------------------------------------------------ nội bộ
+
+    private void Rebuild()
+    {
+        if (_disposed || _window is null || _profile is null) return;
+
+        try
+        {
+            var monitor = ResolveMonitor();
+            _monitor = monitor;
+
+            var options = new CrosshairRenderOptions(
+                DpiScale: monitor.DpiScaleX,
+                // Snapping làm méo hình đã xoay, nên chỉ bật khi crosshair không xoay.
+                SnapToPixels: Math.Abs(_profile.Rotation) < 0.01,
+                MaxExtent: Math.Max(
+                    monitor.Bounds.Width / monitor.DpiScaleX,
+                    monitor.Bounds.Height / monitor.DpiScaleY));
+
+            var contentSize = _renderer.Measure(_profile, options);
+            var drawing = _renderer.Build(_profile, options);
+
+            _window.Host.SetAliasing(_renderer.PrefersAliasedEdges(_profile));
+            _window.Host.SetDrawing(drawing);
+            ApplyPlacement(monitor, contentSize);
+        }
+        catch (Exception ex)
+        {
+            // Preset lỗi không được phép làm sập app — overlay chỉ đơn giản giữ hình cũ.
+            _logger.LogError(ex, "Dựng lại overlay thất bại cho preset '{Name}'.", _profile.Name);
+        }
+    }
+
+    private MonitorInfo ResolveMonitor()
+    {
+        var foreground = NativeMethods.GetForegroundWindow();
+
+        // Chính overlay không bao giờ là foreground (WS_EX_NOACTIVATE), nhưng cửa sổ Settings
+        // thì có thể — và đó là hành vi mong muốn khi người dùng đang chỉnh preset.
+        return _monitors.ResolveTargetMonitor(_selectionMode, _targetDeviceName, foreground);
+    }
+
+    /// <summary>
+    /// Đặt cửa sổ bằng PHYSICAL pixel qua <c>SetWindowPos</c>.
+    /// </summary>
+    /// <remarks>
+    /// Cố tình không dùng <c>Window.Left/Top/Width/Height</c>: WPF diễn giải các giá trị đó
+    /// theo DPI của màn hình chính, nên trên setup multi-monitor có DPI khác nhau overlay sẽ
+    /// bị đặt lệch. Toạ độ Win32 thì luôn là physical pixel trong virtual desktop.
+    /// </remarks>
+    private void ApplyPlacement(MonitorInfo monitor, Size contentSizeDip)
+    {
+        if (_window is null || _placing) return;
+
+        var hwnd = _window.Handle;
+        if (hwnd == 0 || !NativeMethods.IsWindow(hwnd)) return;
+
+        // Math.Round chứ không phải Ceiling: renderer đã trả về kích thước ứng với một số
+        // CHẴN device pixel, làm tròn lên sẽ cộng thừa 1 px do sai số dấu phẩy động và đẩy
+        // tâm crosshair lệch nửa pixel.
+        var width = (int)Math.Round(contentSizeDip.Width * monitor.DpiScaleX);
+        var height = (int)Math.Round(contentSizeDip.Height * monitor.DpiScaleY);
+        if (width <= 0 || height <= 0) return;
+
+        var center = monitor.PhysicalCenter;
+        var offsetX = (_profile?.OffsetX ?? 0d) * monitor.DpiScaleX;
+        var offsetY = (_profile?.OffsetY ?? 0d) * monitor.DpiScaleY;
+
+        var x = (int)Math.Round(center.X - (width / 2d) + offsetX);
+        var y = (int)Math.Round(center.Y - (height / 2d) + offsetY);
+
+        _placing = true;
+        try
+        {
+            var flags = Win32Constants.SWP_NOACTIVATE | Win32Constants.SWP_NOOWNERZORDER;
+            if (!NativeMethods.SetWindowPos(hwnd, Win32Constants.HWND_TOPMOST, x, y, width, height, flags))
+            {
+                _logger.LogWarning(
+                    "SetWindowPos thất bại (Win32 error {Error}).", Marshal.GetLastWin32Error());
+            }
+        }
+        finally
+        {
+            _placing = false;
+        }
+    }
+
+    private void OnTopmostTimerTick(object? sender, EventArgs e)
+    {
+        if (_window is null || !_visible) return;
+
+        var hwnd = _window.Handle;
+        if (hwnd == 0 || !NativeMethods.IsWindow(hwnd)) return;
+
+        NativeMethods.SetWindowPos(
+            hwnd,
+            Win32Constants.HWND_TOPMOST,
+            0, 0, 0, 0,
+            Win32Constants.SWP_NOMOVE | Win32Constants.SWP_NOSIZE
+                | Win32Constants.SWP_NOACTIVATE | Win32Constants.SWP_NOOWNERZORDER);
+    }
+
+    private void OnDisplayConfigurationChanged(object? sender, EventArgs e)
+    {
+        _logger.LogDebug("Cấu hình màn hình đổi, canh lại overlay.");
+        Invalidate();
+    }
+
+    private void OnWindowDpiChanged(object sender, DpiChangedEventArgs e)
+    {
+        // Cửa sổ vừa sang màn hình có DPI khác. Bỏ qua rect gợi ý của Windows và tự canh lại
+        // theo tâm màn hình đích — _placing chặn vòng lặp đệ quy.
+        if (_placing) return;
+
+        _logger.LogDebug(
+            "DPI đổi {Old} → {New}, canh lại overlay.",
+            e.OldDpi.DpiScaleX, e.NewDpi.DpiScaleX);
+
+        // Không cần làm mới cache màn hình: DPI của từng màn hình không đổi, chỉ có việc
+        // cửa sổ chuyển sang màn hình khác. Cache chỉ bị xoá khi DisplaySettingsChanged bắn.
+        Invalidate();
+    }
+
+    private void HookProfile(CrosshairProfile profile, bool subscribe) =>
+        ProfileNotifications.Hook(profile, OnProfilePropertyChanged, subscribe);
+
+    private void OnProfilePropertyChanged(object? sender, PropertyChangedEventArgs e) => Invalidate();
+
+    private void ThrowIfDisposed() => ObjectDisposedException.ThrowIf(_disposed, this);
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        _monitors.DisplayConfigurationChanged -= OnDisplayConfigurationChanged;
+
+        if (_topmostTimer is not null)
+        {
+            _topmostTimer.Stop();
+            _topmostTimer.Tick -= OnTopmostTimerTick;
+            _topmostTimer = null;
+        }
+
+        if (_profile is not null)
+        {
+            HookProfile(_profile, subscribe: false);
+            _profile = null;
+        }
+
+        if (_window is not null)
+        {
+            _window.DpiChanged -= OnWindowDpiChanged;
+            _window.Close();
+            _window = null;
+        }
+    }
+}

@@ -1,0 +1,32 @@
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CrosshairOverlay", "src\CrosshairOverlay\CrosshairOverlay.csproj", "{7F2A9C41-9D2E-4C0B-9D6A-1B2C3D4E5F60}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{A4AA343E-24E7-4368-AE31-A0C3ADDE4787}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrosshairOverlay.Tests", "tests\CrosshairOverlay.Tests\CrosshairOverlay.Tests.csproj", "{6422FF55-CE17-4FFD-9C25-CB0F2B124F95}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7F2A9C41-9D2E-4C0B-9D6A-1B2C3D4E5F60}.Debug|x64.ActiveCfg = Debug|x64
+		{7F2A9C41-9D2E-4C0B-9D6A-1B2C3D4E5F60}.Debug|x64.Build.0 = Debug|x64
+		{7F2A9C41-9D2E-4C0B-9D6A-1B2C3D4E5F60}.Release|x64.ActiveCfg = Release|x64
+		{7F2A9C41-9D2E-4C0B-9D6A-1B2C3D4E5F60}.Release|x64.Build.0 = Release|x64
+		{6422FF55-CE17-4FFD-9C25-CB0F2B124F95}.Debug|x64.ActiveCfg = Debug|x64
+		{6422FF55-CE17-4FFD-9C25-CB0F2B124F95}.Debug|x64.Build.0 = Debug|x64
+		{6422FF55-CE17-4FFD-9C25-CB0F2B124F95}.Release|x64.ActiveCfg = Release|x64
+		{6422FF55-CE17-4FFD-9C25-CB0F2B124F95}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{6422FF55-CE17-4FFD-9C25-CB0F2B124F95} = {A4AA343E-24E7-4368-AE31-A0C3ADDE4787}
+	EndGlobalSection
+EndGlobal

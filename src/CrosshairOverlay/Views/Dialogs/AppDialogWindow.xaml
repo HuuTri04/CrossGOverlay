@@ -1,0 +1,54 @@
+<Window x:Class="CrosshairOverlay.Views.Dialogs.AppDialogWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:core="clr-namespace:CrosshairOverlay.Core"
+        Title="{x:Static core:AppInfo.DisplayName}"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ShowInTaskbar="False"
+        ResizeMode="NoResize"
+        WindowStartupLocation="Manual"
+        KeyDown="OnKeyDown">
+
+    <!-- Lớp phủ làm tối nền phía sau; cửa sổ này được đặt trùng khít lên cửa sổ chủ. -->
+    <Grid Background="{StaticResource Backdrop}">
+
+        <Border MinWidth="400" MaxWidth="560"
+                VerticalAlignment="Center" HorizontalAlignment="Center"
+                Background="{StaticResource CardBg}"
+                BorderBrush="{StaticResource BorderBrushSoft}"
+                BorderThickness="1"
+                CornerRadius="{StaticResource RadiusCard}">
+            <Border.Effect>
+                <!--
+                    Ngoại lệ có chủ ý với quy tắc "không dùng Effect": quy tắc đó áp cho cửa sổ
+                    overlay vẽ liên tục trên game. Đây là hộp thoại nhỏ, tĩnh, thỉnh thoảng mới
+                    hiện — đổ bóng ở đây không ảnh hưởng gì tới FPS.
+                -->
+                <DropShadowEffect BlurRadius="30" ShadowDepth="8" Direction="270"
+                                  Opacity="0.5" Color="#FF000000"/>
+            </Border.Effect>
+
+            <StackPanel>
+                <Border x:Name="AccentStripe" Height="4" CornerRadius="6,6,0,0"
+                        Background="{StaticResource AccentBright}"/>
+
+                <StackPanel Margin="26,22,26,4">
+                    <TextBlock x:Name="TitleText" Style="{StaticResource DialogTitle}" TextWrapping="Wrap"/>
+                    <TextBlock x:Name="MessageText" Margin="0,12,0,18" TextWrapping="Wrap"
+                               Foreground="{StaticResource TextDim}" FontSize="13" LineHeight="21"/>
+                </StackPanel>
+
+                <Border Background="{StaticResource PanelBg}" CornerRadius="0,0,6,6" Padding="22,16">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button x:Name="SecondaryButton" MinWidth="100" Margin="0,0,10,0"
+                                Visibility="Collapsed" Click="OnSecondary"/>
+                        <Button x:Name="PrimaryButton" Style="{StaticResource AccentButton}"
+                                MinWidth="112" Click="OnPrimary" IsDefault="True"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

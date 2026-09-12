@@ -1,0 +1,225 @@
+using CrosshairOverlay.Core.Abstractions;
+using CrosshairOverlay.Core.Models;
+using Microsoft.Extensions.Logging;
+
+namespace CrosshairOverlay.Services.Process;
+
+/// <inheritdoc cref="IProfileAutoSwitcher"/>
+/// <remarks>
+/// Nơi DUY NHẤT ghép watcher + matcher + thư viện preset + overlay. Các thành phần kia đều
+/// không biết gì về nhau.
+/// </remarks>
+public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
+{
+    private readonly IForegroundWindowWatcher _watcher;
+    private readonly IGameProfileMatcher _matcher;
+    private readonly IPresetLibrary _library;
+    private readonly IOverlayController _overlay;
+    private readonly IAppSettingsService _settings;
+    private readonly ILogger<ProfileAutoSwitcher> _logger;
+
+    /// <summary>
+    /// Preset người dùng chọn tay, để trả về khi rời khỏi game. Nếu không nhớ, thoát game xong
+    /// sẽ mắc kẹt ở preset của game đó.
+    /// </summary>
+    private Guid _presetBeforeMatch;
+
+    /// <summary>
+    /// PID của tiến trình đang khớp, để phân biệt "game vẫn chạy, người dùng chỉ Alt-Tab sang
+    /// cửa sổ Settings" với "game đã thoát hẳn".
+    /// </summary>
+    private int _matchedProcessId;
+
+    /// <summary>Đã cảnh báo Exclusive Fullscreen cho tiến trình nào rồi — mỗi game chỉ báo một lần.</summary>
+    private readonly HashSet<string> _warnedProcesses = new(StringComparer.OrdinalIgnoreCase);
+
+    private bool _started;
+    private bool _disposed;
+
+    public ProfileAutoSwitcher(
+        IForegroundWindowWatcher watcher,
+        IGameProfileMatcher matcher,
+        IPresetLibrary library,
+        IOverlayController overlay,
+        IAppSettingsService settings,
+        ILogger<ProfileAutoSwitcher> logger)
+    {
+        _watcher = watcher;
+        _matcher = matcher;
+        _library = library;
+        _overlay = overlay;
+        _settings = settings;
+        _logger = logger;
+    }
+
+    public bool IsEnabled
+    {
+        get => _settings.Current.AutoSwitchByGameProfile;
+        set
+        {
+            _settings.Current.AutoSwitchByGameProfile = value;
+            _settings.RequestSave();
+
+            if (!value) RestoreManualPreset();
+        }
+    }
+
+    public GameProfile? ActiveGameProfile { get; private set; }
+
+    public event EventHandler<ForegroundWindowInfo>? ExclusiveFullscreenDetected;
+
+    public void Start()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (_started) return;
+
+        _started = true;
+        _watcher.ForegroundChanged += OnForegroundChanged;
+        _watcher.Start();
+    }
+
+    public void Stop()
+    {
+        if (!_started) return;
+
+        _started = false;
+        _watcher.ForegroundChanged -= OnForegroundChanged;
+        _watcher.Stop();
+    }
+
+    private void OnForegroundChanged(object? sender, ForegroundWindowChangedEventArgs e)
+    {
+        var window = e.Current;
+
+        // Cửa sổ của chính ứng dụng, thường là Settings. GIỮ NGUYÊN profile game đang áp dụng:
+        // người dùng cần thấy crosshair đúng như trong game khi đang chỉnh nó. Chỉ trả về preset
+        // thủ công nếu tiến trình game đã thoát hẳn — kiểm tra một lần tại đây, không polling.
+        if (window.IsOwnProcess)
+        {
+            if (ActiveGameProfile is not null && !IsMatchedProcessAlive()) ClearMatch();
+            return;
+        }
+
+        WarnIfExclusiveFullscreen(window);
+
+        if (!IsEnabled) return;
+
+        var match = _matcher.Match(window, _settings.Current.GameProfiles);
+
+        if (match is null)
+        {
+            ClearMatch();
+            return;
+        }
+
+        ActiveGameProfile = match;
+        _matchedProcessId = window.ProcessId;
+
+        // Ghi nhớ lựa chọn thủ công ngay trước lần khớp ĐẦU TIÊN.
+        if (_presetBeforeMatch == Guid.Empty && _library.Active is { } current)
+            _presetBeforeMatch = current.Id;
+
+        if (match.Behavior == GameProfileBehavior.HideOverlay)
+        {
+            _logger.LogDebug("Game profile '{Name}' yêu cầu ẩn overlay.", match.Name);
+            _overlay.SetVisible(false);
+            return;
+        }
+
+        var preset = _library.Presets.FirstOrDefault(p => p.Id == match.PresetId);
+        if (preset is null)
+        {
+            _logger.LogWarning(
+                "Game profile '{Name}' trỏ tới preset không còn tồn tại ({PresetId}).",
+                match.Name, match.PresetId);
+            return;
+        }
+
+        _logger.LogInformation(
+            "{Process} → áp preset '{Preset}' theo profile '{Profile}'.",
+            window.ProcessName, preset.Name, match.Name);
+
+        _library.SetActive(preset);
+        if (_settings.Current.OverlayEnabled) _overlay.SetVisible(true);
+    }
+
+    private void ClearMatch()
+    {
+        ActiveGameProfile = null;
+        _matchedProcessId = 0;
+        HandleNoMatch();
+    }
+
+    /// <summary>
+    /// Tiến trình đã khớp còn chạy hay không. Dùng <c>GetProcessById</c> chứ không phải
+    /// <c>OpenProcess</c>: game chạy quyền admin sẽ từ chối mở handle, và ta sẽ tưởng nhầm
+    /// là nó đã thoát.
+    /// </summary>
+    private bool IsMatchedProcessAlive()
+    {
+        if (_matchedProcessId == 0) return false;
+
+        try
+        {
+            using var process = global::System.Diagnostics.Process.GetProcessById(_matchedProcessId);
+            return !process.HasExited;
+        }
+        catch (ArgumentException)
+        {
+            // Không còn tiến trình nào mang PID đó.
+            return false;
+        }
+        catch (InvalidOperationException)
+        {
+            return false;
+        }
+    }
+
+    private void HandleNoMatch()
+    {
+        if (_settings.Current.ShowOnlyInMatchedGames)
+        {
+            _overlay.SetVisible(false);
+            return;
+        }
+
+        RestoreManualPreset();
+        if (_settings.Current.OverlayEnabled) _overlay.SetVisible(true);
+    }
+
+    private void RestoreManualPreset()
+    {
+        if (_presetBeforeMatch == Guid.Empty) return;
+
+        var preset = _library.Presets.FirstOrDefault(p => p.Id == _presetBeforeMatch);
+        _presetBeforeMatch = Guid.Empty;
+
+        if (preset is null) return;
+
+        _logger.LogDebug("Rời game, trả về preset '{Preset}'.", preset.Name);
+        _library.SetActive(preset);
+    }
+
+    private void WarnIfExclusiveFullscreen(ForegroundWindowInfo window)
+    {
+        if (!_settings.Current.WarnOnExclusiveFullscreen) return;
+        if (window.Fullscreen != FullscreenKind.LikelyExclusive) return;
+        if (string.IsNullOrEmpty(window.ProcessName)) return;
+
+        // Mỗi tiến trình chỉ cảnh báo một lần mỗi phiên chạy — nếu không, mỗi lần Alt-Tab
+        // về game lại bật một thông báo.
+        if (!_warnedProcesses.Add(window.ProcessName)) return;
+
+        _logger.LogInformation(
+            "Phát hiện {Process} nhiều khả năng đang chạy Exclusive Fullscreen.", window.ProcessName);
+
+        ExclusiveFullscreenDetected?.Invoke(this, window);
+    }
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        Stop();
+    }
+}
