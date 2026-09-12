@@ -7,5 +7,5 @@ build/
 artifacts/
 publish/
 TestResults/
+tests/
 *.log
-*.LOG.md
