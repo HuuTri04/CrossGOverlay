@@ -8,4 +8,4 @@ artifacts/
 publish/
 TestResults/
 *.log
-*.README.md
+*.LOG.md
