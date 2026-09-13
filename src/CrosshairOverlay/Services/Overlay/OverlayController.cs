@@ -1,9 +1,10 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Threading;
 using CrosshairOverlay.Core.Abstractions;
 using CrosshairOverlay.Core.Models;
+using CrosshairOverlay.Core.Threading;
 using CrosshairOverlay.Interop;
 using Microsoft.Extensions.Logging;
 
@@ -23,9 +24,26 @@ public sealed class OverlayController : IOverlayController
     private readonly ILogger<OverlayController> _logger;
     private readonly Dispatcher _dispatcher;
 
+    private readonly RenderThrottle _rebuildThrottle;
+
     private OverlayWindow? _window;
-    private DispatcherTimer? _topmostTimer;
-    private DispatcherOperation? _pendingRebuild;
+    /// <summary>
+    /// Timer của thread pool, không phải DispatcherTimer.
+    /// </summary>
+    /// <remarks>
+    /// Đo thực tế: DispatcherTimer 1,5 giây, dù mỗi nhịp không làm gì, vẫn chiếm phần lớn chi phí
+    /// CPU của overlay lúc rảnh — mỗi nhịp đánh thức luồng giao diện WPF và kéo theo một vòng xử
+    /// lý của nó. Kiểm tra thứ tự z chỉ là vài lời gọi Win32 đọc trạng thái, làm được từ luồng bất
+    /// kỳ; SetWindowPos lên cửa sổ của luồng khác cũng hợp lệ. Luồng giao diện giờ không bị đánh
+    /// thức trừ khi thật sự có cửa sổ đè lên overlay.
+    /// </remarks>
+    private Timer? _topmostTimer;
+
+    /// <summary>HWND của overlay, đọc từ thread pool — chỉ gán một lần lúc khởi tạo.</summary>
+    private nint _overlayHandle;
+
+    /// <summary>Đọc từ thread pool nên phải volatile.</summary>
+    private volatile bool _topmostActive;
 
     private CrosshairProfile? _profile;
     private MonitorInfo? _monitor;
@@ -45,6 +63,7 @@ public sealed class OverlayController : IOverlayController
         _monitors = monitors;
         _logger = logger;
         _dispatcher = Dispatcher.CurrentDispatcher;
+        _rebuildThrottle = new RenderThrottle(_dispatcher, Rebuild);
     }
 
     public bool IsVisible => _visible;
@@ -66,11 +85,8 @@ public sealed class OverlayController : IOverlayController
 
         _monitors.DisplayConfigurationChanged += OnDisplayConfigurationChanged;
 
-        _topmostTimer = new DispatcherTimer(DispatcherPriority.Background, _dispatcher)
-        {
-            Interval = TopmostReassertInterval,
-        };
-        _topmostTimer.Tick += OnTopmostTimerTick;
+        _overlayHandle = _window.Handle;
+        _topmostTimer = new Timer(OnTopmostTimerTick, null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
 
         _logger.LogInformation("Cửa sổ overlay đã khởi tạo, HWND={Handle:X}.", _window.Handle);
     }
@@ -103,12 +119,23 @@ public sealed class OverlayController : IOverlayController
             // ShowActivated=false + WS_EX_NOACTIVATE ⇒ Show() không kéo focus khỏi game.
             _window!.Show();
             Invalidate();
-            _topmostTimer!.Start();
+
+            // Bật overlay là hành động rời rạc, không phải cú kéo liên tục: bỏ qua bộ chặn
+            // nhịp để crosshair hiện ra đúng hình ngay, không chớp một khung hình trống.
+            _rebuildThrottle.Flush();
+
+            _topmostActive = true;
+            _topmostTimer!.Change(TopmostReassertInterval, TopmostReassertInterval);
         }
         else
         {
-            _topmostTimer!.Stop();
+            _topmostActive = false;
+            _topmostTimer!.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
             _window!.Hide();
+
+            // Bỏ hình đang hiện: nếu là GIF động, đồng hồ animation của nó sẽ chạy ngầm suốt thời
+            // gian overlay tắt. Hiện lại thì Invalidate ở nhánh trên dựng hình mới.
+            _window.Host.SetDrawing(null);
         }
 
         _logger.LogDebug("Overlay {State}.", visible ? "hiện" : "ẩn");
@@ -134,15 +161,20 @@ public sealed class OverlayController : IOverlayController
         Invalidate();
     }
 
+    /// <summary>
+    /// Báo rằng hình đã cũ và cần dựng lại.
+    /// </summary>
+    /// <remarks>
+    /// Dựng lại KHÔNG rẻ: đo hình, dựng lại toàn bộ Geometry rồi gọi <c>SetWindowPos</c>. Kéo
+    /// một thanh trượt có thể bắn ra cả nghìn yêu cầu mỗi giây, nên chúng đi qua bộ chặn theo
+    /// nhịp khung hình — xem <see cref="RenderThrottle"/> để biết vì sao xếp hàng ở
+    /// <see cref="DispatcherPriority.Render"/> không đủ.
+    /// </remarks>
     public void Invalidate()
     {
         if (_disposed || _window is null || _profile is null) return;
 
-        // Gộp nhiều thay đổi trong cùng một lượt (vd kéo slider bắn liên tiếp) thành một lần
-        // dựng lại duy nhất ở ưu tiên Render.
-        if (_pendingRebuild is { Status: DispatcherOperationStatus.Pending }) return;
-
-        _pendingRebuild = _dispatcher.BeginInvoke(DispatcherPriority.Render, new Action(Rebuild));
+        _rebuildThrottle.Request();
     }
 
     // ------------------------------------------------------------------ nội bộ
@@ -150,6 +182,10 @@ public sealed class OverlayController : IOverlayController
     private void Rebuild()
     {
         if (_disposed || _window is null || _profile is null) return;
+
+        // Đang ẩn: không ai nhìn thấy hình này, dựng ra chỉ tốn công (và với GIF là khởi động một
+        // đồng hồ animation vô ích). SetVisible(true) luôn dựng lại khi hiện.
+        if (!_visible) return;
 
         try
         {
@@ -210,8 +246,12 @@ public sealed class OverlayController : IOverlayController
         if (width <= 0 || height <= 0) return;
 
         var center = monitor.PhysicalCenter;
-        var offsetX = (_profile?.OffsetX ?? 0d) * monitor.DpiScaleX;
-        var offsetY = (_profile?.OffsetY ?? 0d) * monitor.DpiScaleY;
+        // Độ lệch áp bằng cách DỊCH CỬA SỔ, không bằng TranslateTransform bên trong nó. Dịch hình
+        // bên trong buộc cửa sổ phải phình ra gấp đôi độ lệch để chứa đủ — lệch 500 px là một
+        // cửa sổ trong suốt hơn 1000 px mà Windows phải tổng hợp lại mỗi khung hình, trong khi
+        // phần có hình chỉ vài chục pixel. Chế độ ảnh dùng độ lệch riêng của ảnh.
+        var offsetX = (_profile?.EffectiveOffsetX ?? 0d) * monitor.DpiScaleX;
+        var offsetY = (_profile?.EffectiveOffsetY ?? 0d) * monitor.DpiScaleY;
 
         var x = (int)Math.Round(center.X - (width / 2d) + offsetX);
         var y = (int)Math.Round(center.Y - (height / 2d) + offsetY);
@@ -232,12 +272,17 @@ public sealed class OverlayController : IOverlayController
         }
     }
 
-    private void OnTopmostTimerTick(object? sender, EventArgs e)
+    private void OnTopmostTimerTick(object? state)
     {
-        if (_window is null || !_visible) return;
+        if (!_topmostActive) return;
 
-        var hwnd = _window.Handle;
+        var hwnd = _overlayHandle;
         if (hwnd == 0 || !NativeMethods.IsWindow(hwnd)) return;
+
+        // Không có gì đè lên thì không làm gì. Gọi SetWindowPos vô điều kiện khiến cửa sổ layered
+        // nhận WM_WINDOWPOSCHANGED và bị xử lý lại mỗi 1,5 giây dù không có gì thay đổi — đo thực
+        // tế đó là phần lớn chi phí của overlay lúc rảnh.
+        if (!IsCoveredByAnotherWindow(hwnd)) return;
 
         NativeMethods.SetWindowPos(
             hwnd,
@@ -245,6 +290,37 @@ public sealed class OverlayController : IOverlayController
             0, 0, 0, 0,
             Win32Constants.SWP_NOMOVE | Win32Constants.SWP_NOSIZE
                 | Win32Constants.SWP_NOACTIVATE | Win32Constants.SWP_NOOWNERZORDER);
+    }
+
+    /// <summary>
+    /// Có cửa sổ hiển thị nào nằm TRÊN overlay trong thứ tự z và chồng lên vùng của nó không.
+    /// </summary>
+    /// <remarks>
+    /// Overlay là topmost, nên thứ nằm trên nó chỉ có thể là cửa sổ topmost khác — thường rất ít,
+    /// nên duyệt ngược thứ tự z rất rẻ. Giới hạn số bước cho chắc; vượt giới hạn thì coi như bị đè
+    /// và quay về hành vi cũ, không bao giờ bỏ sót.
+    /// </remarks>
+    internal static bool IsCoveredByAnotherWindow(nint hwnd)
+    {
+        if (!NativeMethods.GetWindowRect(hwnd, out var mine)) return true;
+
+        var above = NativeMethods.GetWindow(hwnd, Win32Constants.GW_HWNDPREV);
+        for (var steps = 0; above != 0; steps++)
+        {
+            if (steps > 256) return true;
+
+            if (NativeMethods.IsWindowVisible(above)
+                && NativeMethods.GetWindowRect(above, out var other)
+                && other.Left < mine.Right && mine.Left < other.Right
+                && other.Top < mine.Bottom && mine.Top < other.Bottom)
+            {
+                return true;
+            }
+
+            above = NativeMethods.GetWindow(above, Win32Constants.GW_HWNDPREV);
+        }
+
+        return false;
     }
 
     private void OnDisplayConfigurationChanged(object? sender, EventArgs e)
@@ -281,11 +357,12 @@ public sealed class OverlayController : IOverlayController
         _disposed = true;
 
         _monitors.DisplayConfigurationChanged -= OnDisplayConfigurationChanged;
+        _rebuildThrottle.Dispose();
 
         if (_topmostTimer is not null)
         {
-            _topmostTimer.Stop();
-            _topmostTimer.Tick -= OnTopmostTimerTick;
+            _topmostActive = false;
+            _topmostTimer.Dispose();
             _topmostTimer = null;
         }
 

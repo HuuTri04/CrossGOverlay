@@ -1,4 +1,4 @@
-using System.Runtime;
+﻿using System.Runtime;
 using System.Windows;
 using CrosshairOverlay.Composition;
 using CrosshairOverlay.Core.Abstractions;
@@ -23,6 +23,29 @@ public partial class App : Application
     private ServiceProvider? _provider;
     private ILogger<App>? _log;
     private bool _fatalReported;
+
+    /// <summary>
+    /// Bật lên ngay khi quy trình thoát bắt đầu.
+    /// </summary>
+    /// <remarks>
+    /// Cửa sổ Settings chặn sự kiện đóng để thu nhỏ xuống khay hoặc để hỏi xác nhận. Không có
+    /// cờ này thì lệnh Thoát từ menu khay sẽ đi đóng cửa sổ Settings, gặp đúng đoạn chặn đó, và
+    /// ứng dụng không bao giờ thoát được — hoặc tệ hơn, hỏi lại "bạn có chắc muốn thoát?" ngay
+    /// sau khi người dùng vừa bấm Thoát.
+    /// </remarks>
+    public static bool IsShuttingDown { get; private set; }
+
+    /// <summary>
+    /// Đường thoát DUY NHẤT của ứng dụng. Mọi nơi muốn đóng app đều phải gọi hàm này thay vì
+    /// <see cref="Application.Shutdown()"/>, để cờ <see cref="IsShuttingDown"/> luôn đúng.
+    /// </summary>
+    public static void RequestShutdown()
+    {
+        if (IsShuttingDown) return;
+
+        IsShuttingDown = true;
+        Current?.Shutdown();
+    }
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -82,12 +105,15 @@ public partial class App : Application
             RefreshTrayState();
             _log.LogInformation("Khởi động hoàn tất.");
 
+            ScheduleImageCleanup();
+
             ScheduleUpdateCheck(settings);
         }
         catch (Exception ex)
         {
             _log?.LogCritical(ex, "Khởi động thất bại.");
             ReportFatal(ex, Tr.Get("Error_StartupFailed"));
+            IsShuttingDown = true;
             Shutdown(1);
         }
     }
@@ -106,7 +132,7 @@ public partial class App : Application
         {
             guard.SignalExistingInstance();
             _log?.LogInformation("Đã có instance khác, thoát.");
-            Shutdown();
+            RequestShutdown();
             return false;
         }
 
@@ -145,7 +171,7 @@ public partial class App : Application
         tray.OpenSettingsRequested += (_, _) =>
             _provider!.GetRequiredService<IDialogService>().ShowSettingsWindow();
         tray.ToggleOverlayRequested += (_, _) => ToggleOverlay();
-        tray.ExitRequested += (_, _) => Shutdown();
+        tray.ExitRequested += (_, _) => RequestShutdown();
     }
 
     private void StartHotkeys(IAppSettingsService settings)
@@ -166,6 +192,45 @@ public partial class App : Application
             Tr.Get("Hotkeys_ConflictTitle"),
             Tr.Format("Hotkeys_ConflictBody", names),
             isWarning: true);
+    }
+
+    /// <summary>Ảnh chưa dùng tới trong khoảng này thì chưa bị dọn — đường lùi cho người dùng.</summary>
+    private static readonly TimeSpan UnusedImageGracePeriod = TimeSpan.FromDays(3);
+
+    /// <summary>
+    /// Dọn ảnh trong kho không còn preset nào dùng, ở nền.
+    /// </summary>
+    /// <remarks>
+    /// Danh sách ảnh đang dùng lấy trên luồng giao diện từ thư viện TRONG BỘ NHỚ, không đọc lại
+    /// đĩa: thay đổi gần nhất có thể còn nằm trong hàng đợi lưu. Bỏ qua cả lượt dọn nếu có file
+    /// preset hỏng — biết đâu file đó đang dùng một ảnh trong kho.
+    /// </remarks>
+    private void ScheduleImageCleanup()
+    {
+        var provider = _provider!;
+        if (provider.GetRequiredService<IPresetRepository>().LastLoadSkippedFiles)
+        {
+            _log?.LogInformation("Có file preset không đọc được — bỏ qua lượt dọn kho ảnh.");
+            return;
+        }
+
+        var referenced = provider.GetRequiredService<IPresetLibrary>().Presets
+            .Select(p => p.Image.FilePath)
+            .ToList();
+
+        var images = provider.GetRequiredService<ICustomImageStore>();
+
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                images.CleanupUnused(referenced, UnusedImageGracePeriod);
+            }
+            catch (Exception ex)
+            {
+                _log?.LogDebug(ex, "Dọn kho ảnh thất bại.");
+            }
+        });
     }
 
     /// <summary>
@@ -202,7 +267,7 @@ public partial class App : Application
         if (_provider is null) return;
 
         var dialogs = _provider.GetRequiredService<IDialogService>();
-        if (await UpdatePrompt.OfferAsync(updates, dialogs, update)) Shutdown();
+        if (await UpdatePrompt.OfferAsync(updates, dialogs, update)) RequestShutdown();
     }
 
     // ------------------------------------------------------------------ sự kiện
@@ -230,7 +295,7 @@ public partial class App : Application
                 break;
 
             case HotkeyAction.ExitApplication:
-                Shutdown();
+                RequestShutdown();
                 break;
         }
     }

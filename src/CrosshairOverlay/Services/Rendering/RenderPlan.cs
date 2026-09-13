@@ -1,4 +1,4 @@
-using System.Windows.Media;
+﻿using System.Windows.Media;
 using CrosshairOverlay.Core.Models;
 
 namespace CrosshairOverlay.Services.Rendering;
@@ -14,7 +14,7 @@ namespace CrosshairOverlay.Services.Rendering;
 /// <para>
 /// Vì sao làm việc bằng device pixel: một nét dày lẻ pixel (1, 3, 5…) chỉ sắc khi tâm nét nằm
 /// giữa pixel, còn nét dày chẵn chỉ sắc khi tâm nét nằm trên biên pixel. Quy về số nguyên
-/// pixel rồi cộng <see cref="ArmAlign"/> nửa pixel khi cần là cách duy nhất bảo đảm điều đó ở
+/// pixel rồi cộng <see cref="LineLayerPlan.Align"/> nửa pixel khi cần là cách duy nhất bảo đảm điều đó ở
 /// mọi mức DPI scaling.
 /// </para>
 /// </remarks>
@@ -27,20 +27,12 @@ internal sealed class RenderPlan
     public required double ExtentPx { get; init; }
 
     // ---- nhánh ----
-    public bool ShowArms { get; init; }
+
+    /// <summary>Hình X: cả hai lớp nhánh cùng vẽ theo đường chéo.</summary>
     public bool ArmsDiagonal { get; init; }
-    public double ArmInnerPx { get; init; }
-    public double ArmOuterPx { get; init; }
-    public double ArmCoreThicknessPx { get; init; }
 
-    /// <summary>Lệch nửa pixel theo trục vuông góc khi nét dày lẻ pixel. 0 hoặc 0.5.</summary>
-    public double ArmAlign { get; init; }
-
-    public bool ShowTop { get; init; }
-    public bool ShowBottom { get; init; }
-    public bool ShowLeft { get; init; }
-    public bool ShowRight { get; init; }
-    public bool RoundedCaps { get; init; }
+    public LineLayerPlan InnerLines { get; init; }
+    public LineLayerPlan OuterLines { get; init; }
 
     // ---- vòng / khung ----
     public bool ShowRing { get; init; }
@@ -70,6 +62,20 @@ internal sealed class RenderPlan
     public double ImageHeightPx { get; init; }
     public double ImageOpacity { get; init; }
 
+    /// <summary>Mép trái/trên của ảnh so với tâm, device pixel — đã làm tròn khi bám lưới.</summary>
+    public double ImageLeftPx { get; init; }
+    public double ImageTopPx { get; init; }
+
+    /// <summary>
+    /// <see cref="BitmapScalingMode.NearestNeighbor"/> khi phóng đúng bội số nguyên (mỗi pixel
+    /// ảnh thành một khối pixel vuông, sắc tuyệt đối); <see cref="BitmapScalingMode.HighQuality"/>
+    /// cho mọi tỉ lệ khác, nơi láng giềng gần nhất sẽ làm ảnh răng cưa không đều.
+    /// </summary>
+    public BitmapScalingMode ImageScalingMode { get; init; }
+
+    /// <summary>Các khung của GIF động; null với ảnh tĩnh.</summary>
+    public AnimatedImage? Animation { get; init; }
+
     // ---- viền ----
     /// <summary>Bề dày viền mỗi bên, device pixel. 0 khi tắt viền.</summary>
     public double OutlineThicknessPx { get; init; }
@@ -85,4 +91,39 @@ internal sealed class RenderPlan
 
     /// <summary>Đổi device pixel về DIP để đưa vào <see cref="DrawingContext"/>.</summary>
     public double ToDip(double devicePx) => devicePx / Dpi;
+}
+
+/// <summary>Một lớp nhánh đã quy đổi sang device pixel và bám lưới.</summary>
+/// <remarks>
+/// Hai lớp được quy đổi ĐỘC LẬP: mỗi lớp tự quyết định căn nửa pixel theo độ dày của chính nó.
+/// Dùng chung một giá trị căn thì lớp có độ dày lẻ và lớp có độ dày chẵn sẽ có một lớp bị nhoè.
+/// </remarks>
+internal readonly record struct LineLayerPlan
+{
+    public bool Show { get; init; }
+
+    /// <summary>Khoảng cách từ TÂM tới điểm bắt đầu vạch, device pixel.</summary>
+    public double StartPx { get; init; }
+
+    /// <summary>Khoảng cách từ TÂM tới điểm kết thúc vạch NGANG (và vạch chéo), device pixel.</summary>
+    public double EndPx { get; init; }
+
+    /// <summary>Khoảng cách từ TÂM tới điểm kết thúc vạch DỌC, device pixel.</summary>
+    public double VerticalEndPx { get; init; }
+
+    /// <summary>Nửa cạnh vùng bao cần cho lớp này, device pixel — đã tính nửa độ dày.</summary>
+    public double ReachPx { get; init; }
+
+    public double CoreThicknessPx { get; init; }
+
+    /// <summary>Lệch nửa pixel theo trục vuông góc khi nét dày lẻ pixel. 0 hoặc 0.5.</summary>
+    public double Align { get; init; }
+
+    public double Opacity { get; init; }
+
+    public bool ShowTop { get; init; }
+    public bool ShowBottom { get; init; }
+    public bool ShowLeft { get; init; }
+    public bool ShowRight { get; init; }
+    public bool RoundedCaps { get; init; }
 }

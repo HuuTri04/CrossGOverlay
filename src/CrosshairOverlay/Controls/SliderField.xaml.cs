@@ -1,7 +1,8 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using CrosshairOverlay.Core.Models;
 
 namespace CrosshairOverlay.Controls;
 
@@ -49,6 +50,34 @@ public partial class SliderField : UserControl
     {
         get => (double)GetValue(ValueProperty);
         set => SetValue(ValueProperty, value);
+    }
+
+    /// <summary>
+    /// Khoảng hợp lệ, gán một lần thay cho cặp Minimum/Maximum.
+    /// </summary>
+    /// <remarks>
+    /// Tồn tại để giao diện và model KHÔNG THỂ trôi lệch nhau: cả hai cùng đọc một hằng số
+    /// trong <see cref="CrosshairLimits"/>. Nếu XAML tự gõ số, sửa giới hạn ở model mà quên
+    /// sửa slider sẽ tạo ra một vùng giá trị kéo được nhưng lại bị model lặng lẽ kẹp lại —
+    /// người dùng thấy thanh trượt chạy tiếp mà con số thì đứng yên.
+    /// </remarks>
+    public static readonly DependencyProperty RangeProperty = DependencyProperty.Register(
+        nameof(Range), typeof(ValueRange), typeof(SliderField),
+        new PropertyMetadata(new ValueRange(0d, 100d), OnRangeAssigned));
+
+    public ValueRange Range
+    {
+        get => (ValueRange)GetValue(RangeProperty);
+        set => SetValue(RangeProperty, value);
+    }
+
+    private static void OnRangeAssigned(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        var field = (SliderField)d;
+        var range = (ValueRange)e.NewValue;
+
+        field.Minimum = range.Min;
+        field.Maximum = range.Max;
     }
 
     public static readonly DependencyProperty MinimumProperty = DependencyProperty.Register(
@@ -164,15 +193,30 @@ public partial class SliderField : UserControl
         return value.ToString(decimals == 2 ? "0.##" : "0.#", CultureInfo.CurrentCulture);
     }
 
-    /// <summary>Rời ô nhập thì chuẩn hoá lại hiển thị, kể cả khi đang dở một chuỗi không hợp lệ.</summary>
-    private void OnBoxLostFocus(object sender, RoutedEventArgs e) => SyncTextFromValue();
+    /// <summary>
+    /// Chốt giá trị đang gõ rồi chuẩn hoá lại hiển thị.
+    /// </summary>
+    /// <remarks>
+    /// Lệnh <c>UpdateSource</c> là BẮT BUỘC, không thừa. Binding của ô nhập có Delay=300, nên
+    /// khi người dùng gõ xong rồi bấm Enter hoặc chuyển ô ngay lập tức, phần vừa gõ vẫn đang
+    /// nằm chờ trong hàng đợi của binding. Gọi thẳng SyncTextFromValue lúc đó sẽ ghi con số CŨ
+    /// đè lên ô — người dùng gõ 35, rời ô, và thấy nó nhảy về 20.
+    /// </remarks>
+    private void CommitBox()
+    {
+        Box.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
+        SyncTextFromValue();
+    }
+
+    /// <summary>Rời ô nhập thì chốt lại, kể cả khi đang dở một chuỗi không hợp lệ.</summary>
+    private void OnBoxLostFocus(object sender, RoutedEventArgs e) => CommitBox();
 
     private void OnBoxKeyDown(object sender, KeyEventArgs e)
     {
         switch (e.Key)
         {
             case Key.Enter:
-                SyncTextFromValue();
+                CommitBox();
                 e.Handled = true;
                 break;
 

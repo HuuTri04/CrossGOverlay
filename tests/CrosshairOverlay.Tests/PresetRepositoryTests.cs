@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using CrosshairOverlay.Core.Models;
 using CrosshairOverlay.Services.Storage;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -23,7 +23,7 @@ public class PresetRepositoryTests : IDisposable
         _paths = new AppPathProvider(_root);
         _paths.EnsureCreated();
 
-        _repository = new PresetRepository(_paths, NullLogger<PresetRepository>.Instance);
+        _repository = new PresetRepository(_paths, new CustomImageStore(_paths, NullLogger<CustomImageStore>.Instance), NullLogger<PresetRepository>.Instance);
     }
 
     [Fact]
@@ -43,14 +43,14 @@ public class PresetRepositoryTests : IDisposable
     {
         var preset = CrosshairProfile.CreateDefault();
         preset.Name = "Của tôi";
-        preset.Lines.Thickness = 7;
+        preset.InnerLines.Thickness = 7;
 
         await _repository.SaveAsync(preset);
         var doc = await _repository.GetAsync(preset.Id);
 
         Assert.NotNull(doc);
         Assert.Equal("Của tôi", doc!.Name);
-        Assert.Equal(7, doc.Lines.Thickness);
+        Assert.Equal(7, doc.InnerLines.Thickness);
     }
 
     [Fact]
@@ -97,7 +97,7 @@ public class PresetRepositoryTests : IDisposable
         // Id mới là bắt buộc: trùng Id sẽ ghi đè lên preset đang có.
         Assert.NotEqual(goc.Id, nhap.Id);
         Assert.Equal(goc.Name, nhap.Name);
-        Assert.Equal(goc.Lines.Thickness, nhap.Lines.Thickness);
+        Assert.Equal(goc.InnerLines.Thickness, nhap.InnerLines.Thickness);
 
         Assert.NotNull(await _repository.GetAsync(goc.Id));
         Assert.NotNull(await _repository.GetAsync(nhap.Id));

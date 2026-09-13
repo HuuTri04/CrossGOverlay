@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace CrosshairOverlay.Core.Models;
@@ -24,6 +24,16 @@ public sealed partial class AppSettings : ObservableObject
 
     /// <summary>Khởi động vào thẳng system tray, không mở cửa sổ Settings.</summary>
     [ObservableProperty] private bool _startMinimizedToTray;
+
+    /// <summary>
+    /// Bấm nút X thì ẩn cửa sổ Settings xuống khay thay vì thoát hẳn.
+    /// </summary>
+    /// <remarks>
+    /// Mặc định BẬT. Đây là ứng dụng chạy nền suốt phiên chơi: đóng cửa sổ Settings gần như
+    /// luôn có nghĩa là "tôi chỉnh xong rồi", chứ không phải "tắt overlay đi". Khi tắt tuỳ chọn
+    /// này, nút X sẽ hỏi xác nhận trước khi thoát thật.
+    /// </remarks>
+    [ObservableProperty] private bool _minimizeToTrayOnClose = true;
 
     /// <summary>Tự đổi preset theo tiến trình foreground.</summary>
     [ObservableProperty] private bool _autoSwitchByGameProfile = true;

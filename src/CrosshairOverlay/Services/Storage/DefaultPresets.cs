@@ -1,4 +1,4 @@
-using System.Windows.Media;
+﻿using System.Windows.Media;
 using CrosshairOverlay.Core.Models;
 
 namespace CrosshairOverlay.Services.Storage;
@@ -20,7 +20,7 @@ internal static class DefaultPresets
             Name = "Classic Cross",
             Shape = CrosshairShape.Cross,
             Color = Colors.Lime,
-            Lines = new CrosshairLines { Length = 10, Thickness = 2, Gap = 4 },
+            InnerLines = new LineLayerSettings { Length = 10, Thickness = 2, Offset = 4 },
             CenterDot = new CenterDotSettings { Enabled = true, Size = 2 },
             Outline = new OutlineSettings { Enabled = true, Thickness = 1, Color = Colors.Black },
         },
@@ -29,9 +29,20 @@ internal static class DefaultPresets
             Name = "Tactical T",
             Shape = CrosshairShape.TShape,
             Color = Color.FromRgb(0x00, 0xE5, 0xFF),
-            Lines = new CrosshairLines { Length = 7, Thickness = 2, Gap = 3 },
+            InnerLines = new LineLayerSettings { Length = 7, Thickness = 2, Offset = 3 },
             CenterDot = new CenterDotSettings { Enabled = false },
             Outline = new OutlineSettings { Enabled = true, Thickness = 1, Color = Colors.Black },
+        },
+        new()
+        {
+            // Hai lớp nhánh kiểu Valorant: nhánh trong đậm sát tâm, nhánh ngoài mờ và xa hơn.
+            Name = "Dual Lines",
+            Shape = CrosshairShape.Cross,
+            Color = Colors.White,
+            CenterDot = new CenterDotSettings { Enabled = true, Size = 2 },
+            InnerLines = new LineLayerSettings { Length = 6, Thickness = 2, Offset = 3, Opacity = 0.8 },
+            OuterLines = new LineLayerSettings { Enabled = true, Length = 2, Thickness = 2, Offset = 10, Opacity = 0.35 },
+            Outline = new OutlineSettings { Enabled = true, Thickness = 1, Opacity = 0.5, Color = Colors.Black },
         },
         new()
         {
@@ -55,7 +66,7 @@ internal static class DefaultPresets
             Name = "Diagonal X",
             Shape = CrosshairShape.XShape,
             Color = Color.FromRgb(0xFF, 0xD6, 0x00),
-            Lines = new CrosshairLines { Length = 9, Thickness = 2, Gap = 4 },
+            InnerLines = new LineLayerSettings { Length = 9, Thickness = 2, Offset = 4 },
             CenterDot = new CenterDotSettings { Enabled = false },
             Outline = new OutlineSettings { Enabled = true, Thickness = 1, Color = Colors.Black },
         },

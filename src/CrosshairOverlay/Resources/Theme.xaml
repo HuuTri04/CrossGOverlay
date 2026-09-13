@@ -44,7 +44,11 @@
 
     <SolidColorBrush x:Key="Danger" Color="{StaticResource LG.Red.Light1}"/>
     <SolidColorBrush x:Key="Warning" Color="{StaticResource LG.Yellow.Base}"/>
-    <SolidColorBrush x:Key="Backdrop" Color="#B3001E2B"/>
+    <!--
+        Lớp phủ sau hộp thoại: đen thuần, alpha 0x80 (50%). Cố tình KHÔNG pha màu nhấn của theme —
+        pha xanh vào thì toàn bộ app phía sau bị nhuộm xanh thay vì chỉ tối đi.
+    -->
+    <SolidColorBrush x:Key="Backdrop" Color="#80000000"/>
 
     <!-- StaticResource chỉ nhìn thấy tài nguyên khai báo TRƯỚC nó, nên hai brush dưới đây
          phải nằm ở đây chứ không phải cạnh chỗ dùng. -->
@@ -505,6 +509,102 @@
                             <Setter Property="Height" Value="10"/>
                             <Setter Property="Width" Value="Auto"/>
                         </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ================= Expander (nhóm cài đặt thu gọn được) ================= -->
+    <!--
+        Nhóm cài đặt phẳng: nền tối hơn thẻ chứa một bậc, viền mảnh, không đổ bóng.
+
+        Chấm tròn bên phải tiêu đề phản ánh Tag của Expander: xanh khi Tag = true (nhóm đang
+        bật), xám khi false. Nhờ vậy thu gọn nhóm lại vẫn thấy ngay nhánh ngoài có đang hiện hay
+        không, khỏi phải mở ra xem.
+    -->
+    <SolidColorBrush x:Key="ExpanderHoverBg" Color="#0FFFFFFF"/>
+
+    <Style x:Key="SettingsExpander" TargetType="Expander">
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+        <Setter Property="FontFamily" Value="{StaticResource UiFont}"/>
+        <Setter Property="Margin" Value="0,10,0,0"/>
+        <Setter Property="IsExpanded" Value="True"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Expander">
+                    <Border Background="{StaticResource PanelBg}"
+                            BorderBrush="{StaticResource BorderBrushSoft}"
+                            BorderThickness="1"
+                            CornerRadius="{StaticResource RadiusCard}">
+                        <DockPanel>
+                            <ToggleButton DockPanel.Dock="Top" Cursor="Hand"
+                                          IsChecked="{Binding IsExpanded, Mode=TwoWay,
+                                                      RelativeSource={RelativeSource TemplatedParent}}">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border x:Name="HeaderBg" Background="Transparent" Padding="12,10"
+                                                CornerRadius="{StaticResource RadiusCard}">
+                                            <ContentPresenter/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="HeaderBg" Property="Background"
+                                                        Value="{StaticResource ExpanderHoverBg}"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <Path x:Name="Chevron" Width="8" Height="8" Margin="0,0,10,0"
+                                          VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5"
+                                          Data="M 2,0 L 6,4 L 2,8" Stretch="None"
+                                          Stroke="{StaticResource TextDim}" StrokeThickness="1.6"
+                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+
+                                    <ContentPresenter Grid.Column="1" ContentSource="Header"
+                                                      VerticalAlignment="Center" RecognizesAccessKey="True"
+                                                      TextElement.FontSize="13"
+                                                      TextElement.FontWeight="SemiBold"
+                                                      TextElement.Foreground="{StaticResource TextPrimary}"/>
+
+                                    <Ellipse x:Name="StateDot" Grid.Column="2" Width="7" Height="7"
+                                             VerticalAlignment="Center"
+                                             Fill="{StaticResource TextMuted}"/>
+                                </Grid>
+                            </ToggleButton>
+
+                            <Border x:Name="ContentHost" Visibility="Collapsed"
+                                    BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="0,1,0,0"
+                                    Padding="14,6,14,12">
+                                <ContentPresenter/>
+                            </Border>
+                        </DockPanel>
+                    </Border>
+
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsExpanded" Value="True">
+                            <Setter TargetName="ContentHost" Property="Visibility" Value="Visible"/>
+                            <Setter TargetName="Chevron" Property="RenderTransform">
+                                <Setter.Value>
+                                    <RotateTransform Angle="90"/>
+                                </Setter.Value>
+                            </Setter>
+                        </Trigger>
+
+                        <!-- DataTrigger chứ không phải Trigger: Tag kiểu object, Trigger sẽ so chuỗi
+                             "True" với bool true và không bao giờ khớp. DataTrigger đổi kiểu trước khi so. -->
+                        <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True">
+                            <Setter TargetName="StateDot" Property="Fill" Value="{StaticResource AccentBright}"/>
+                        </DataTrigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>

@@ -1,4 +1,4 @@
-using CrosshairOverlay.Core.Models;
+﻿using CrosshairOverlay.Core.Models;
 
 namespace CrosshairOverlay.Core.Abstractions;
 
@@ -28,4 +28,10 @@ public interface IPresetRepository
 
     /// <summary>Phát khi tập preset thay đổi để UI và tray menu đồng bộ lại.</summary>
     event EventHandler? PresetsChanged;
+
+    /// <summary>
+    /// Lần nạp gần nhất có file preset bị bỏ qua vì hỏng. Khi đó KHÔNG được dọn kho ảnh: không
+    /// biết file hỏng kia có đang dùng ảnh nào không.
+    /// </summary>
+    bool LastLoadSkippedFiles { get; }
 }

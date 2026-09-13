@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
   <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
     <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
@@ -106,18 +106,21 @@ Lưu ý: định dạng mã chỉ mô tả được chữ thập, chấm giữa 
   <data name="Editor_Opacity"><value>Độ mờ</value></data>
   <data name="Editor_Scale"><value>Tỉ lệ</value></data>
   <data name="Editor_Rotation"><value>Xoay (độ)</value></data>
-  <data name="Editor_Lines"><value>NHÁNH</value></data>
-  <data name="Editor_ShowLines"><value>Hiện nhánh</value></data>
   <data name="Editor_Length"><value>Độ dài</value></data>
   <data name="Editor_Thickness"><value>Độ dày</value></data>
-  <data name="Editor_Gap"><value>Khoảng hở</value></data>
   <data name="Editor_RoundedCaps"><value>Bo tròn đầu nhánh</value></data>
   <data name="Editor_Top"><value>Trên</value></data>
   <data name="Editor_Bottom"><value>Dưới</value></data>
   <data name="Editor_Left"><value>Trái</value></data>
   <data name="Editor_Right"><value>Phải</value></data>
-  <data name="Editor_CenterDot"><value>CHẤM GIỮA</value></data>
-  <data name="Editor_ShowCenterDot"><value>Hiện chấm giữa</value></data>
+  <data name="Editor_CenterDot"><value>Tâm giữa</value></data>
+  <data name="Editor_InnerLines"><value>Nhánh trong</value></data>
+  <data name="Editor_OuterLines"><value>Nhánh ngoài</value></data>
+  <data name="Editor_Show"><value>Hiển thị</value></data>
+  <data name="Editor_Offset"><value>Khoảng cách</value></data>
+  <data name="Editor_SeparateVertical"><value>Độ dài vạch dọc riêng</value></data>
+  <data name="Editor_VerticalLength"><value>Độ dài dọc</value></data>
+  <data name="Editor_HorizontalLength"><value>Độ dài ngang</value></data>
   <data name="Editor_Size"><value>Kích thước</value></data>
   <data name="Editor_UseProfileColor"><value>Dùng màu chung</value></data>
   <data name="Editor_Ring"><value>VÒNG / KHUNG</value></data>
@@ -126,13 +129,24 @@ Lưu ý: định dạng mã chỉ mô tả được chữ thập, chấm giữa 
   <data name="Editor_Filled"><value>Tô đặc</value></data>
   <data name="Editor_Outline"><value>VIỀN</value></data>
   <data name="Editor_ShowOutline"><value>Hiện viền</value></data>
-  <data name="Editor_Image"><value>ẢNH TUỲ CHỈNH</value></data>
+  <data name="Editor_Mode"><value>Chế độ tâm ngắm</value></data>
+  <data name="Type_Standard"><value>Tâm ngắm tiêu chuẩn</value></data>
+  <data name="Type_Image"><value>Sử dụng hình ảnh</value></data>
+  <data name="Editor_ImageScale"><value>Kích thước</value></data>
+  <data name="Editor_ImageOffsetX"><value>Lệch ngang (X)</value></data>
+  <data name="Editor_ImageOffsetY"><value>Lệch dọc (Y)</value></data>
+  <data name="Editor_ImageMissing"><value>Không tìm thấy ảnh: {0}</value></data>
+  <data name="Editor_ImageFilter"><value>Ảnh (*.png;*.jpg;*.jpeg;*.gif)|*.png;*.jpg;*.jpeg;*.gif</value></data>
+  <data name="Editor_ImageNote"><value>Ảnh được chép vào thư mục của ứng dụng — xoá file gốc không ảnh hưởng. PNG giữ được nền trong suốt; GIF chỉ hiện khung hình đầu. Ảnh không có viền tự động.</value></data>
+  <data name="Editor_ResetImageOffset"><value>Về giữa</value></data>
+  <data name="Image_ErrTitle"><value>Không dùng được ảnh này</value></data>
+  <data name="Image_ErrUnsupported"><value>Chỉ hỗ trợ ảnh PNG, JPG hoặc GIF.</value></data>
+  <data name="Image_ErrUnreadable"><value>File không phải ảnh hợp lệ hoặc đã bị hỏng.</value></data>
+  <data name="Image_ErrTooLarge"><value>Ảnh quá lớn: tối đa {0} MB và {1}×{1} pixel.</value></data>
+  <data name="Editor_Image"><value>Hình ảnh</value></data>
   <data name="Editor_NoImage"><value>(chưa chọn ảnh)</value></data>
   <data name="Editor_BrowseImage"><value>Chọn ảnh…</value></data>
   <data name="Editor_ClearImage"><value>Bỏ ảnh</value></data>
-  <data name="Editor_ImageScale"><value>Tỉ lệ ảnh</value></data>
-  <data name="Editor_ImageOutlineNote"><value>Ảnh bitmap không vẽ được viền — dùng ảnh PNG đã có sẵn viền.</value></data>
-  <data name="Editor_ImageFilter"><value>Ảnh (*.png;*.jpg;*.jpeg;*.bmp;*.gif)|*.png;*.jpg;*.jpeg;*.bmp;*.gif|Tất cả file (*.*)|*.*</value></data>
   <data name="Editor_Position"><value>VỊ TRÍ</value></data>
   <data name="Editor_OffsetX"><value>Lệch ngang</value></data>
   <data name="Editor_OffsetY"><value>Lệch dọc</value></data>
@@ -147,7 +161,6 @@ Lưu ý: định dạng mã chỉ mô tả được chữ thập, chấm giữa 
   <data name="Shape_Circle"><value>Vòng tròn</value></data>
   <data name="Shape_CircleDot"><value>Vòng tròn + chấm</value></data>
   <data name="Shape_Square"><value>Khung vuông</value></data>
-  <data name="Shape_CustomImage"><value>Ảnh tuỳ chỉnh</value></data>
 
   <!-- ===== Tab Chung ===== -->
   <data name="General_Monitor"><value>MÀN HÌNH</value></data>
@@ -156,6 +169,7 @@ Lưu ý: định dạng mã chỉ mô tả được chữ thập, chấm giữa 
   <data name="General_Language"><value>Ngôn ngữ</value></data>
   <data name="General_StartWithWindows"><value>Khởi động cùng Windows</value></data>
   <data name="General_StartMinimized"><value>Khởi động thu nhỏ vào khay hệ thống</value></data>
+  <data name="General_MinimizeOnClose"><value>Thu nhỏ xuống khay hệ thống khi đóng</value></data>
   <data name="General_WarnExclusive"><value>Cảnh báo khi game chạy Exclusive Fullscreen</value></data>
   <data name="General_StartupEnabled"><value>Đã thêm vào danh sách khởi động của Windows.</value></data>
   <data name="General_StartupDisabled"><value>Đã gỡ khỏi danh sách khởi động của Windows.</value></data>
@@ -244,9 +258,10 @@ Lưu ý: định dạng mã chỉ mô tả được chữ thập, chấm giữa 
   <data name="Import_NameValorant"><value>Import từ Valorant</value></data>
   <data name="Import_FieldShape"><value>Hình dạng</value></data>
   <data name="Import_FieldColor"><value>Màu</value></data>
-  <data name="Import_FieldLength"><value>Độ dài nhánh</value></data>
-  <data name="Import_FieldThickness"><value>Độ dày nhánh</value></data>
-  <data name="Import_FieldGap"><value>Khoảng hở</value></data>
+  <data name="Import_FieldInner"><value>Nhánh trong</value></data>
+  <data name="Import_FieldOuter"><value>Nhánh ngoài</value></data>
+  <data name="Import_LinesOn"><value>dài {0}, dày {1}, cách tâm {2}, mờ {3}</value></data>
+  <data name="Import_LengthSplit"><value>ngang {0} · dọc {1}</value></data>
   <data name="Import_FieldDot"><value>Chấm giữa</value></data>
   <data name="Import_FieldOutline"><value>Viền</value></data>
   <data name="Import_FieldOpacity"><value>Độ mờ</value></data>
@@ -266,6 +281,7 @@ Lưu ý: định dạng mã chỉ mô tả được chữ thập, chấm giữa 
   <data name="Tray_Exit"><value>Thoát</value></data>
   <data name="Tray_TooltipOff"><value>{0} — đang tắt</value></data>
   <data name="Tray_RunningInTray"><value>Đang chạy trong khay hệ thống.</value></data>
+  <data name="Tray_HiddenToTray"><value>Ứng dụng vẫn chạy trong khay hệ thống, overlay không bị tắt.</value></data>
   <data name="Fullscreen_WarnTitle"><value>Overlay có thể không hiển thị</value></data>
   <data name="Fullscreen_WarnBody"><value>{0} nhiều khả năng đang chạy Exclusive Fullscreen. Hãy đổi game sang chế độ Borderless Windowed để thấy crosshair.</value></data>
   <data name="Error_StartupFailed"><value>Khởi động thất bại</value></data>
@@ -279,6 +295,8 @@ Lưu ý: định dạng mã chỉ mô tả được chữ thập, chấm giữa 
   <data name="Dialog_Yes"><value>Có</value></data>
   <data name="Dialog_No"><value>Không</value></data>
   <data name="Dialog_Cancel"><value>Huỷ</value></data>
+  <data name="Exit_ConfirmTitle"><value>Thoát ứng dụng</value></data>
+  <data name="Exit_ConfirmBody"><value>Bạn có chắc chắn muốn thoát hoàn toàn ứng dụng không? Overlay sẽ tắt và các phím tắt sẽ ngừng hoạt động.</value></data>
 
   <!-- ===== Cập nhật ===== -->
   <data name="Update_Title"><value>Đã có phiên bản mới</value></data>

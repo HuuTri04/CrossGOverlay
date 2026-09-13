@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Media;
 
 namespace CrosshairOverlay.Services.Overlay;
@@ -46,6 +46,9 @@ internal sealed class CrosshairVisualHost : FrameworkElement
     public void SetDrawing(Drawing? drawing)
     {
         if (ReferenceEquals(_drawing, drawing)) return;
+
+        // Hình cũ sắp bị bỏ: dừng đồng hồ GIF của nó, nếu không nó chạy ngầm mãi mãi.
+        Rendering.DrawingAnimations.Stop(_drawing);
 
         _drawing = drawing;
         InvalidateVisual();

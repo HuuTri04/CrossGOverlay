@@ -1,4 +1,4 @@
-using System.Windows.Media;
+﻿using System.Windows.Media;
 using CrosshairOverlay.Core.Models;
 
 namespace CrosshairOverlay.Services.Import;
@@ -40,12 +40,13 @@ public static class CrosshairCodeConverter
             Opacity = source.HasAlpha ? Math.Clamp(source.Alpha / 255d, 0.05d, 1d) : 1d,
         };
 
-        profile.Lines = new CrosshairLines
+        // CS2 chỉ có một lớp nhánh. Nhánh ngoài giữ mặc định của preset, tức là tắt.
+        profile.InnerLines = new LineLayerSettings
         {
             Enabled = true,
             Length = Math.Max(1d, source.Size * UnitToDip),
             Thickness = Math.Max(1d, source.Thickness * UnitToDip),
-            Gap = Math.Max(0d, (source.Gap + GapOrigin) * UnitToDip),
+            Offset = Math.Max(0d, (source.Gap + GapOrigin) * UnitToDip),
 
             // Kiểu chữ T bỏ nhánh trên; renderer cũng tự ép điều này theo Shape, đặt ở đây để
             // người dùng mở tab editor ra thấy đúng trạng thái các ô đánh dấu.
@@ -82,8 +83,11 @@ public static class CrosshairCodeConverter
     {
         ArgumentNullException.ThrowIfNull(profile);
 
-        var hasLines = profile.Lines.Enabled
-            && profile.Shape is CrosshairShape.Cross or CrosshairShape.TShape or CrosshairShape.XShape;
+        var lineShape = profile.Shape is CrosshairShape.Cross or CrosshairShape.TShape or CrosshairShape.XShape;
+
+        // Mã Valorant không có độ mờ tổng thể. Renderer nhân độ mờ tổng thể vào MỌI thứ, nên để
+        // crosshair xuất ra trông y hệt thì phải nhân nó vào từng thành phần.
+        var global = profile.Opacity;
 
         return new ValorantCrosshair
         {
@@ -91,17 +95,40 @@ public static class CrosshairCodeConverter
 
             HasOutline = profile.Outline.Enabled,
             OutlineThickness = profile.Outline.Thickness,
-            OutlineOpacity = profile.Outline.Opacity,
+            OutlineOpacity = profile.Outline.Opacity * global,
 
             HasCenterDot = profile.CenterDot.Enabled,
             CenterDotSize = profile.CenterDot.Size,
-            CenterDotOpacity = profile.CenterDot.Opacity,
+            CenterDotOpacity = profile.CenterDot.Opacity * global,
 
-            ShowInnerLines = hasLines,
-            InnerLineThickness = profile.Lines.Thickness,
-            InnerLineLength = profile.Lines.Length,
-            InnerLineOffset = profile.Lines.Gap,
-            InnerLineOpacity = profile.Opacity,
+            Inner = FromLayer(profile.InnerLines, lineShape, global),
+            Outer = FromLayer(profile.OuterLines, lineShape, global),
+        };
+    }
+
+    /// <summary>
+    /// Đổi một lớp nhánh sang dạng Valorant.
+    /// </summary>
+    /// <remarks>
+    /// Valorant không có cờ ẩn từng vạch; ẩn một trục được biểu diễn bằng độ dài 0 của trục đó.
+    /// Nên độ dài ngang/dọc xuất ra là độ dài THẬT của trục (0 nếu cả hai vạch của trục bị ẩn),
+    /// và cờ tách độ dài dọc bật khi hai con số đó khác nhau. Tổ hợp một trục chỉ có một vạch —
+    /// ví dụ ba vạch — không biểu diễn được; <see cref="CanExportFaithfully"/> báo trước điều đó.
+    /// </remarks>
+    private static ValorantLines FromLayer(LineLayerSettings layer, bool lineShape, double globalOpacity)
+    {
+        var horizontal = layer.ShowLeft || layer.ShowRight ? layer.Length : 0d;
+        var vertical = layer.ShowTop || layer.ShowBottom ? layer.EffectiveVerticalLength : 0d;
+
+        return new ValorantLines
+        {
+            Show = lineShape && layer.Enabled && (horizontal > 0d || vertical > 0d),
+            Thickness = layer.Thickness,
+            Length = horizontal,
+            Offset = layer.Offset,
+            Opacity = layer.Opacity * globalOpacity,
+            SeparateVerticalLength = Math.Abs(horizontal - vertical) > 0.0001d,
+            VerticalLength = vertical,
         };
     }
 
@@ -121,7 +148,23 @@ public static class CrosshairCodeConverter
         if (Math.Abs(profile.Rotation) > 0.01d) return false;
         if (Math.Abs(profile.Scale - 1d) > 0.01d) return false;
 
+        if (profile.Shape == CrosshairShape.Cross)
+        {
+            if (!LayerExportable(profile.InnerLines)) return false;
+            if (!LayerExportable(profile.OuterLines)) return false;
+        }
+
         return true;
+    }
+
+    /// <summary>Bo tròn đầu vạch, hoặc tổ hợp vạch mà mã không mô tả được (vd chỉ ba vạch).</summary>
+    private static bool LayerExportable(LineLayerSettings layer)
+    {
+        if (!layer.Enabled) return true;
+        if (layer.RoundedCaps) return false;
+
+        // Mỗi trục phải hiện đủ hai vạch hoặc ẩn cả hai.
+        return layer.ShowLeft == layer.ShowRight && layer.ShowTop == layer.ShowBottom;
     }
 
     /// <summary>
@@ -129,45 +172,80 @@ public static class CrosshairCodeConverter
     /// </summary>
     /// <remarks>
     /// Khác với CS2, đơn vị của Valorant xấp xỉ PIXEL nên chuyển 1:1, không nhân hệ số.
-    /// Ứng dụng chỉ vẽ một lớp nhánh, còn Valorant có cả nhánh trong lẫn nhánh ngoài — chỉ
-    /// nhánh trong được chuyển, vì đó là phần quyết định hình dáng crosshair.
+    /// Cả hai lớp nhánh được chuyển độc lập: khoá <c>0*</c> vào <see cref="CrosshairProfile.InnerLines"/>,
+    /// khoá <c>1*</c> vào <see cref="CrosshairProfile.OuterLines"/>.
+    ///
+    /// <para>
+    /// Số 0 phải được dịch thành "tắt" TRƯỚC khi gán vào model. Trong Valorant, độ dày 0, độ dài
+    /// 0 hay độ mờ 0 nghĩa là phần đó không hiện. Còn model của ứng dụng tự kẹp mọi giá trị vào
+    /// khoảng hợp lệ (<see cref="CrosshairLimits"/>) — gán thẳng số 0 vào thì nó bị nâng lên mức
+    /// tối thiểu, và một nhánh vốn vô hình trong game lại hiện ra trên overlay.
+    /// </para>
     /// </remarks>
     public static CrosshairProfile ToProfile(ValorantCrosshair source, string name)
     {
         ArgumentNullException.ThrowIfNull(source);
 
+        var inner = ToLayer(source.Inner);
+        var outer = ToLayer(source.Outer);
+
         var profile = new CrosshairProfile
         {
             Name = string.IsNullOrWhiteSpace(name) ? "Import từ Valorant" : name,
-            Shape = source.ShowInnerLines ? CrosshairShape.Cross : CrosshairShape.Dot,
+            Shape = inner.Enabled || outer.Enabled ? CrosshairShape.Cross : CrosshairShape.Dot,
             Color = source.Color,
-            Opacity = Math.Clamp(source.InnerLineOpacity, 0.05d, 1d),
-        };
 
-        profile.Lines = new CrosshairLines
-        {
-            Enabled = source.ShowInnerLines,
-            Length = Math.Max(1d, source.InnerLineLength),
-            Thickness = Math.Max(1d, source.InnerLineThickness),
-            Gap = Math.Max(0d, source.InnerLineOffset),
+            // Mỗi lớp nhánh đã có độ mờ riêng, nên độ mờ tổng thể để nguyên 1.
+            Opacity = 1d,
+            InnerLines = inner,
+            OuterLines = outer,
         };
 
         profile.CenterDot = new CenterDotSettings
         {
-            Enabled = source.HasCenterDot,
-            Size = Math.Max(1d, source.CenterDotSize),
+            Enabled = source.HasCenterDot && source.CenterDotSize > 0d && source.CenterDotOpacity > 0d,
+            Size = source.CenterDotSize,
             UseProfileColor = true,
-            Opacity = Math.Clamp(source.CenterDotOpacity, 0.05d, 1d),
+            Opacity = source.CenterDotOpacity,
         };
 
         profile.Outline = new OutlineSettings
         {
-            Enabled = source.HasOutline,
-            Thickness = Math.Max(1d, source.OutlineThickness),
-            Opacity = Math.Clamp(source.OutlineOpacity, 0.05d, 1d),
+            Enabled = source.HasOutline && source.OutlineThickness > 0d && source.OutlineOpacity > 0d,
+            Thickness = source.OutlineThickness,
+            Opacity = source.OutlineOpacity,
             Color = Colors.Black,
         };
 
         return profile;
+    }
+
+    /// <summary>
+    /// Đổi một lớp nhánh Valorant sang lớp nhánh của preset.
+    /// </summary>
+    /// <remarks>
+    /// Chuyển 1:1, kể cả độ dài dọc riêng (<c>g</c>/<c>v</c>). Trục có độ dài 0 thì renderer tự
+    /// không vẽ trục đó, nên bốn cờ hướng giữ nguyên là bật — chúng là tuỳ chọn riêng của người
+    /// dùng, không bị dùng để mô phỏng thứ Valorant đã biểu diễn bằng độ dài.
+    /// </remarks>
+    private static LineLayerSettings ToLayer(ValorantLines source)
+    {
+        var vertical = source.SeparateVerticalLength ? source.VerticalLength : source.Length;
+
+        var visible = source.Show
+            && source.Thickness > 0d
+            && source.Opacity > 0d
+            && (source.Length > 0d || vertical > 0d);
+
+        return new LineLayerSettings
+        {
+            Enabled = visible,
+            Opacity = source.Opacity,
+            Length = source.Length,
+            SeparateVerticalLength = source.SeparateVerticalLength,
+            VerticalLength = vertical,
+            Thickness = source.Thickness,
+            Offset = source.Offset,
+        };
     }
 }

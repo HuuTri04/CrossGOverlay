@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CrosshairOverlay.Core.Abstractions;
@@ -83,7 +83,7 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
         }
 
         if (await Services.Updates.UpdatePrompt.OfferAsync(_updates, _dialogs, update))
-            global::System.Windows.Application.Current?.Shutdown();
+            App.RequestShutdown();
     }
 
     public bool ShowMonitorPicker => MonitorMode == MonitorSelectionMode.Specific;

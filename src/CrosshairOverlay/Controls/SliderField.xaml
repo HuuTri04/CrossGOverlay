@@ -1,4 +1,4 @@
-<UserControl x:Class="CrosshairOverlay.Controls.SliderField"
+﻿<UserControl x:Class="CrosshairOverlay.Controls.SliderField"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Name="Root">
@@ -17,16 +17,20 @@
         <Slider Grid.Column="1" VerticalAlignment="Center" Margin="6,0,10,0"
                 Minimum="{Binding Minimum, ElementName=Root}"
                 Maximum="{Binding Maximum, ElementName=Root}"
-                Value="{Binding Value, ElementName=Root, Mode=TwoWay}"/>
+                Value="{Binding Value, ElementName=Root, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
 
         <!--
-            Ô nhập số: UpdateSourceTrigger=PropertyChanged để gõ tới đâu preview đổi tới đó.
-            Bind vào Text chứ không bind thẳng vào Value — bind số kèm định dạng sẽ liên tục
-            viết đè lên thứ người dùng đang gõ và nhảy con trỏ.
+            Ô nhập số. Bind vào Text chứ không bind thẳng vào Value — bind số kèm định dạng sẽ
+            liên tục viết đè lên thứ người dùng đang gõ và nhảy con trỏ.
+
+            UpdateSourceTrigger=PropertyChanged kết hợp Delay=300: chữ hiện ra trong ô ngay lập
+            tức (Delay chỉ hoãn chiều đẩy về nguồn), nhưng preview chỉ vẽ lại sau khi người dùng
+            ngừng gõ 300ms. Không có Delay thì gõ "35" sẽ vẽ lại một lần ở "3" — một crosshair
+            bé xíu nhấp nháy giữa chừng — rồi mới tới "35".
         -->
-        <TextBox Grid.Column="2" Style="{DynamicResource NumericBox}"
+        <TextBox x:Name="Box" Grid.Column="2" Style="{DynamicResource NumericBox}"
                  Text="{Binding Text, ElementName=Root, Mode=TwoWay,
-                        UpdateSourceTrigger=PropertyChanged}"
+                        UpdateSourceTrigger=PropertyChanged, Delay=300}"
                  LostFocus="OnBoxLostFocus"
                  PreviewKeyDown="OnBoxKeyDown"/>
     </Grid>

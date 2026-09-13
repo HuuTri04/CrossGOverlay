@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -47,7 +47,39 @@
     <!-- WPF kéo theo nhiều DLL native; không bật cờ này thì chúng nằm rời cạnh file exe. -->
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
 
+    <!--
+      Nén bundle. Đây là đòn bẩy lớn nhất về dung lượng: 141 MB xuống 64 MB (đo trên máy build).
+      Giá phải trả là lần chạy ĐẦU TIÊN phải giải nén ra thư mục tạm; các lần sau dùng lại
+      bản đã giải nén nên không mất chi phí đó nữa.
+    -->
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+
+    <!--
+      Biên dịch sẵn sang mã máy (ReadyToRun) để không phải JIT lúc khởi động.
+      Đo thực tế trên dự án này, 9 lần chạy nóng xen kẽ, lấy trung vị:
+        không R2R : 1992 ms, file 64.2 MB
+        có R2R    : 1873 ms, file 68.8 MB
+      Tức nhanh hơn khoảng 6% đổi lấy 4.6 MB. Khiêm tốn — phần lớn thời gian khởi động là
+      giải nén bundle và dựng cây WPF chứ không phải JIT — nhưng vẫn là cải thiện thật.
+    -->
+    <PublishReadyToRun>true</PublishReadyToRun>
+
+    <!--
+      PublishTrimmed CỐ TÌNH không bật.
+
+      Không phải vì quên, cũng không phải vì chưa thử: SDK chặn cứng với lỗi
+      "NETSDK1168: WPF is not supported or recommended with trimming enabled".
+      Lý do kỹ thuật là WPF tra cứu kiểu lúc chạy khi phân giải XAML/BAML, binding và
+      ControlTemplate, nên trimmer không nhìn ra kiểu nào thực sự được dùng. Cắt nhầm không gây
+      lỗi biên dịch — nó nổ lúc chạy ở đúng bản publish mà người dùng tải về.
+
+      Có cửa hậu `<_SuppressWpfTrimError>true</_SuppressWpfTrimError>` (dấu gạch dưới nghĩa là
+      nội bộ, không được hỗ trợ) để ép qua. KHÔNG dùng: đánh đổi vài chục MB lấy nguy cơ app
+      sập khi mở một tab bất kỳ, mà chỉ phát hiện được sau khi đã phát hành.
+
+      Muốn giảm dung lượng thêm thì hướng đi đúng là bỏ bớt dependency, không phải trimming.
+    -->
+
     <DebugType>embedded</DebugType>
   </PropertyGroup>
 

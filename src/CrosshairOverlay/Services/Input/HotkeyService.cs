@@ -1,6 +1,7 @@
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Threading;
 using CrosshairOverlay.Core.Abstractions;
 using CrosshairOverlay.Core.Models;
 using CrosshairOverlay.Interop;
@@ -21,9 +22,23 @@ namespace CrosshairOverlay.Services.Input;
 /// </remarks>
 public sealed class HotkeyService : IHotkeyService
 {
+    /// <summary>
+    /// Kích thước struct tính sẵn một lần.
+    /// </summary>
+    /// <remarks>
+    /// <c>Marshal.SizeOf&lt;T&gt;()</c> không phải hằng số biên dịch — mỗi lần gọi là một lượt
+    /// tra cứu layout qua reflection. Đường WM_INPUT chạy ở tần số polling của chuột (chuột
+    /// gaming là 1000 lần/giây), nên hai lời gọi mỗi message hoá ra 2000 lượt tra cứu mỗi giây
+    /// cho một con số không bao giờ đổi.
+    /// </remarks>
+    private static readonly uint RawMouseSize = (uint)Marshal.SizeOf<RAWINPUTMOUSE>();
+
+    private static readonly uint RawHeaderSize = (uint)Marshal.SizeOf<RAWINPUTHEADER>();
+
     private readonly ILogger<HotkeyService> _logger;
     private readonly Dictionary<int, HotkeyAction> _byId = [];
     private readonly List<HotkeyBinding> _mouseBindings = [];
+    private readonly Dispatcher _dispatcher;
 
     private nint _hwnd;
     private HwndSourceHook? _hook;
@@ -31,7 +46,11 @@ public sealed class HotkeyService : IHotkeyService
     private int _nextId = 1;
     private bool _disposed;
 
-    public HotkeyService(ILogger<HotkeyService> logger) => _logger = logger;
+    public HotkeyService(ILogger<HotkeyService> logger)
+    {
+        _logger = logger;
+        _dispatcher = Dispatcher.CurrentDispatcher;
+    }
 
     public event EventHandler<HotkeyPressedEventArgs>? HotkeyPressed;
 
@@ -50,7 +69,34 @@ public sealed class HotkeyService : IHotkeyService
         _hook = WndProc;
         source.AddHook(_hook);
 
+        // KHÔNG đăng ký Raw Input ở đây — xem SetRawMouse. Chỉ đăng ký khi Apply thấy có phím tắt
+        // thật sự dùng nút chuột.
+    }
+
+    /// <summary>
+    /// Bật hoặc tắt nhận sự kiện chuột thô, theo đúng nhu cầu.
+    /// </summary>
+    /// <remarks>
+    /// Raw Input của chuột không cho lọc riêng sự kiện NÚT: đã đăng ký là nhận MỌI sự kiện, kể cả
+    /// từng lần di chuột. Với cờ INPUTSINK (bắt buộc để phím tắt chạy khi đang trong game), chuột
+    /// gaming 1000 Hz đánh thức tiến trình này tới 1000 lần mỗi giây trong suốt trận đấu — chỉ để
+    /// đọc gói tin rồi bỏ đi. Nên chỉ đăng ký khi có ít nhất một phím tắt dùng nút chuột, và gỡ
+    /// ngay khi không còn.
+    /// </remarks>
+    private void SetRawMouse(bool wanted)
+    {
+        if (wanted == _rawInputRegistered) return;
+
+        if (!wanted)
+        {
+            RemoveRawMouse();
+            _logger.LogInformation("Đã gỡ Raw Input chuột — không còn phím tắt nào dùng nút chuột.");
+            return;
+        }
+
         RegisterRawMouse();
+        if (_rawInputRegistered)
+            _logger.LogInformation("Đã đăng ký Raw Input chuột cho phím tắt dùng nút chuột.");
     }
 
     /// <summary>
@@ -81,6 +127,31 @@ public sealed class HotkeyService : IHotkeyService
         }
     }
 
+    private void RemoveRawMouse()
+    {
+        if (!_rawInputRegistered) return;
+
+        // Gỡ đăng ký Raw Input: hwndTarget phải là 0 khi dùng cờ REMOVE.
+        var devices = new[]
+        {
+            new RAWINPUTDEVICE
+            {
+                usUsagePage = Win32Constants.HID_USAGE_PAGE_GENERIC,
+                usUsage = Win32Constants.HID_USAGE_GENERIC_MOUSE,
+                dwFlags = Win32Constants.RIDEV_REMOVE,
+                hwndTarget = 0,
+            },
+        };
+
+        NativeMethods.RegisterRawInputDevices(
+            devices, (uint)devices.Length, (uint)Marshal.SizeOf<RAWINPUTDEVICE>());
+
+        _rawInputRegistered = false;
+    }
+
+    /// <summary>Có đang nhận Raw Input chuột không. Dùng cho chẩn đoán và kiểm thử.</summary>
+    public bool IsReceivingRawMouse => _rawInputRegistered;
+
     public HotkeyRegistrationResult Apply(IEnumerable<HotkeyBinding> bindings)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -90,10 +161,13 @@ public sealed class HotkeyService : IHotkeyService
 
         UnregisterAll();
 
+        var list = bindings as IReadOnlyCollection<HotkeyBinding> ?? bindings.ToList();
+        SetRawMouse(list.Any(b => b.Enabled && b.IsAssigned && b.IsMouseBinding));
+
         var registered = new List<HotkeyBinding>();
         var failures = new List<HotkeyRegistrationFailure>();
 
-        foreach (var binding in bindings)
+        foreach (var binding in list)
         {
             binding.IsRegistered = false;
             binding.RegistrationError = null;
@@ -212,13 +286,13 @@ public sealed class HotkeyService : IHotkeyService
     {
         if (_mouseBindings.Count == 0) return;
 
-        var size = (uint)Marshal.SizeOf<RAWINPUTMOUSE>();
+        var size = RawMouseSize;
         var read = NativeMethods.GetRawInputData(
             lParam,
             Win32Constants.RID_INPUT,
             out var raw,
             ref size,
-            (uint)Marshal.SizeOf<RAWINPUTHEADER>());
+            RawHeaderSize);
 
         // GetRawInputData trả về (uint)-1 khi lỗi.
         if (read == uint.MaxValue || raw.header.dwType != Win32Constants.RIM_TYPEMOUSE) return;
@@ -262,8 +336,29 @@ public sealed class HotkeyService : IHotkeyService
         static bool IsDown(int virtualKey) => (NativeMethods.GetAsyncKeyState(virtualKey) & 0x8000) != 0;
     }
 
-    private void Raise(HotkeyAction action)
+    /// <summary>
+    /// Ghi nhận phím tắt rồi TRẢ LUỒNG VỀ NGAY.
+    /// </summary>
+    /// <remarks>
+    /// Hàm này được gọi từ trong WndProc, tức là đang ở giữa một lượt bơm message. Việc mà một
+    /// phím tắt kích hoạt — đổi preset, dựng lại overlay, ghi settings.json — nặng hơn nhiều
+    /// lần so với thứ được phép làm trong một lượt WndProc, và suốt thời gian đó mọi WM_INPUT
+    /// kế tiếp phải xếp hàng chờ. Đẩy sang <see cref="Dispatcher"/> khiến WndProc kết thúc chỉ
+    /// sau một lần xếp hàng, còn phần việc thật chạy ở lượt dispatcher ngay sau đó.
+    ///
+    /// <para>
+    /// Kể cả ghi log cũng dời sang bên kia: tạo chuỗi và định dạng tham số đều là cấp phát bộ
+    /// nhớ, mà cấp phát trong đường callback chính là thứ sinh ra GC churn cần tránh.
+    /// </para>
+    /// </remarks>
+    private void Raise(HotkeyAction action) =>
+        _dispatcher.InvokeAsync(() => Dispatch(action), DispatcherPriority.Input);
+
+    private void Dispatch(HotkeyAction action)
     {
+        // Người dùng có thể đã thoát app trong khoảng giữa lúc xếp hàng và lúc chạy.
+        if (_disposed) return;
+
         _logger.LogDebug("Hotkey kích hoạt: {Action}", action);
         HotkeyPressed?.Invoke(this, new HotkeyPressedEventArgs(action));
     }
@@ -284,26 +379,7 @@ public sealed class HotkeyService : IHotkeyService
         _disposed = true;
 
         UnregisterAll();
-
-        if (_rawInputRegistered)
-        {
-            // Gỡ đăng ký Raw Input: hwndTarget phải là 0 khi dùng cờ REMOVE.
-            var devices = new[]
-            {
-                new RAWINPUTDEVICE
-                {
-                    usUsagePage = Win32Constants.HID_USAGE_PAGE_GENERIC,
-                    usUsage = Win32Constants.HID_USAGE_GENERIC_MOUSE,
-                    dwFlags = Win32Constants.RIDEV_REMOVE,
-                    hwndTarget = 0,
-                },
-            };
-
-            NativeMethods.RegisterRawInputDevices(
-                devices, (uint)devices.Length, (uint)Marshal.SizeOf<RAWINPUTDEVICE>());
-
-            _rawInputRegistered = false;
-        }
+        RemoveRawMouse();
 
         if (_hwnd != 0 && _hook is not null)
             HwndSource.FromHwnd(_hwnd)?.RemoveHook(_hook);

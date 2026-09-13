@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Text.Json;
 using CrosshairOverlay.Core.Abstractions;
 using CrosshairOverlay.Core.Models;
@@ -9,17 +9,24 @@ namespace CrosshairOverlay.Services.Storage;
 /// <inheritdoc cref="IPresetRepository"/>
 public sealed class PresetRepository : IPresetRepository
 {
+    /// <summary>Base64 dài hơn thế này thì giải mã ra chắc chắn vượt giới hạn kích thước ảnh.</summary>
+    private static readonly long MaxEmbeddedChars = (CustomImageStore.MaxFileBytes * 4 / 3) + 4;
+
     private readonly IAppPathProvider _paths;
+    private readonly ICustomImageStore _images;
     private readonly ILogger<PresetRepository> _logger;
     private readonly SemaphoreSlim _writeLock = new(1, 1);
 
-    public PresetRepository(IAppPathProvider paths, ILogger<PresetRepository> logger)
+    public PresetRepository(IAppPathProvider paths, ICustomImageStore images, ILogger<PresetRepository> logger)
     {
         _paths = paths;
+        _images = images;
         _logger = logger;
     }
 
     public event EventHandler? PresetsChanged;
+
+    public bool LastLoadSkippedFiles { get; private set; }
 
     public async Task<IReadOnlyList<CrosshairProfile>> GetAllAsync(
         CancellationToken cancellationToken = default)
@@ -28,6 +35,7 @@ public sealed class PresetRepository : IPresetRepository
         AtomicFile.CleanupTemporaries(_paths.PresetsDirectory);
 
         var results = new List<CrosshairProfile>();
+        var skipped = false;
 
         foreach (var file in Directory.EnumerateFiles(_paths.PresetsDirectory, "*.json"))
         {
@@ -35,7 +43,10 @@ public sealed class PresetRepository : IPresetRepository
 
             var preset = await TryReadAsync(file, cancellationToken).ConfigureAwait(false);
             if (preset is not null) results.Add(preset);
+            else skipped = true;
         }
+
+        LastLoadSkippedFiles = skipped;
 
         if (results.Count == 0)
         {
@@ -119,6 +130,8 @@ public sealed class PresetRepository : IPresetRepository
         // là hành vi người dùng không hề mong đợi.
         imported.Id = Guid.NewGuid();
         imported.CreatedUtc = DateTimeOffset.UtcNow;
+        MarkMigrated(imported);
+        MaterializeEmbeddedImage(imported);
 
         if (string.IsNullOrWhiteSpace(imported.Name))
             imported.Name = Path.GetFileNameWithoutExtension(filePath);
@@ -135,8 +148,76 @@ public sealed class PresetRepository : IPresetRepository
         ArgumentNullException.ThrowIfNull(profile);
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
 
-        await AtomicFile.WriteJsonAsync(filePath, profile, cancellationToken).ConfigureAwait(false);
-        _logger.LogInformation("Đã export preset '{Name}' ra {Path}.", profile.Name, filePath);
+        // Ghi một BẢN SAO có nhúng ảnh, không đụng vào preset đang dùng: chuỗi base64 vài MB không
+        // được phép bám vào preset trong thư viện và bị ghi lại mỗi lần lưu.
+        var export = profile.Clone();
+        export.EmbeddedImage = await TryEmbedImageAsync(profile, cancellationToken).ConfigureAwait(false);
+
+        await AtomicFile.WriteJsonAsync(filePath, export, cancellationToken).ConfigureAwait(false);
+        _logger.LogInformation(
+            "Đã export preset '{Name}' ra {Path} (kèm ảnh: {HasImage}).",
+            profile.Name, filePath, export.EmbeddedImage is not null);
+    }
+
+    /// <summary>
+    /// Ghi nhận preset đã ở định dạng hiện tại.
+    /// </summary>
+    /// <remarks>
+    /// Việc chuyển đổi thật (khối <c>Lines</c> cũ thành nhánh trong, <c>Gap</c> thành
+    /// <c>Offset</c>) đã xảy ra ngay lúc đọc JSON. Số phiên bản phải được nâng theo, nếu không lần
+    /// lưu kế tiếp sẽ ghi ra một file mang cấu trúc mới nhưng vẫn tự nhận là phiên bản cũ.
+    /// </remarks>
+    private static void MarkMigrated(CrosshairProfile preset)
+    {
+        if (preset.SchemaVersion < CrosshairProfile.CurrentSchemaVersion)
+            preset.SchemaVersion = CrosshairProfile.CurrentSchemaVersion;
+    }
+
+    /// <summary>Đọc ảnh của preset để nhúng vào file export; không có ảnh hoặc ảnh đã mất thì trả null.</summary>
+    private async Task<EmbeddedImageData?> TryEmbedImageAsync(CrosshairProfile profile, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(profile.Image.FilePath)) return null;
+
+        var resolved = _images.Resolve(profile.Image.FilePath);
+        if (resolved is null || !File.Exists(resolved))
+        {
+            _logger.LogWarning("Preset '{Name}' trỏ tới ảnh không còn tồn tại — export không kèm ảnh.", profile.Name);
+            return null;
+        }
+
+        var bytes = await File.ReadAllBytesAsync(resolved, cancellationToken).ConfigureAwait(false);
+        return new EmbeddedImageData
+        {
+            FileName = Path.GetFileName(resolved),
+            Data = Convert.ToBase64String(bytes),
+        };
+    }
+
+    /// <summary>
+    /// Đưa ảnh nhúng vào kho rồi trỏ preset tới bản trong kho.
+    /// </summary>
+    /// <remarks>
+    /// Ảnh nhúng hỏng hay không hợp lệ KHÔNG làm hỏng việc nhập preset: phần còn lại vẫn dùng
+    /// được. Đường dẫn ảnh được giữ nguyên, nên giao diện hiện rõ "không tìm thấy ảnh" thay vì
+    /// âm thầm mất ảnh.
+    /// </remarks>
+    private void MaterializeEmbeddedImage(CrosshairProfile preset)
+    {
+        if (preset.EmbeddedImage is not { } embedded) return;
+        preset.EmbeddedImage = null;
+
+        try
+        {
+            if (embedded.Data.Length > MaxEmbeddedChars) throw new InvalidDataException("Ảnh nhúng quá lớn.");
+
+            var bytes = Convert.FromBase64String(embedded.Data);
+            preset.Image.FilePath = _images.ImportBytes(embedded.FileName, bytes);
+        }
+        catch (Exception ex) when (ex is InvalidDataException or FormatException or IOException
+                                       or UnauthorizedAccessException or ArgumentException)
+        {
+            _logger.LogWarning(ex, "Bỏ qua ảnh nhúng không hợp lệ trong preset '{Name}'.", preset.Name);
+        }
     }
 
     private string PathFor(Guid id) => Path.Combine(_paths.PresetsDirectory, $"{id:D}.json");
@@ -155,6 +236,10 @@ public sealed class PresetRepository : IPresetRepository
             }
 
             if (preset.Id == Guid.Empty) preset.Id = Guid.NewGuid();
+            MarkMigrated(preset);
+
+            // File export bị thả thẳng vào thư mục preset: vẫn đưa ảnh vào kho như lúc import.
+            MaterializeEmbeddedImage(preset);
             return preset;
         }
         catch (JsonException ex)

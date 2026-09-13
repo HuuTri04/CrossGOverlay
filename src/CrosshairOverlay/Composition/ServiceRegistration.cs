@@ -1,4 +1,4 @@
-using CrosshairOverlay.Core.Abstractions;
+﻿using CrosshairOverlay.Core.Abstractions;
 using CrosshairOverlay.Services.Display;
 using CrosshairOverlay.Services.Input;
 using CrosshairOverlay.Services.Overlay;
@@ -36,6 +36,7 @@ internal static class ServiceRegistration
         services.AddSingleton<IAppSettingsService, AppSettingsService>();
         services.AddSingleton<IPresetRepository, PresetRepository>();
         services.AddSingleton<IPresetLibrary, PresetLibrary>();
+        services.AddSingleton<ICustomImageStore, CustomImageStore>();
 
         // ---- hiển thị ----
         services.AddSingleton<IMonitorService, MonitorService>();
@@ -60,7 +61,9 @@ internal static class ServiceRegistration
         // phải dựng được cửa sổ chứa ViewModel đó. Closure giải vòng vì nó chỉ resolve
         // ViewModel tại thời điểm người dùng mở cửa sổ, khi singleton đã tồn tại.
         services.AddSingleton<IDialogService>(provider => new DialogService(
-            () => new SettingsWindow(provider.GetRequiredService<SettingsViewModel>())));
+            () => new SettingsWindow(
+                provider.GetRequiredService<SettingsViewModel>(),
+                provider.GetRequiredService<ITrayIconController>())));
 
         // Transient: mỗi lần mở cửa sổ Settings là một ViewModel mới, vì cửa sổ cũ đã bị đóng
         // và các đăng ký sự kiện của nó không còn giá trị.

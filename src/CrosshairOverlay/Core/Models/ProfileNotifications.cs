@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 
 namespace CrosshairOverlay.Core.Models;
 
@@ -6,9 +6,9 @@ namespace CrosshairOverlay.Core.Models;
 /// Đăng ký <c>PropertyChanged</c> trên một preset VÀ mọi khối con của nó.
 /// </summary>
 /// <remarks>
-/// <see cref="CrosshairProfile"/> là <c>ObservableObject</c>, nhưng <see cref="CrosshairProfile.Lines"/>,
+/// <see cref="CrosshairProfile"/> là <c>ObservableObject</c>, nhưng <see cref="CrosshairProfile.InnerLines"/>,
 /// <see cref="CrosshairProfile.Outline"/>… là những object riêng biệt cũng tự phát sự kiện. Ai muốn
-/// biết "preset này có gì đổi không" đều phải nghe cả sáu — overlay, khung preview, và cơ chế
+/// biết "preset này có gì đổi không" đều phải nghe cả bảy — overlay, khung preview, và cơ chế
 /// tự động lưu. Gom vào đây để ba nơi đó không trôi lệch nhau khi model thêm khối mới.
 /// </remarks>
 public static class ProfileNotifications
@@ -22,7 +22,8 @@ public static class ProfileNotifications
         INotifyPropertyChanged[] targets =
         [
             profile,
-            profile.Lines,
+            profile.InnerLines,
+            profile.OuterLines,
             profile.CenterDot,
             profile.Outline,
             profile.Ring,

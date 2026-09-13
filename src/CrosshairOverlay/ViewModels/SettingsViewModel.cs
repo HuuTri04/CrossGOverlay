@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CrosshairOverlay.Core.Abstractions;
@@ -33,6 +33,7 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
         IGameProfileMatcher matcher,
         IRunningApplicationScanner scanner,
         IUpdateService updates,
+        ICustomImageStore images,
         ILogger<SettingsViewModel> logger)
     {
         _library = library;
@@ -41,7 +42,7 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
         _dialogs = dialogs;
         _logger = logger;
 
-        Editor = new CrosshairEditorViewModel(renderer, dialogs);
+        Editor = new CrosshairEditorViewModel(renderer, dialogs, images);
         General = new GeneralSettingsViewModel(settings, monitors, overlay, startup, updates, dialogs);
         Hotkeys = new HotkeysViewModel(settings, hotkeys);
         Games = new GameProfilesViewModel(settings, library, watcher, matcher, scanner);

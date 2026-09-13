@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
   <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
     <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
@@ -102,18 +102,21 @@ Note: the code format can only describe a cross, a centre dot and an outline. Th
   <data name="Editor_Opacity"><value>Opacity</value></data>
   <data name="Editor_Scale"><value>Scale</value></data>
   <data name="Editor_Rotation"><value>Rotation (deg)</value></data>
-  <data name="Editor_Lines"><value>ARMS</value></data>
-  <data name="Editor_ShowLines"><value>Show arms</value></data>
   <data name="Editor_Length"><value>Length</value></data>
   <data name="Editor_Thickness"><value>Thickness</value></data>
-  <data name="Editor_Gap"><value>Gap</value></data>
   <data name="Editor_RoundedCaps"><value>Rounded ends</value></data>
   <data name="Editor_Top"><value>Top</value></data>
   <data name="Editor_Bottom"><value>Bottom</value></data>
   <data name="Editor_Left"><value>Left</value></data>
   <data name="Editor_Right"><value>Right</value></data>
-  <data name="Editor_CenterDot"><value>CENTRE DOT</value></data>
-  <data name="Editor_ShowCenterDot"><value>Show centre dot</value></data>
+  <data name="Editor_CenterDot"><value>Centre dot</value></data>
+  <data name="Editor_InnerLines"><value>Inner lines</value></data>
+  <data name="Editor_OuterLines"><value>Outer lines</value></data>
+  <data name="Editor_Show"><value>Show</value></data>
+  <data name="Editor_Offset"><value>Offset</value></data>
+  <data name="Editor_SeparateVertical"><value>Separate vertical length</value></data>
+  <data name="Editor_VerticalLength"><value>Vertical length</value></data>
+  <data name="Editor_HorizontalLength"><value>Horizontal length</value></data>
   <data name="Editor_Size"><value>Size</value></data>
   <data name="Editor_UseProfileColor"><value>Use main colour</value></data>
   <data name="Editor_Ring"><value>RING / BOX</value></data>
@@ -122,13 +125,24 @@ Note: the code format can only describe a cross, a centre dot and an outline. Th
   <data name="Editor_Filled"><value>Filled</value></data>
   <data name="Editor_Outline"><value>OUTLINE</value></data>
   <data name="Editor_ShowOutline"><value>Show outline</value></data>
-  <data name="Editor_Image"><value>CUSTOM IMAGE</value></data>
+  <data name="Editor_Mode"><value>Crosshair mode</value></data>
+  <data name="Type_Standard"><value>Standard crosshair</value></data>
+  <data name="Type_Image"><value>Use an image</value></data>
+  <data name="Editor_ImageScale"><value>Size</value></data>
+  <data name="Editor_ImageOffsetX"><value>X offset</value></data>
+  <data name="Editor_ImageOffsetY"><value>Y offset</value></data>
+  <data name="Editor_ImageMissing"><value>Image not found: {0}</value></data>
+  <data name="Editor_ImageFilter"><value>Images (*.png;*.jpg;*.jpeg;*.gif)|*.png;*.jpg;*.jpeg;*.gif</value></data>
+  <data name="Editor_ImageNote"><value>The image is copied into the app folder — deleting the original has no effect. PNG keeps transparency; GIF shows its first frame only. Images get no automatic outline.</value></data>
+  <data name="Editor_ResetImageOffset"><value>Centre</value></data>
+  <data name="Image_ErrTitle"><value>This image cannot be used</value></data>
+  <data name="Image_ErrUnsupported"><value>Only PNG, JPG or GIF images are supported.</value></data>
+  <data name="Image_ErrUnreadable"><value>The file is not a valid image or is corrupted.</value></data>
+  <data name="Image_ErrTooLarge"><value>The image is too large: at most {0} MB and {1}×{1} pixels.</value></data>
+  <data name="Editor_Image"><value>Image</value></data>
   <data name="Editor_NoImage"><value>(no image selected)</value></data>
   <data name="Editor_BrowseImage"><value>Choose image…</value></data>
   <data name="Editor_ClearImage"><value>Clear image</value></data>
-  <data name="Editor_ImageScale"><value>Image scale</value></data>
-  <data name="Editor_ImageOutlineNote"><value>Bitmap images cannot be outlined — use a PNG that already has one.</value></data>
-  <data name="Editor_ImageFilter"><value>Images (*.png;*.jpg;*.jpeg;*.bmp;*.gif)|*.png;*.jpg;*.jpeg;*.bmp;*.gif|All files (*.*)|*.*</value></data>
   <data name="Editor_Position"><value>POSITION</value></data>
   <data name="Editor_OffsetX"><value>Offset X</value></data>
   <data name="Editor_OffsetY"><value>Offset Y</value></data>
@@ -142,7 +156,6 @@ Note: the code format can only describe a cross, a centre dot and an outline. Th
   <data name="Shape_Circle"><value>Circle</value></data>
   <data name="Shape_CircleDot"><value>Circle + dot</value></data>
   <data name="Shape_Square"><value>Square box</value></data>
-  <data name="Shape_CustomImage"><value>Custom image</value></data>
 
   <data name="General_Monitor"><value>DISPLAY</value></data>
   <data name="General_RefreshMonitors"><value>Rescan displays</value></data>
@@ -150,6 +163,7 @@ Note: the code format can only describe a cross, a centre dot and an outline. Th
   <data name="General_Language"><value>Language</value></data>
   <data name="General_StartWithWindows"><value>Start with Windows</value></data>
   <data name="General_StartMinimized"><value>Start minimised to the system tray</value></data>
+  <data name="General_MinimizeOnClose"><value>Minimise to the system tray on close</value></data>
   <data name="General_WarnExclusive"><value>Warn when a game runs in Exclusive Fullscreen</value></data>
   <data name="General_StartupEnabled"><value>Added to the Windows startup list.</value></data>
   <data name="General_StartupDisabled"><value>Removed from the Windows startup list.</value></data>
@@ -235,9 +249,10 @@ Note: the code format can only describe a cross, a centre dot and an outline. Th
   <data name="Import_NameValorant"><value>Imported from Valorant</value></data>
   <data name="Import_FieldShape"><value>Shape</value></data>
   <data name="Import_FieldColor"><value>Colour</value></data>
-  <data name="Import_FieldLength"><value>Arm length</value></data>
-  <data name="Import_FieldThickness"><value>Arm thickness</value></data>
-  <data name="Import_FieldGap"><value>Gap</value></data>
+  <data name="Import_FieldInner"><value>Inner lines</value></data>
+  <data name="Import_FieldOuter"><value>Outer lines</value></data>
+  <data name="Import_LinesOn"><value>length {0}, thickness {1}, offset {2}, opacity {3}</value></data>
+  <data name="Import_LengthSplit"><value>horizontal {0} · vertical {1}</value></data>
   <data name="Import_FieldDot"><value>Centre dot</value></data>
   <data name="Import_FieldOutline"><value>Outline</value></data>
   <data name="Import_FieldOpacity"><value>Opacity</value></data>
@@ -256,6 +271,7 @@ Note: the code format can only describe a cross, a centre dot and an outline. Th
   <data name="Tray_Exit"><value>Quit</value></data>
   <data name="Tray_TooltipOff"><value>{0} — off</value></data>
   <data name="Tray_RunningInTray"><value>Running in the system tray.</value></data>
+  <data name="Tray_HiddenToTray"><value>Still running in the system tray — the overlay stays on.</value></data>
   <data name="Fullscreen_WarnTitle"><value>The overlay may not be visible</value></data>
   <data name="Fullscreen_WarnBody"><value>{0} is likely running in Exclusive Fullscreen. Switch the game to Borderless Windowed to see the crosshair.</value></data>
   <data name="Error_StartupFailed"><value>Startup failed</value></data>
@@ -268,6 +284,8 @@ Note: the code format can only describe a cross, a centre dot and an outline. Th
   <data name="Dialog_Yes"><value>Yes</value></data>
   <data name="Dialog_No"><value>No</value></data>
   <data name="Dialog_Cancel"><value>Cancel</value></data>
+  <data name="Exit_ConfirmTitle"><value>Quit the application</value></data>
+  <data name="Exit_ConfirmBody"><value>Are you sure you want to quit the application completely? The overlay will disappear and the hotkeys will stop working.</value></data>
 
   <data name="Update_Title"><value>A new version is available</value></data>
   <data name="Update_Body"><value>Version {0} has been released; you are running {1}.

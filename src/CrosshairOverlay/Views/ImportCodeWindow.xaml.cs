@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using CrosshairOverlay.Core.Models;
 using CrosshairOverlay.Localization;
@@ -86,13 +86,24 @@ public partial class ImportCodeWindow : Window
             Environment.NewLine,
             Row("Import_FieldShape", p.Shape.ToString()),
             Row("Import_FieldColor", JsonColorConverter.ToHex(p.Color)),
-            Row("Import_FieldLength", p.Lines.Length.ToString("0.#")),
-            Row("Import_FieldThickness", p.Lines.Thickness.ToString("0.#")),
-            Row("Import_FieldGap", p.Lines.Gap.ToString("0.#")),
+            Row("Import_FieldInner", Describe(p.InnerLines)),
+            Row("Import_FieldOuter", Describe(p.OuterLines)),
             Row("Import_FieldDot", dot),
             Row("Import_FieldOutline", outline),
             Row("Import_FieldOpacity", p.Opacity.ToString("0.##")));
     }
+
+    private static string Describe(Core.Models.LineLayerSettings layer) =>
+        layer.Enabled
+            ? Tr.Format(
+                "Import_LinesOn",
+                layer.SeparateVerticalLength
+                    ? Tr.Format("Import_LengthSplit", layer.Length.ToString("0.#"), layer.VerticalLength.ToString("0.#"))
+                    : layer.Length.ToString("0.#"),
+                layer.Thickness.ToString("0.#"),
+                layer.Offset.ToString("0.#"),
+                layer.Opacity.ToString("0.##"))
+            : Tr.Get("Import_Off");
 
     /// <summary>Căn nhãn cho thẳng cột, không phụ thuộc độ dài nhãn của từng ngôn ngữ.</summary>
     private static string Row(string key, string value) => $"{Tr.Get(key),-16}: {value}";

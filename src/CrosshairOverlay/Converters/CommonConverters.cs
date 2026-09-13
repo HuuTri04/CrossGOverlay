@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
@@ -86,8 +86,16 @@ public sealed class RoundedNumberConverter : IValueConverter
             : number.ToString("0.0", CultureInfo.CurrentCulture);
     }
 
+    /// <remarks>
+    /// Đọc bằng <see cref="CultureInfo.InvariantCulture"/> sau khi đổi dấu phẩy thành dấu chấm,
+    /// giống hệt ô nhập của SliderField. Đọc theo văn hoá hiện tại thì cùng một chuỗi "0.5" ra
+    /// 0.5 trên máy tiếng Anh nhưng ra 5 trên máy đặt vùng Việt Nam — dấu chấm ở đó là dấu
+    /// phân cách hàng nghìn.
+    /// </remarks>
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
-        double.TryParse(value as string, NumberStyles.Float, CultureInfo.CurrentCulture, out var parsed)
+        value is string text
+        && double.TryParse(
+            text.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)
             ? parsed
             : DependencyProperty.UnsetValue;
 }

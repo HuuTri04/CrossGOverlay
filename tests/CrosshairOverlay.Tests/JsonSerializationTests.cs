@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Windows.Input;
 using System.Windows.Media;
 using CrosshairOverlay.Core.Models;
@@ -65,7 +65,9 @@ public class JsonSerializationTests
         var json = JsonSerializer.Serialize(CrosshairProfile.CreateDefault(), AppJson.Options);
 
         Assert.True(json.IndexOf("\"Name\"", StringComparison.Ordinal)
-                    < json.IndexOf("\"Lines\"", StringComparison.Ordinal));
+                    < json.IndexOf("\"CenterDot\"", StringComparison.Ordinal));
+        Assert.True(json.IndexOf("\"CenterDot\"", StringComparison.Ordinal)
+                    < json.IndexOf("\"InnerLines\"", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -81,7 +83,7 @@ public class JsonSerializationTests
             Rotation = 45,
             OffsetX = -12,
             OffsetY = 7,
-            Lines = new CrosshairLines { Length = 13, Thickness = 3, Gap = 5, ShowTop = false, RoundedCaps = true },
+            InnerLines = new LineLayerSettings { Length = 13, Thickness = 3, Offset = 5, ShowTop = false, RoundedCaps = true },
             CenterDot = new CenterDotSettings { Enabled = true, Size = 4, UseProfileColor = false, Color = Colors.Red },
             Outline = new OutlineSettings { Enabled = true, Thickness = 2, Color = Colors.Blue, Opacity = 0.5 },
             Ring = new RingSettings { Enabled = true, Radius = 17, Thickness = 4, Filled = true },
@@ -98,8 +100,8 @@ public class JsonSerializationTests
         Assert.Equal(goc.Opacity, doc.Opacity);
         Assert.Equal(goc.Rotation, doc.Rotation);
         Assert.Equal(goc.OffsetX, doc.OffsetX);
-        Assert.False(doc.Lines.ShowTop);
-        Assert.True(doc.Lines.RoundedCaps);
+        Assert.False(doc.InnerLines.ShowTop);
+        Assert.True(doc.InnerLines.RoundedCaps);
         Assert.Equal(goc.CenterDot.Color, doc.CenterDot.Color);
         Assert.False(doc.CenterDot.UseProfileColor);
         Assert.Equal(goc.Outline.Opacity, doc.Outline.Opacity);

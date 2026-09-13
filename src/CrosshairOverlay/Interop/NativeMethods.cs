@@ -1,4 +1,4 @@
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 
 namespace CrosshairOverlay.Interop;
 
@@ -44,6 +44,10 @@ internal static partial class NativeMethods
     [DllImport(User32)]
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static extern bool IsWindow(nint hWnd);
+
+    /// <summary>Duyệt thứ tự z: <c>GW_HWNDPREV</c> trả về cửa sổ nằm ngay TRÊN.</summary>
+    [DllImport(User32)]
+    internal static extern nint GetWindow(nint hWnd, uint uCmd);
 
     // ---------------------------------------------------------------- Monitors
 

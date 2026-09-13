@@ -1,8 +1,11 @@
-namespace CrosshairOverlay.Interop;
+﻿namespace CrosshairOverlay.Interop;
 
 /// <summary>Hằng số Win32 dùng cho cửa sổ overlay.</summary>
 internal static class Win32Constants
 {
+    // GetWindow
+    public const uint GW_HWNDPREV = 3;
+
     // GetWindowLongPtr / SetWindowLongPtr index
     public const int GWL_STYLE = -16;
     public const int GWL_EXSTYLE = -20;

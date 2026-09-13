@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
 using CrosshairOverlay.Core.Abstractions;
 using CrosshairOverlay.Core.Models;
@@ -200,7 +200,8 @@ public sealed class PresetLibrary : IPresetLibrary
 
         foreach (var preset in _presets)
         {
-            if (ReferenceEquals(preset.Lines, part)
+            if (ReferenceEquals(preset.InnerLines, part)
+                || ReferenceEquals(preset.OuterLines, part)
                 || ReferenceEquals(preset.CenterDot, part)
                 || ReferenceEquals(preset.Outline, part)
                 || ReferenceEquals(preset.Ring, part)

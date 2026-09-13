@@ -1,4 +1,4 @@
-namespace CrosshairOverlay.Core.Models;
+﻿namespace CrosshairOverlay.Core.Models;
 
 /// <summary>Hình dạng gốc của crosshair. Quyết định renderer vẽ primitive nào.</summary>
 public enum CrosshairShape
@@ -24,8 +24,21 @@ public enum CrosshairShape
     /// <summary>4 nhánh xoay 45 độ.</summary>
     XShape = 6,
 
-    /// <summary>Ảnh PNG/SVG do người dùng cung cấp.</summary>
+    /// <summary>
+    /// CHỈ ĐỂ ĐỌC file cũ. Chế độ ảnh giờ là <see cref="CrosshairType.Image"/>; preset cũ mang
+    /// giá trị này được <see cref="CrosshairProfile"/> tự chuyển sang khi đọc.
+    /// </summary>
     CustomImage = 7,
+}
+
+/// <summary>Tâm ngắm vẽ bằng hình học, hay bằng một bức ảnh.</summary>
+public enum CrosshairType
+{
+    /// <summary>Vẽ từ chấm giữa, nhánh trong, nhánh ngoài, vòng và viền.</summary>
+    Standard = 0,
+
+    /// <summary>Hiển thị một ảnh PNG/JPG/GIF do người dùng chọn.</summary>
+    Image = 1,
 }
 
 /// <summary>Cách chọn màn hình để đặt overlay.</summary>

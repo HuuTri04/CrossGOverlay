@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Windows.Media;
 using CrosshairOverlay.Core.Models;
 using CrosshairOverlay.Services.Import;
@@ -20,10 +20,10 @@ public class ValorantCrosshairCodeTests
         Assert.Equal(Color.FromRgb(0x00, 0xFF, 0xFF), c.Color);   // c;5 = lục lam
         Assert.True(c.HasCenterDot);                              // d;1
         Assert.Equal(3d, c.CenterDotSize);                        // z;3
-        Assert.Equal(4d, c.InnerLineThickness);                   // 0t;4
-        Assert.Equal(1d, c.InnerLineLength);                      // 0l;1
-        Assert.Equal(2d, c.InnerLineOffset);                      // 0o;2
-        Assert.Equal(1d, c.InnerLineOpacity);                     // 0a;1
+        Assert.Equal(4d, c.Inner.Thickness);                   // 0t;4
+        Assert.Equal(1d, c.Inner.Length);                      // 0l;1
+        Assert.Equal(2d, c.Inner.Offset);                      // 0o;2
+        Assert.Equal(1d, c.Inner.Opacity);                     // 0a;1
     }
 
     [Fact]
@@ -32,7 +32,7 @@ public class ValorantCrosshairCodeTests
         // Mã bắt đầu bằng một token "0" đơn lẻ rồi mới tới "P". Nếu bộ đọc ghép nhầm "0" với
         // "P" thành một cặp thì MỌI khoá sau đó lệch đi một vị trí.
         Assert.True(ValorantCrosshairCode.TryDecode(RealCode, out var c, out _));
-        Assert.Equal(4d, c.InnerLineThickness);
+        Assert.Equal(4d, c.Inner.Thickness);
     }
 
     [Fact]
@@ -42,7 +42,7 @@ public class ValorantCrosshairCodeTests
 
         Assert.True(ValorantCrosshairCode.TryDecode(code, out var c, out _));
 
-        Assert.Equal(4d, c.InnerLineLength);                      // của khối P
+        Assert.Equal(4d, c.Inner.Length);                      // của khối P
         Assert.NotEqual(Color.FromRgb(0xFF, 0, 0), c.Color);      // c;7 của khối A bị bỏ qua
     }
 
@@ -73,7 +73,7 @@ public class ValorantCrosshairCodeTests
     public void KhoaLa_BiBoQuaKhongLamHongPhanConLai()
     {
         Assert.True(ValorantCrosshairCode.TryDecode("0;P;khoaMoi;123;0l;7", out var c, out _));
-        Assert.Equal(7d, c.InnerLineLength);
+        Assert.Equal(7d, c.Inner.Length);
     }
 
     [Theory]
@@ -98,8 +98,8 @@ public class ValorantCrosshairCodeTests
         Assert.Equal(CrosshairShape.Cross, profile.Shape);
         Assert.Equal(Color.FromRgb(0x00, 0xFF, 0xFF), profile.Color);
         Assert.True(profile.CenterDot.Enabled);
-        Assert.Equal(4d, profile.Lines.Thickness);
-        Assert.Equal(2d, profile.Lines.Gap);
+        Assert.Equal(4d, profile.InnerLines.Thickness);
+        Assert.Equal(2d, profile.InnerLines.Offset);
     }
 
     // ---- bộ mã hoá (chiều xuất) ----
@@ -116,11 +116,10 @@ public class ValorantCrosshairCodeTests
             HasCenterDot = true,
             CenterDotSize = 3,
             CenterDotOpacity = 0.5,
-            ShowInnerLines = true,
-            InnerLineThickness = 2,
-            InnerLineLength = 6,
-            InnerLineOffset = 3,
-            InnerLineOpacity = 0.9,
+            // Dựng từ mặc định: VerticalLength chỉ có nghĩa khi tách độ dài dọc, và mã không ghi nó
+            // trong trường hợp này — bộ đọc sẽ điền mặc định của game, nên kỳ vọng cũng phải vậy.
+            Inner = ValorantLines.InnerDefault with { Thickness = 2, Length = 6, Offset = 3, Opacity = 0.9 },
+            Outer = ValorantLines.OuterDefault with { Thickness = 1, Length = 3, Offset = 12, Opacity = 0.4 },
         };
 
         var code = ValorantCrosshairCode.Encode(goc);
@@ -152,7 +151,7 @@ public class ValorantCrosshairCodeTests
             // InvariantCulture.
             Thread.CurrentThread.CurrentCulture = new CultureInfo("vi-VN");
 
-            var code = ValorantCrosshairCode.Encode(new ValorantCrosshair { InnerLineOpacity = 0.5 });
+            var code = ValorantCrosshairCode.Encode(new ValorantCrosshair { Inner = ValorantLines.InnerDefault with { Opacity = 0.5 } });
 
             Assert.Contains("0a;0.5", code, StringComparison.Ordinal);
             Assert.DoesNotContain("0,5", code, StringComparison.Ordinal);
@@ -171,7 +170,7 @@ public class ValorantCrosshairCodeTests
             Shape = CrosshairShape.Cross,
             Color = Color.FromRgb(0xFF, 0x69, 0xB4),
             Opacity = 0.8,
-            Lines = new CrosshairLines { Enabled = true, Length = 7, Thickness = 3, Gap = 4 },
+            InnerLines = new LineLayerSettings { Enabled = true, Length = 7, Thickness = 3, Offset = 4 },
             CenterDot = new CenterDotSettings { Enabled = true, Size = 2, Opacity = 1 },
             Outline = new OutlineSettings { Enabled = true, Thickness = 1, Opacity = 1 },
         };
@@ -181,9 +180,9 @@ public class ValorantCrosshairCodeTests
         Assert.True(ValorantCrosshairCode.TryDecode(code, out var decoded, out _));
         var back = CrosshairCodeConverter.ToProfile(decoded, "vòng lại");
 
-        Assert.Equal(goc.Lines.Length, back.Lines.Length);
-        Assert.Equal(goc.Lines.Thickness, back.Lines.Thickness);
-        Assert.Equal(goc.Lines.Gap, back.Lines.Gap);
+        Assert.Equal(goc.InnerLines.Length, back.InnerLines.Length);
+        Assert.Equal(goc.InnerLines.Thickness, back.InnerLines.Thickness);
+        Assert.Equal(goc.InnerLines.Offset, back.InnerLines.Offset);
         Assert.Equal(goc.Color.R, back.Color.R);
         Assert.Equal(goc.Color.G, back.Color.G);
         Assert.Equal(goc.Color.B, back.Color.B);
@@ -232,6 +231,6 @@ public class ValorantCrosshairCodeTests
         var profile = CrosshairCodeConverter.ToProfile(cs2 with { IsTStyle = true }, "T");
 
         Assert.Equal(CrosshairShape.TShape, profile.Shape);
-        Assert.False(profile.Lines.ShowTop);
+        Assert.False(profile.InnerLines.ShowTop);
     }
 }

@@ -1,4 +1,4 @@
-using CrosshairOverlay.Core.Models;
+﻿using CrosshairOverlay.Core.Models;
 using CrosshairOverlay.Services.Rendering;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
@@ -49,7 +49,7 @@ public class CrosshairRendererTests
     {
         var nho = CrosshairProfile.CreateDefault();
         var to = CrosshairProfile.CreateDefault();
-        to.Lines.Length = nho.Lines.Length * 4;
+        to.InnerLines.Length = nho.InnerLines.Length * 4;
 
         Assert.True(_renderer.Measure(to, Options()).Width
                     > _renderer.Measure(nho, Options()).Width);
@@ -84,7 +84,7 @@ public class CrosshairRendererTests
     public void Measure_TonTrongGioiHanMaxExtent()
     {
         var khongLo = CrosshairProfile.CreateDefault();
-        khongLo.Lines.Length = 100000;
+        khongLo.InnerLines.Length = 100000;
         khongLo.Scale = 10;
 
         var size = _renderer.Measure(khongLo, new CrosshairRenderOptions(1d, true, 200d));
@@ -125,7 +125,7 @@ public class CrosshairRendererTests
             Shape = CrosshairShape.Cross,
             Opacity = double.NaN,
             Scale = 0,
-            Lines = new CrosshairLines { Length = -5, Thickness = 0, Gap = -10 },
+            InnerLines = new LineLayerSettings { Length = -5, Thickness = 0, Offset = -10 },
             CenterDot = new CenterDotSettings { Enabled = true, Size = -1 },
             Outline = new OutlineSettings { Enabled = true, Thickness = -3 },
             Ring = new RingSettings { Enabled = true, Radius = -20, Thickness = -1 },
@@ -172,7 +172,7 @@ public class CrosshairRendererTests
     public void DauNhanhBoTron_PhaiGiuKhuRangCua()
     {
         var profile = CrosshairProfile.CreateDefault();
-        profile.Lines.RoundedCaps = true;
+        profile.InnerLines.RoundedCaps = true;
 
         Assert.False(_renderer.PrefersAliasedEdges(profile));
     }
