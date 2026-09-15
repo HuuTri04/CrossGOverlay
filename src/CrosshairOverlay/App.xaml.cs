@@ -1,6 +1,7 @@
 ﻿using System.Runtime;
 using System.Windows;
 using CrosshairOverlay.Composition;
+using CrosshairOverlay.Core;
 using CrosshairOverlay.Core.Abstractions;
 using CrosshairOverlay.Core.Models;
 using CrosshairOverlay.Localization;
@@ -23,6 +24,7 @@ public partial class App : Application
     private ServiceProvider? _provider;
     private ILogger<App>? _log;
     private bool _fatalReported;
+    private StartupArguments _arguments = StartupArguments.None;
 
     /// <summary>
     /// Bật lên ngay khi quy trình thoát bắt đầu.
@@ -50,6 +52,7 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        _arguments = StartupArguments.Parse(e.Args);
 
         // Một đợt thu gom gen2 gây khựng sẽ thành micro-stutter nhìn thấy được trong game.
         // SustainedLowLatency yêu cầu GC tránh những đợt đó, đổi lại heap có thể lớn hơn đôi
@@ -75,7 +78,13 @@ public partial class App : Application
                 "CrosshairOverlay {Version} khởi động. Dữ liệu: {Root}",
                 typeof(App).Assembly.GetName().Version, paths.RootDirectory);
 
+            // Khởi động lại (vd khôi phục cài đặt gốc): chờ instance cũ thoát hẳn TRƯỚC khi giành
+            // quyền chạy duy nhất — nếu không, instance này sẽ tưởng đã có app chạy và tự thoát.
+            if (_arguments.WaitForProcessId is { } previous) WaitForPreviousInstance(previous);
+
             if (!AcquireSingleInstance()) return;
+
+            if (_arguments.FactoryReset) PerformFactoryReset(paths);
 
             var settings = _provider.GetRequiredService<IAppSettingsService>();
             await settings.LoadAsync().ConfigureAwait(true);
@@ -83,6 +92,9 @@ public partial class App : Application
 
             // Áp ngôn ngữ TRƯỚC khi dựng bất kỳ cửa sổ hay menu khay nào.
             LanguageCatalog.Apply(settings.Current.Language);
+
+            // Chế độ render cũng phải có trước cửa sổ đầu tiên.
+            Services.Overlay.OverlayBehaviorController.ApplyRenderMode(settings.Current.UseHardwareAcceleration);
 
             await StartOverlayAsync(settings).ConfigureAwait(true);
 
@@ -95,6 +107,9 @@ public partial class App : Application
             // Áp quy tắc hiện/ẩn ngay từ đầu, kể cả khi cửa sổ foreground lúc khởi động là của chính
             // ứng dụng (Settings) — trường hợp bộ tự đổi không xử lý.
             autoSwitcher.ApplyVisibility();
+
+            // Sau hotkey (dùng chung Raw Input) và bộ tự đổi (biết phiên test tâm ngắm).
+            _provider.GetRequiredService<Services.Overlay.OverlayBehaviorController>().Start();
 
             // Bật/tắt overlay (menu khay, phím tắt, Settings) và hai tuỳ chọn của game profile đều
             // chỉ ghi vào cài đặt; phản ứng tập trung tại đây để không nơi nào tự bật overlay thẳng.
@@ -127,6 +142,34 @@ public partial class App : Application
     }
 
     // ------------------------------------------------------------------ các bước khởi động
+
+    private void WaitForPreviousInstance(int processId)
+    {
+        try
+        {
+            using var previous = global::System.Diagnostics.Process.GetProcessById(processId);
+            if (!previous.WaitForExit(TimeSpan.FromSeconds(15)))
+                _log!.LogWarning("Instance cũ ({Pid}) chưa thoát sau 15 giây, vẫn tiếp tục.", processId);
+        }
+        catch (ArgumentException)
+        {
+            // Đã thoát từ trước.
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or global::System.ComponentModel.Win32Exception)
+        {
+            _log!.LogDebug(ex, "Không chờ được instance cũ.");
+        }
+    }
+
+    /// <summary>
+    /// Xoá dữ liệu người dùng, TRƯỚC khi bất cứ thứ gì được nạp. Bỏ luôn khởi động cùng Windows để khớp
+    /// với cài đặt gốc (mặc định tắt), nếu không registry vẫn chạy app mà cài đặt lại báo là tắt.
+    /// </summary>
+    private void PerformFactoryReset(AppPathProvider paths)
+    {
+        FactoryReset.Wipe(paths, _log!);
+        _provider!.GetRequiredService<IStartupService>().SetEnabled(false);
+    }
 
     /// <summary>
     /// Hai instance cùng chạy sẽ có hai overlay chồng nhau và tranh nhau đăng ký hotkey.

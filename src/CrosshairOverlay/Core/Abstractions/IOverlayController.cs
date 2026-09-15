@@ -1,4 +1,4 @@
-using CrosshairOverlay.Core.Models;
+﻿using CrosshairOverlay.Core.Models;
 
 namespace CrosshairOverlay.Core.Abstractions;
 
@@ -40,6 +40,23 @@ public interface IOverlayController : IDisposable
 
     /// <summary>Ép vẽ lại. Dùng sau khi đổi DPI/độ phân giải hoặc khi preset bị thay toàn bộ.</summary>
     void Invalidate();
+
+    /// <summary>
+    /// Ẩn/hiện hình TẠM THỜI (vd đang giữ chuột phải để ngắm) mà không đổi trạng thái hiện/ẩn của
+    /// overlay.
+    /// </summary>
+    /// <remarks>
+    /// Rẻ hơn <see cref="SetVisible"/> rất nhiều: không Show/Hide cửa sổ, không dựng lại hình, không
+    /// khởi động lại GIF — chỉ bỏ độ mờ về 0. Cần vậy vì người chơi có thể bấm chuột phải nhiều lần
+    /// mỗi giây.
+    /// </remarks>
+    void SetSuppressed(bool suppressed);
+
+    /// <summary>
+    /// Giới hạn tần số dựng lại hình khi chỉnh preset và tần số đổi khung hình GIF.
+    /// </summary>
+    /// <param name="framesPerSecond">60, 120, 144…; 0 hoặc âm là không giới hạn.</param>
+    void SetFrameRateLimit(int framesPerSecond);
 
     event EventHandler<OverlayVisibilityChangedEventArgs>? VisibilityChanged;
 }

@@ -123,3 +123,15 @@ public enum FullscreenKind
     /// </summary>
     LikelyExclusive = 2,
 }
+
+/// <summary>Mức ưu tiên CPU của tiến trình ứng dụng.</summary>
+public enum ProcessPriorityMode
+{
+    Normal,
+
+    /// <summary>
+    /// Windows chia CPU cho overlay trước khi chia cho tiến trình thường khi máy đang tải 100%.
+    /// Overlay gần như không dùng CPU lúc rảnh, nên không giành gì của game khi không cần.
+    /// </summary>
+    High,
+}

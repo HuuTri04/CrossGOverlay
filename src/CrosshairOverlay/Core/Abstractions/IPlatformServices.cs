@@ -154,6 +154,42 @@ public interface IProcessLauncher
     /// Không tìm thấy file, không có quyền, hoặc người dùng từ chối hộp thoại UAC.
     /// </exception>
     void Launch(string fileNameOrPath);
+
+    /// <summary>Mở một thư mục trong File Explorer.</summary>
+    /// <exception cref="System.ComponentModel.Win32Exception">Không mở được Explorer.</exception>
+    void OpenFolder(string path);
+}
+
+/// <summary>Khởi động lại ứng dụng.</summary>
+public interface IAppRestartService
+{
+    /// <summary>
+    /// Mở instance mới với lệnh khôi phục cài đặt gốc rồi thoát instance này. Instance mới chờ instance
+    /// này thoát hẳn mới xoá dữ liệu.
+    /// </summary>
+    /// <param name="error">Lý do khi không khởi chạy được instance mới — lúc đó ứng dụng KHÔNG thoát.</param>
+    bool RestartWithFactoryReset(out string? error);
+}
+
+/// <summary>Thông tin phần cứng/hệ điều hành đọc được. Mục nào không đọc được thì null/rỗng/0.</summary>
+public sealed record HardwareInfo(
+    string? OsName,
+    string? OsBuild,
+    bool Is64BitOs,
+    string? CpuName,
+    int LogicalProcessors,
+    IReadOnlyList<string> Gpus,
+    ulong InstalledRamBytes,
+    ulong UsableRamBytes);
+
+/// <summary>Đọc thông tin phần cứng cho panel "Thông tin hệ thống".</summary>
+public interface IHardwareInfoService
+{
+    /// <summary>
+    /// Đọc trên thread pool, không bao giờ chặn UI; lần gọi sau trả lại đúng kết quả lần đầu.
+    /// Không ném exception — mục lỗi chỉ để trống.
+    /// </summary>
+    Task<HardwareInfo> GetAsync();
 }
 
 /// <summary>Đảm bảo chỉ một instance chạy; instance thứ hai sẽ đánh thức cửa sổ Settings.</summary>

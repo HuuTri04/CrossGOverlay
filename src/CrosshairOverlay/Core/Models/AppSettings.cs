@@ -58,6 +58,24 @@ public sealed partial class AppSettings : ObservableObject
     /// <summary>Tự kiểm tra bản cập nhật khi khởi động.</summary>
     [ObservableProperty] private bool _checkForUpdates = true;
 
+    /// <summary>
+    /// Giới hạn khung hình của overlay (FPS): tần số dựng lại hình khi chỉnh preset và đổi khung GIF.
+    /// 0 là không giới hạn. Tâm ngắm tĩnh không vẽ lại liên tục nên con số này không ảnh hưởng lúc rảnh.
+    /// </summary>
+    [ObservableProperty] private int _overlayFpsLimit = 60;
+
+    /// <summary>Dùng GPU để vẽ (RenderMode.Default); tắt thì vẽ bằng CPU (SoftwareOnly).</summary>
+    [ObservableProperty] private bool _useHardwareAcceleration = true;
+
+    /// <summary>Mức ưu tiên CPU của tiến trình. Mặc định Normal.</summary>
+    [ObservableProperty] private ProcessPriorityMode _processPriority = ProcessPriorityMode.Normal;
+
+    /// <summary>Ẩn tâm ngắm trong lúc giữ chuột phải (ngắm qua ống ngắm / ADS).</summary>
+    [ObservableProperty] private bool _hideOnRightClick;
+
+    /// <summary>Chỉ hiện tâm ngắm khi con trỏ chuột của Windows đang bị ẩn (đang trong trận).</summary>
+    [ObservableProperty] private bool _showOnlyWhenCursorHidden;
+
     /// <summary>Khung preview vẽ nền ca-rô để thấy rõ phần trong suốt của crosshair.</summary>
     /// <remarks>File settings.json cũ không có khoá này sẽ giữ mặc định BẬT.</remarks>
     [ObservableProperty] private bool _previewShowCheckerboard = true;

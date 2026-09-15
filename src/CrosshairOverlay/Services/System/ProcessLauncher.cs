@@ -33,4 +33,16 @@ public sealed class ProcessLauncher : IProcessLauncher
         using var process = global::System.Diagnostics.Process.Start(startInfo);
         _logger.LogInformation("Đã mở {App} để test tâm ngắm.", fileNameOrPath);
     }
+
+    public void OpenFolder(string path)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
+        // ArgumentList tự đặt dấu nháy: đường dẫn có khoảng trắng hay dấu phẩy không bị Explorer tách sai.
+        var startInfo = new global::System.Diagnostics.ProcessStartInfo("explorer.exe") { UseShellExecute = false };
+        startInfo.ArgumentList.Add(path);
+
+        using var process = global::System.Diagnostics.Process.Start(startInfo);
+        _logger.LogInformation("Đã mở thư mục {Path}.", path);
+    }
 }

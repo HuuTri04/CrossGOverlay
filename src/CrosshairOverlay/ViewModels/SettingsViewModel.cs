@@ -39,6 +39,9 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
         ICustomImageStore images,
         IProfileAutoSwitcher autoSwitcher,
         IProcessLauncher launcher,
+        IHardwareInfoService hardware,
+        IAppPathProvider paths,
+        IAppRestartService restart,
         ILogger<SettingsViewModel> logger)
     {
         _library = library;
@@ -51,9 +54,10 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
         _logger = logger;
 
         Editor = new CrosshairEditorViewModel(renderer, dialogs, images, settings);
-        General = new GeneralSettingsViewModel(settings, monitors, overlay, startup, updates, dialogs);
+        General = new GeneralSettingsViewModel(settings, monitors, overlay, startup, updates, dialogs, paths, launcher, restart);
         Hotkeys = new HotkeysViewModel(settings, hotkeys);
         Games = new GameProfilesViewModel(settings, library, watcher, matcher, scanner);
+        SystemInfo = new SystemInfoViewModel(hardware);
 
         // Ô "Bật overlay" là lựa chọn của người dùng, không phải overlay có đang hiện hay không —
         // xem App.ToggleOverlay. Đồng bộ hai chiều với menu khay và phím tắt qua cài đặt.
@@ -72,6 +76,8 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
     public HotkeysViewModel Hotkeys { get; }
 
     public GameProfilesViewModel Games { get; }
+
+    public SystemInfoViewModel SystemInfo { get; }
 
     public ReadOnlyObservableCollection<CrosshairProfile> Presets => _library.Presets;
 
@@ -470,6 +476,7 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
         General.Dispose();
         Hotkeys.Dispose();
         Games.Dispose();
+        SystemInfo.Dispose();
     }
 
     private void Report(Exception ex, string message)

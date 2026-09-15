@@ -1,4 +1,4 @@
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 
 namespace CrosshairOverlay.Interop;
 
@@ -71,4 +71,22 @@ internal static partial class NativeMethods
     /// </remarks>
     [DllImport(User32)]
     internal static extern short GetAsyncKeyState(int vKey);
+
+    [DllImport(User32)]
+    internal static extern int GetSystemMetrics(int nIndex);
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct CURSORINFO
+    {
+        public int cbSize;
+        public int flags;
+        public nint hCursor;
+        public int ptScreenX;
+        public int ptScreenY;
+    }
+
+    /// <summary>Con trỏ đang hiện hay ẩn (<c>ShowCursor(FALSE)</c> hoặc <c>SetCursor(NULL)</c>). Chỉ đọc.</summary>
+    [DllImport(User32, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool GetCursorInfo(ref CURSORINFO pci);
 }

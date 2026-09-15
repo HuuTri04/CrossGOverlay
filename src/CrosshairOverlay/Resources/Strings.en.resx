@@ -61,7 +61,7 @@
   <data name="Tab_Games"><value>Games</value></data>
 
   <data name="Preset_Header"><value>PRESETS</value></data>
-  <data name="Preset_New"><value>New</value></data>
+  <data name="Preset_New"><value>New preset</value></data>
   <data name="Preset_Duplicate"><value>Duplicate</value></data>
   <data name="Preset_TestCrosshair"><value>Test crosshair</value></data>
   <data name="Preset_TestCrosshairTip"><value>Turn the overlay on and open Notepad as a plain background to see the selected crosshair</value></data>
@@ -325,6 +325,49 @@ You can download it manually from the releases page.</value></data>
   <data name="Update_UpToDate"><value>You are on the latest version ({0}).</value></data>
   <data name="Update_CheckFailed"><value>Could not check for updates — try again later.</value></data>
   <data name="Update_AutoCheck"><value>Check for updates on startup</value></data>
+  <data name="Perf_Header"><value>PERFORMANCE</value></data>
+  <data name="Perf_FpsLimit"><value>Overlay FPS limit</value></data>
+  <data name="Perf_Fps60"><value>60 FPS</value></data>
+  <data name="Perf_Fps120"><value>120 FPS</value></data>
+  <data name="Perf_Fps144"><value>144 FPS</value></data>
+  <data name="Perf_FpsUnlimited"><value>Unlimited</value></data>
+  <data name="Perf_HardwareAcceleration"><value>Use hardware acceleration (GPU)</value></data>
+  <data name="Perf_HardwareAccelerationTip"><value>Turn off if your game stutters because the GPU is overloaded.</value></data>
+  <data name="Perf_Priority"><value>Process priority</value></data>
+  <data name="Perf_PriorityNormal"><value>Normal</value></data>
+  <data name="Perf_PriorityHigh"><value>High</value></data>
+  <data name="Perf_PriorityTip"><value>High: Windows gives the overlay CPU time first when the machine is at 100%, so the crosshair does not stutter. The overlay uses almost no CPU while idle, so it does not take resources from the game.</value></data>
+  <data name="Data_Header"><value>DATA &amp; MAINTENANCE</value></data>
+  <data name="Data_OpenFolder"><value>Open data folder</value></data>
+  <data name="Data_OpenFolderTip"><value>Open the folder with settings.json, your presets and crosshair images (CustomImages).</value></data>
+  <data name="Data_OpenFailed"><value>Could not open the folder {0}.
+
+{1}</value></data>
+  <data name="Data_Reset"><value>Factory reset</value></data>
+  <data name="Data_ResetTip"><value>Delete all settings, presets and saved images, then restart the app.</value></data>
+  <data name="Data_ResetTitle"><value>Factory reset</value></data>
+  <data name="Data_ResetConfirm"><value>Are you sure you want to delete all settings and saved crosshairs? This cannot be undone.</value></data>
+  <data name="Data_ResetFailed"><value>Could not restart the app, so nothing was deleted.
+
+{0}</value></data>
+  <data name="Adv_Header"><value>ADVANCED BEHAVIOUR</value></data>
+  <data name="Adv_HideOnRightClick"><value>Hide the crosshair while holding right mouse button (ADS)</value></data>
+  <data name="Adv_HideOnRightClickTip"><value>Useful in FPS games when aiming down the iron sights.</value></data>
+  <data name="Adv_OnlyWhenCursorHidden"><value>Only show the crosshair while the mouse cursor is hidden</value></data>
+  <data name="Adv_OnlyWhenCursorHiddenTip"><value>Keeps the crosshair out of the way while you browse the web or open a game menu.</value></data>
+  <data name="Update_Header"><value>UPDATES</value></data>
+  <data name="Hotkeys_Header"><value>HOTKEYS</value></data>
+  <data name="Hw_Title"><value>SYSTEM INFORMATION</value></data>
+  <data name="Hw_Os"><value>Operating system</value></data>
+  <data name="Hw_Cpu"><value>CPU</value></data>
+  <data name="Hw_Gpu"><value>Graphics card (GPU)</value></data>
+  <data name="Hw_Ram"><value>RAM</value></data>
+  <data name="Hw_Loading"><value>Reading…</value></data>
+  <data name="Hw_Unknown"><value>Unknown</value></data>
+  <data name="Hw_OsValue"><value>{0} (build {1}, {2})</value></data>
+  <data name="Hw_CpuValue"><value>{0} · {1} threads</value></data>
+  <data name="Hw_RamValue"><value>{0} GB ({1} GB usable)</value></data>
+  <data name="Hw_RamUsableOnly"><value>{0} GB usable</value></data>
 
   <data name="Games_RunningHeader"><value>RUNNING APPLICATIONS</value></data>
   <data name="Games_RunningHint"><value>Only processes with a visible window are listed. Pick one, then press "Use this one".</value></data>

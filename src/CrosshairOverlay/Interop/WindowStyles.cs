@@ -91,6 +91,15 @@ internal static class Win32Constants
 
     /// <summary><c>idObject</c> của sự kiện nói về chính cửa sổ, không phải một phần tử bên trong nó.</summary>
     public const int OBJID_WINDOW = 0;
+
+    /// <summary><c>idObject</c> của sự kiện nói về con trỏ chuột của hệ thống.</summary>
+    public const int OBJID_CURSOR = -9;
+
+    /// <summary>Cờ trong <c>CURSORINFO.flags</c>: con trỏ đang hiện.</summary>
+    public const int CURSOR_SHOWING = 0x00000001;
+
+    /// <summary><c>GetSystemMetrics</c>: người dùng đã đổi vai trò nút trái/phải.</summary>
+    public const int SM_SWAPBUTTON = 23;
     public const int CHILDID_SELF = 0;
     public const uint WINEVENT_OUTOFCONTEXT = 0x0000;
     public const uint WINEVENT_SKIPOWNPROCESS = 0x0002;
@@ -118,11 +127,15 @@ internal static class Win32Constants
     public const ushort HID_USAGE_PAGE_GENERIC = 0x01;
     public const ushort HID_USAGE_GENERIC_MOUSE = 0x02;
 
+    public const ushort RI_MOUSE_RIGHT_BUTTON_DOWN = 0x0004;
+    public const ushort RI_MOUSE_RIGHT_BUTTON_UP = 0x0008;
     public const ushort RI_MOUSE_MIDDLE_BUTTON_DOWN = 0x0010;
     public const ushort RI_MOUSE_BUTTON_4_DOWN = 0x0040;
     public const ushort RI_MOUSE_BUTTON_5_DOWN = 0x0100;
 
     // Virtual-key của phím bổ trợ, dùng với GetAsyncKeyState
+    public const int VK_LBUTTON = 0x01;
+    public const int VK_RBUTTON = 0x02;
     public const int VK_SHIFT = 0x10;
     public const int VK_CONTROL = 0x11;
     public const int VK_MENU = 0x12;

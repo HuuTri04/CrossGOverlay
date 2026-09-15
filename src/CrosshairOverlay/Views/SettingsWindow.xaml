@@ -132,31 +132,31 @@
                             <TextBlock DockPanel.Dock="Top" Text="{loc:Loc Preset_Header}"
                                        Style="{StaticResource SectionHeader}" Margin="2,0,0,8"/>
 
+                            <!-- Hành động chính của cột: nút lớn, trên cùng, kéo hết chiều ngang. -->
+                            <Button DockPanel.Dock="Top" Content="{loc:Loc Preset_New}"
+                                    Command="{Binding NewPresetCommand}"
+                                    Style="{StaticResource PrimaryWideButton}" Margin="0,0,0,10"/>
+
                             <!--
-                                Chia sẻ tâm ngắm chỉ qua mã văn bản (Nhập mã / Xuất mã). Chỗ của hai nút
-                                import/export file cũ giờ là "Test tâm ngắm": bật overlay và mở một nền
-                                trắng để xem tâm ngắm thật. Việc tự lưu preset vào AppData không đổi.
+                                Cụm dưới cùng, từ trên xuống: kiểm tra → chia sẻ (mã văn bản) → quản lý.
+                                Tự lưu preset vào AppData không phụ thuộc vào nút nào ở đây.
                             -->
                             <StackPanel DockPanel.Dock="Bottom" Margin="0,12,0,0">
-                                <UniformGrid Columns="2">
-                                    <Button Content="{loc:Loc Preset_New}" Command="{Binding NewPresetCommand}"
-                                            Margin="0,0,3,4"/>
-                                    <Button Content="{loc:Loc Preset_Duplicate}" Command="{Binding DuplicatePresetCommand}"
-                                            IsEnabled="{Binding SelectedPreset, Converter={StaticResource NotNullToBool}}"
-                                            Margin="3,0,0,4"/>
-                                </UniformGrid>
                                 <Button Content="{loc:Loc Preset_TestCrosshair}" Command="{Binding TestCrosshairCommand}"
-                                        ToolTip="{loc:Loc Preset_TestCrosshairTip}" Margin="0,4,0,4"/>
+                                        ToolTip="{loc:Loc Preset_TestCrosshairTip}"
+                                        HorizontalAlignment="Stretch" Margin="0,0,0,4"/>
                                 <UniformGrid Columns="2">
                                     <Button Content="{loc:Loc Preset_FromGameCode}" Command="{Binding ImportCodeCommand}"
-                                            Style="{StaticResource AccentButton}"
                                             ToolTip="{loc:Loc Preset_FromGameCodeTip}" Margin="0,4,3,4"/>
                                     <Button Content="{loc:Loc Preset_ExportCode}" Command="{Binding ExportCodeCommand}"
                                             IsEnabled="{Binding SelectedPreset, Converter={StaticResource NotNullToBool}}"
                                             ToolTip="{loc:Loc Preset_ExportCodeTip}" Margin="3,4,0,4"/>
+                                    <Button Content="{loc:Loc Preset_Duplicate}" Command="{Binding DuplicatePresetCommand}"
+                                            IsEnabled="{Binding SelectedPreset, Converter={StaticResource NotNullToBool}}"
+                                            Margin="0,4,3,0"/>
                                     <Button Content="{loc:Loc Preset_Delete}" Command="{Binding DeletePresetCommand}"
                                             IsEnabled="{Binding SelectedPreset, Converter={StaticResource NotNullToBool}}"
-                                            Style="{StaticResource DangerButton}" Margin="0,4,3,0"/>
+                                            Style="{StaticResource DangerButton}" Margin="3,4,0,0"/>
                                 </UniformGrid>
                             </StackPanel>
 
@@ -373,140 +373,338 @@
             </TabItem>
 
             <!-- ============================================ TAB CHUNG -->
+            <!-- Hai cột bằng nhau: màn hình bên trái, ứng dụng + cập nhật bên phải — dàn đều hết cửa sổ. -->
             <TabItem Header="{loc:Loc Tab_General}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,14,0,0">
-                    <Border Style="{StaticResource Card}" VerticalAlignment="Top" MaxWidth="640"
-                            HorizontalAlignment="Left" Margin="0,0,0,16">
-                        <StackPanel>
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="14"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
 
-                            <TextBlock Text="{loc:Loc General_Monitor}" Style="{StaticResource SectionHeader}"
-                                       Margin="0,0,0,6"/>
-                            <ComboBox ItemsSource="{Binding General.MonitorModes}"
-                                      DisplayMemberPath="Label" SelectedValuePath="Value"
-                                      Width="340" HorizontalAlignment="Left"
-                                      SelectedValue="{Binding General.MonitorMode, Mode=TwoWay}"/>
+                        <!-- ======== Cột trái: MÀN HÌNH + HIỆU NĂNG -->
+                        <StackPanel Grid.Column="0">
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Text="{loc:Loc General_Monitor}" Style="{StaticResource SectionHeader}"
+                                           Margin="0,0,0,8"/>
+                                <ComboBox ItemsSource="{Binding General.MonitorModes}"
+                                          DisplayMemberPath="Label" SelectedValuePath="Value"
+                                          SelectedValue="{Binding General.MonitorMode, Mode=TwoWay}"/>
 
-                            <StackPanel Margin="0,10,0,0"
-                                        Visibility="{Binding General.ShowMonitorPicker,
-                                                     Converter={StaticResource BoolToVisibility}}">
-                                <ComboBox ItemsSource="{Binding General.AvailableMonitors}"
-                                          SelectedItem="{Binding General.PinnedMonitor, Mode=TwoWay}"
-                                          DisplayMemberPath="DeviceName"
-                                          Width="340" HorizontalAlignment="Left"/>
+                                <StackPanel Margin="0,10,0,0"
+                                            Visibility="{Binding General.ShowMonitorPicker,
+                                                         Converter={StaticResource BoolToVisibility}}">
+                                    <ComboBox ItemsSource="{Binding General.AvailableMonitors}"
+                                              SelectedItem="{Binding General.PinnedMonitor, Mode=TwoWay}"
+                                              DisplayMemberPath="DeviceName"/>
+                                </StackPanel>
+
+                                <Border Style="{StaticResource InnerCard}" Margin="0,12,0,0" Padding="12,8">
+                                    <ItemsControl ItemsSource="{Binding General.AvailableMonitors}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Style="{StaticResource FieldLabel}" FontFamily="Consolas"
+                                                           FontSize="11" Margin="0,2" TextWrapping="Wrap">
+                                                    <Run Text="{Binding DeviceName, Mode=OneWay}"/>
+                                                    <Run Text="{Binding Bounds, Mode=OneWay, StringFormat='· {0}'}"/>
+                                                    <Run Text="{Binding DpiScaleX, Mode=OneWay, StringFormat='· DPI {0:0.##}x'}"/>
+                                                </TextBlock>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Border>
+
+                                <Button Content="{loc:Loc General_RefreshMonitors}" HorizontalAlignment="Left"
+                                        Margin="0,12,0,0" Command="{Binding General.RefreshMonitorsCommand}"/>
                             </StackPanel>
+                        </Border>
 
-                            <ItemsControl ItemsSource="{Binding General.AvailableMonitors}" Margin="0,12,0,0">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Style="{StaticResource FieldLabel}" FontFamily="Consolas"
-                                                   FontSize="11" Margin="0,2">
-                                            <Run Text="{Binding DeviceName, Mode=OneWay}"/>
-                                            <Run Text="{Binding Bounds, Mode=OneWay, StringFormat='· {0}'}"/>
-                                            <Run Text="{Binding DpiScaleX, Mode=OneWay, StringFormat='· DPI {0:0.##}x'}"/>
-                                        </TextBlock>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+                        <!--
+                            HIỆU NĂNG. FPS giới hạn tần số dựng lại hình khi đang chỉnh và tần số đổi khung GIF —
+                            tâm ngắm tĩnh không vẽ lại liên tục nên lúc chơi con số này gần như không tốn gì.
+                        -->
+                        <Border Style="{StaticResource Card}" Margin="0,14,0,0">
+                            <StackPanel>
+                                <TextBlock Text="{loc:Loc Perf_Header}" Style="{StaticResource SectionHeader}"
+                                           Margin="0,0,0,8"/>
 
-                            <Button Content="{loc:Loc General_RefreshMonitors}" HorizontalAlignment="Left"
-                                    Margin="0,12,0,0" Command="{Binding General.RefreshMonitorsCommand}"/>
+                                <TextBlock Text="{loc:Loc Perf_FpsLimit}" Style="{StaticResource FieldLabel}"
+                                           Margin="0,0,0,4"/>
+                                <ComboBox ItemsSource="{Binding General.FpsLimits}"
+                                          DisplayMemberPath="Label" SelectedValuePath="Value"
+                                          SelectedValue="{Binding General.OverlayFpsLimit, Mode=TwoWay}"/>
 
-                            <TextBlock Text="{loc:Loc General_App}" Style="{StaticResource SectionHeader}"/>
+                                <CheckBox Style="{StaticResource ToggleSwitch}" Margin="0,16,0,2"
+                                          Content="{loc:Loc Perf_HardwareAcceleration}"
+                                          ToolTip="{loc:Loc Perf_HardwareAccelerationTip}"
+                                          IsChecked="{Binding General.UseHardwareAcceleration, Mode=TwoWay}"/>
 
-                            <TextBlock Text="{loc:Loc General_Language}" Style="{StaticResource FieldLabel}"
-                                       Margin="0,0,0,4"/>
-                            <ComboBox ItemsSource="{Binding General.Languages}" Width="340"
-                                      HorizontalAlignment="Left"
-                                      DisplayMemberPath="Label" SelectedValuePath="Value"
-                                      SelectedValue="{Binding General.LanguageCode, Mode=TwoWay}"/>
-
-                            <CheckBox Content="{loc:Loc General_StartWithWindows}" Margin="0,14,0,4"
-                                      IsChecked="{Binding General.StartWithWindows, Mode=TwoWay}"/>
-                            <TextBlock Text="{Binding General.StartupHint}" Style="{StaticResource FieldLabel}"
-                                       TextWrapping="Wrap" Margin="25,0,0,4"/>
-                            <CheckBox Content="{loc:Loc General_StartMinimized}" Margin="0,6"
-                                      IsChecked="{Binding General.Settings.StartMinimizedToTray, Mode=TwoWay}"
-                                      Command="{Binding General.PersistSettingsCommand}"/>
-                            <CheckBox Content="{loc:Loc General_MinimizeOnClose}" Margin="0,6"
-                                      IsChecked="{Binding General.Settings.MinimizeToTrayOnClose, Mode=TwoWay}"
-                                      Command="{Binding General.PersistSettingsCommand}"/>
-                            <CheckBox Content="{loc:Loc General_WarnExclusive}" Margin="0,6"
-                                      IsChecked="{Binding General.Settings.WarnOnExclusiveFullscreen, Mode=TwoWay}"
-                                      Command="{Binding General.PersistSettingsCommand}"/>
-                            <CheckBox Content="{loc:Loc Update_AutoCheck}" Margin="0,6"
-                                      IsChecked="{Binding General.Settings.CheckForUpdates, Mode=TwoWay}"
-                                      Command="{Binding General.PersistSettingsCommand}"/>
-
-                            <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
-                                <Button Content="{loc:Loc Update_CheckNow}"
-                                        Command="{Binding General.CheckForUpdatesCommand}"/>
-                                <TextBlock Text="{Binding General.UpdateStatus}" Margin="14,0,0,0"
-                                           VerticalAlignment="Center" TextWrapping="Wrap"
-                                           Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{loc:Loc Perf_Priority}" Style="{StaticResource FieldLabel}"
+                                           Margin="0,16,0,4"/>
+                                <ComboBox ItemsSource="{Binding General.PriorityModes}"
+                                          DisplayMemberPath="Label" SelectedValuePath="Value"
+                                          ToolTip="{loc:Loc Perf_PriorityTip}"
+                                          SelectedValue="{Binding General.ProcessPriority, Mode=TwoWay}"/>
                             </StackPanel>
-
+                        </Border>
                         </StackPanel>
-                    </Border>
+
+                        <!-- ======== Cột phải: ỨNG DỤNG + CẬP NHẬT -->
+                        <StackPanel Grid.Column="2">
+                            <Border Style="{StaticResource Card}">
+                                <StackPanel>
+                                    <TextBlock Text="{loc:Loc General_App}" Style="{StaticResource SectionHeader}"
+                                               Margin="0,0,0,8"/>
+
+                                    <TextBlock Text="{loc:Loc General_Language}" Style="{StaticResource FieldLabel}"
+                                               Margin="0,0,0,4"/>
+                                    <ComboBox ItemsSource="{Binding General.Languages}"
+                                              DisplayMemberPath="Label" SelectedValuePath="Value"
+                                              SelectedValue="{Binding General.LanguageCode, Mode=TwoWay}"/>
+
+                                    <CheckBox Content="{loc:Loc General_StartWithWindows}" Margin="0,14,0,4"
+                                              IsChecked="{Binding General.StartWithWindows, Mode=TwoWay}"/>
+                                    <TextBlock Text="{Binding General.StartupHint}" Style="{StaticResource FieldLabel}"
+                                               TextWrapping="Wrap" Margin="25,0,0,4"/>
+                                    <CheckBox Content="{loc:Loc General_StartMinimized}" Margin="0,6"
+                                              IsChecked="{Binding General.Settings.StartMinimizedToTray, Mode=TwoWay}"
+                                              Command="{Binding General.PersistSettingsCommand}"/>
+                                    <CheckBox Content="{loc:Loc General_MinimizeOnClose}" Margin="0,6"
+                                              IsChecked="{Binding General.Settings.MinimizeToTrayOnClose, Mode=TwoWay}"
+                                              Command="{Binding General.PersistSettingsCommand}"/>
+                                    <CheckBox Content="{loc:Loc General_WarnExclusive}" Margin="0,6"
+                                              IsChecked="{Binding General.Settings.WarnOnExclusiveFullscreen, Mode=TwoWay}"
+                                              Command="{Binding General.PersistSettingsCommand}"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource Card}" Margin="0,14,0,0">
+                                <StackPanel>
+                                    <TextBlock Text="{loc:Loc Update_Header}" Style="{StaticResource SectionHeader}"
+                                               Margin="0,0,0,8"/>
+                                    <CheckBox Content="{loc:Loc Update_AutoCheck}" Margin="0,2,0,6"
+                                              IsChecked="{Binding General.Settings.CheckForUpdates, Mode=TwoWay}"
+                                              Command="{Binding General.PersistSettingsCommand}"/>
+
+                                    <Grid Margin="0,10,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Button Content="{loc:Loc Update_CheckNow}"
+                                                Command="{Binding General.CheckForUpdatesCommand}"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding General.UpdateStatus}" Margin="14,0,0,0"
+                                                   VerticalAlignment="Center" TextWrapping="Wrap"
+                                                   Style="{StaticResource FieldLabel}"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- DỮ LIỆU & BẢO TRÌ: nút nguy hiểm dùng màu đỏ và luôn qua hộp thoại xác nhận. -->
+                            <Border Style="{StaticResource Card}" Margin="0,14,0,0">
+                                <StackPanel>
+                                    <TextBlock Text="{loc:Loc Data_Header}" Style="{StaticResource SectionHeader}"
+                                               Margin="0,0,0,8"/>
+                                    <TextBlock Text="{Binding General.DataDirectory}" Style="{StaticResource FieldLabel}"
+                                               FontFamily="Consolas" FontSize="11" TextWrapping="Wrap"
+                                               Margin="0,0,0,10"/>
+                                    <UniformGrid Columns="2">
+                                        <Button Content="{loc:Loc Data_OpenFolder}" Margin="0,0,5,0"
+                                                ToolTip="{loc:Loc Data_OpenFolderTip}"
+                                                Command="{Binding General.OpenDataFolderCommand}"/>
+                                        <Button Content="{loc:Loc Data_Reset}" Margin="5,0,0,0"
+                                                Style="{StaticResource DangerButton}"
+                                                ToolTip="{loc:Loc Data_ResetTip}"
+                                                Command="{Binding General.FactoryResetCommand}"/>
+                                    </UniformGrid>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
                 </ScrollViewer>
             </TabItem>
 
             <!-- ============================================ TAB PHÍM TẮT -->
+            <!-- 65% phím tắt, 35% thông tin hệ thống. -->
             <TabItem Header="{loc:Loc Tab_Hotkeys}">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,14,0,0">
-                    <Border Style="{StaticResource Card}" VerticalAlignment="Top" MaxWidth="760"
-                            HorizontalAlignment="Left" Margin="0,0,0,16">
+                <Grid Margin="0,14,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="6.5*"/>
+                        <ColumnDefinition Width="14"/>
+                        <ColumnDefinition Width="3.5*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!--
+                        ======== Cột trái, 2 hàng: PHÍM TẮT (cao vừa đủ nội dung) và HÀNH VI NÂNG CAO (lấp phần
+                        còn lại). Cả cột nằm trong ScrollViewer để cửa sổ thấp vẫn cuộn tới được mọi thứ.
+                    -->
+                    <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
+                        <!--
+                            MinHeight = chiều cao vùng nhìn thấy: trong ScrollViewer hàng "*" không có gì để
+                            chia, nên ép Grid ít nhất cao bằng khung — đủ chỗ thì thẻ dưới lấp phần còn lại,
+                            thiếu chỗ thì cuộn.
+                        -->
+                        <Grid MinHeight="{Binding ViewportHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <Border Grid.Row="0" Style="{StaticResource Card}">
+                                <StackPanel>
+                                    <TextBlock Text="{loc:Loc Hotkeys_Header}" Style="{StaticResource SectionHeader}"
+                                               Margin="0,0,0,8"/>
+                                    <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
+                                               Margin="0,0,0,6" Text="{loc:Loc Hotkeys_Intro}"/>
+                                    <ContentControl Style="{StaticResource Hint}" Margin="0,0,0,12"
+                                                    Content="{loc:Loc Hotkeys_ComboHint}"/>
+
+                                    <!--
+                                        Lưới 3 cột thẳng hàng giữa mọi dòng: tên chức năng | ô nhập phím | nút gạt.
+                                        Grid.IsSharedSizeScope để cột 1 và 3 rộng bằng nhau ở mọi dòng dù nhãn dài
+                                        ngắn khác nhau. Lỗi đăng ký (nếu có) nằm ở dòng phụ, dưới ô nhập phím.
+                                    -->
+                                    <ItemsControl ItemsSource="{Binding Hotkeys.Rows}" Grid.IsSharedSizeScope="True">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="0,4">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyLabel" MinWidth="160"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyToggle"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="Auto"/>
+                                                    </Grid.RowDefinitions>
+
+                                                    <TextBlock Grid.Column="0" Text="{Binding Label}" Margin="0,0,16,0"
+                                                               Style="{StaticResource FieldLabel}"/>
+
+                                                    <ctl:HotkeyInputBox Grid.Column="1" MaxWidth="320" HorizontalAlignment="Stretch"
+                                                        Style="{StaticResource {x:Type TextBox}}"
+                                                        HotkeyKey="{Binding Binding.Key, Mode=TwoWay}"
+                                                        HotkeyMouseButton="{Binding Binding.MouseButton, Mode=TwoWay}"
+                                                        HotkeyModifiers="{Binding Binding.Modifiers, Mode=TwoWay}"/>
+
+                                                    <CheckBox Grid.Column="2" Style="{StaticResource ToggleSwitch}"
+                                                              Margin="16,0,0,0" VerticalAlignment="Center"
+                                                              AutomationProperties.Name="{Binding Label}"
+                                                              ToolTip="{loc:Loc Hotkeys_Enabled}"
+                                                              IsChecked="{Binding Binding.Enabled, Mode=TwoWay}"/>
+
+                                                    <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
+                                                               Margin="0,4,0,0" TextWrapping="Wrap" FontSize="11.5"
+                                                               Foreground="{StaticResource Danger}"
+                                                               Text="{Binding Binding.RegistrationError}">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                                                <Style.Triggers>
+                                                                    <Trigger Property="Text" Value="">
+                                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                                    </Trigger>
+                                                                    <Trigger Property="Text" Value="{x:Null}">
+                                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                                    </Trigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <!-- Sát ngay dưới dòng phím tắt cuối cùng. -->
+                                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                                        <Button Content="{loc:Loc Hotkeys_Apply}" Style="{StaticResource AccentButton}"
+                                                Command="{Binding Hotkeys.ApplyHotkeysCommand}" Margin="0,0,10,0"/>
+                                        <Button Content="{loc:Loc Hotkeys_Reset}"
+                                                Command="{Binding Hotkeys.ResetToDefaultsCommand}"/>
+                                    </StackPanel>
+                                    <TextBlock Margin="0,10,0,0" TextWrapping="Wrap" FontSize="12.5"
+                                               Text="{Binding Hotkeys.StatusMessage}">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                                <Style.Triggers>
+                                                    <Trigger Property="Text" Value="">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- HÀNH VI NÂNG CAO: ẩn tạm thời, chồng lên quy tắc hiện/ẩn của game profile. -->
+                            <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,14,0,0">
+                                <StackPanel>
+                                    <TextBlock Text="{loc:Loc Adv_Header}" Style="{StaticResource SectionHeader}"
+                                               Margin="0,0,0,10"/>
+
+                                    <CheckBox Style="{StaticResource ToggleSwitch}" Margin="0,2,0,4"
+                                              Content="{loc:Loc Adv_HideOnRightClick}"
+                                              ToolTip="{loc:Loc Adv_HideOnRightClickTip}"
+                                              IsChecked="{Binding Hotkeys.HideOnRightClick, Mode=TwoWay}"/>
+
+                                    <CheckBox Style="{StaticResource ToggleSwitch}" Margin="0,10,0,2"
+                                              Content="{loc:Loc Adv_OnlyWhenCursorHidden}"
+                                              ToolTip="{loc:Loc Adv_OnlyWhenCursorHiddenTip}"
+                                              IsChecked="{Binding Hotkeys.ShowOnlyWhenCursorHidden, Mode=TwoWay}"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </ScrollViewer>
+
+                    <!-- ======== Cột phải: THÔNG TIN HỆ THỐNG (đọc trên luồng nền, xem SystemInfoViewModel) -->
+                    <Border Grid.Column="2" Style="{StaticResource Card}" VerticalAlignment="Top">
                         <StackPanel>
+                            <TextBlock Text="{loc:Loc Hw_Title}" Style="{StaticResource SectionHeader}"
+                                       Margin="0,0,0,10"/>
 
-                            <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
-                                       Margin="0,0,0,6" Text="{loc:Loc Hotkeys_Intro}"/>
-                            <ContentControl Style="{StaticResource Hint}" Margin="0,0,0,14"
-                                            Content="{loc:Loc Hotkeys_ComboHint}"/>
+                            <StackPanel>
+                                <StackPanel.Resources>
+                                    <Style x:Key="HwLabel" TargetType="TextBlock" BasedOn="{StaticResource FieldLabel}">
+                                        <Setter Property="FontSize" Value="11.5"/>
+                                        <Setter Property="Margin" Value="0,0,0,2"/>
+                                    </Style>
+                                    <Style x:Key="HwValue" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                        <Setter Property="TextWrapping" Value="Wrap"/>
+                                        <Setter Property="FontSize" Value="13"/>
+                                    </Style>
+                                </StackPanel.Resources>
 
-                            <ItemsControl ItemsSource="{Binding Hotkeys.Rows}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Grid Margin="0,5">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="180"/>
-                                                <ColumnDefinition Width="210"/>
-                                                <ColumnDefinition Width="80"/>
-                                                <ColumnDefinition Width="*"/>
-                                            </Grid.ColumnDefinitions>
-
-                                            <TextBlock Grid.Column="0" Text="{Binding Label}"
-                                                       Style="{StaticResource FieldLabel}"/>
-
-                                            <ctl:HotkeyInputBox Grid.Column="1" Margin="0,0,12,0"
-                                                HotkeyKey="{Binding Binding.Key, Mode=TwoWay}"
-                                                HotkeyMouseButton="{Binding Binding.MouseButton, Mode=TwoWay}"
-                                                HotkeyModifiers="{Binding Binding.Modifiers, Mode=TwoWay}"/>
-
-                                            <CheckBox Grid.Column="2" Content="{loc:Loc Hotkeys_Enabled}"
-                                                      VerticalAlignment="Center"
-                                                      IsChecked="{Binding Binding.Enabled, Mode=TwoWay}"/>
-
-                                            <TextBlock Grid.Column="3" VerticalAlignment="Center"
-                                                       TextWrapping="Wrap" FontSize="11.5"
-                                                       Foreground="{StaticResource Danger}"
-                                                       Text="{Binding Binding.RegistrationError}"/>
-                                        </Grid>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-
-                            <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
-                                <Button Content="{loc:Loc Hotkeys_Apply}" Style="{StaticResource AccentButton}"
-                                        Command="{Binding Hotkeys.ApplyHotkeysCommand}" Margin="0,0,10,0"/>
-                                <Button Content="{loc:Loc Hotkeys_Reset}"
-                                        Command="{Binding Hotkeys.ResetToDefaultsCommand}"/>
+                                <Border Style="{StaticResource InnerCard}" Padding="12,10" Margin="0,0,0,8">
+                                    <StackPanel>
+                                        <TextBlock Text="{loc:Loc Hw_Os}" Style="{StaticResource HwLabel}"/>
+                                        <TextBlock Text="{Binding SystemInfo.OsInfo}" Style="{StaticResource HwValue}"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Style="{StaticResource InnerCard}" Padding="12,10" Margin="0,0,0,8">
+                                    <StackPanel>
+                                        <TextBlock Text="{loc:Loc Hw_Cpu}" Style="{StaticResource HwLabel}"/>
+                                        <TextBlock Text="{Binding SystemInfo.CpuName}" Style="{StaticResource HwValue}"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Style="{StaticResource InnerCard}" Padding="12,10" Margin="0,0,0,8">
+                                    <StackPanel>
+                                        <TextBlock Text="{loc:Loc Hw_Gpu}" Style="{StaticResource HwLabel}"/>
+                                        <TextBlock Text="{Binding SystemInfo.GpuName}" Style="{StaticResource HwValue}"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Style="{StaticResource InnerCard}" Padding="12,10">
+                                    <StackPanel>
+                                        <TextBlock Text="{loc:Loc Hw_Ram}" Style="{StaticResource HwLabel}"/>
+                                        <TextBlock Text="{Binding SystemInfo.RamInfo}" Style="{StaticResource HwValue}"/>
+                                    </StackPanel>
+                                </Border>
                             </StackPanel>
-
-                            <TextBlock Margin="0,14,0,0" TextWrapping="Wrap" FontSize="12.5"
-                                       Text="{Binding Hotkeys.StatusMessage}"/>
-
                         </StackPanel>
                     </Border>
-                </ScrollViewer>
+                </Grid>
             </TabItem>
 
             <!-- ============================================ TAB GAME -->

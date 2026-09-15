@@ -75,6 +75,17 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
 
     public GameProfile? ActiveGameProfile { get; private set; }
 
+    public bool IsShowingCrosshairTest => _inTestWindow;
+
+    public event EventHandler? CrosshairTestStateChanged;
+
+    private void SetInTestWindow(bool value)
+    {
+        if (_inTestWindow == value) return;
+        _inTestWindow = value;
+        CrosshairTestStateChanged?.Invoke(this, EventArgs.Empty);
+    }
+
     public event EventHandler<ForegroundWindowInfo>? ExclusiveFullscreenDetected;
 
     public void Start()
@@ -120,14 +131,14 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
             // kể cả ở chế độ "chỉ hiện trong game".
             ActiveGameProfile = null;
             _matchedProcessId = 0;
-            _inTestWindow = true;
+            SetInTestWindow(true);
             _testProcessId = window.ProcessId;
             _watcher.Track(window);
             ApplyVisibility();
             return;
         }
 
-        _inTestWindow = false;
+        SetInTestWindow(false);
 
         if (!IsEnabled) return;
 
@@ -267,7 +278,7 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
 
         _testProcessName = null;
         _testProcessId = 0;
-        _inTestWindow = false;
+        SetInTestWindow(false);
         ApplyVisibility();
     }
 

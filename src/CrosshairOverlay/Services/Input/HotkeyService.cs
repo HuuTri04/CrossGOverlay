@@ -43,6 +43,14 @@ public sealed class HotkeyService : IHotkeyService
     private nint _hwnd;
     private HwndSourceHook? _hook;
     private bool _rawInputRegistered;
+
+    /// <summary>Có phím tắt nào dùng nút chuột không — một trong hai lý do cần Raw Input.</summary>
+    private bool _wantsMouseBindings;
+
+    private bool _trackRightButton;
+
+    /// <summary>Nút phải đang được giữ (theo Raw Input). Chỉ đụng trên UI thread.</summary>
+    private bool _rightHeld;
     private int _nextId = 1;
     private bool _disposed;
 
@@ -53,6 +61,23 @@ public sealed class HotkeyService : IHotkeyService
     }
 
     public event EventHandler<HotkeyPressedEventArgs>? HotkeyPressed;
+
+    public event EventHandler<bool>? RightButtonChanged;
+
+    public bool TrackRightButton
+    {
+        get => _trackRightButton;
+        set
+        {
+            if (_trackRightButton == value) return;
+            _trackRightButton = value;
+
+            // Tắt giữa lúc đang giữ nút: báo nhả để không ai kẹt ở trạng thái "đang ngắm".
+            if (!value) SetRightHeld(false);
+
+            if (_hwnd != 0) SetRawMouse(_wantsMouseBindings || value);
+        }
+    }
 
     public void Attach(nint hwnd)
     {
@@ -90,13 +115,13 @@ public sealed class HotkeyService : IHotkeyService
         if (!wanted)
         {
             RemoveRawMouse();
-            _logger.LogInformation("Đã gỡ Raw Input chuột — không còn phím tắt nào dùng nút chuột.");
+            _logger.LogInformation("Đã gỡ Raw Input chuột — không còn tính năng nào cần nút chuột.");
             return;
         }
 
         RegisterRawMouse();
         if (_rawInputRegistered)
-            _logger.LogInformation("Đã đăng ký Raw Input chuột cho phím tắt dùng nút chuột.");
+            _logger.LogInformation("Đã đăng ký Raw Input chuột (phím tắt nút chuột hoặc ẩn khi giữ chuột phải).");
     }
 
     /// <summary>
@@ -162,7 +187,8 @@ public sealed class HotkeyService : IHotkeyService
         UnregisterAll();
 
         var list = bindings as IReadOnlyCollection<HotkeyBinding> ?? bindings.ToList();
-        SetRawMouse(list.Any(b => b.Enabled && b.IsAssigned && b.IsMouseBinding));
+        _wantsMouseBindings = list.Any(b => b.Enabled && b.IsAssigned && b.IsMouseBinding);
+        SetRawMouse(_wantsMouseBindings || _trackRightButton);
 
         var registered = new List<HotkeyBinding>();
         var failures = new List<HotkeyRegistrationFailure>();
@@ -284,7 +310,7 @@ public sealed class HotkeyService : IHotkeyService
 
     private void HandleRawInput(nint lParam)
     {
-        if (_mouseBindings.Count == 0) return;
+        if (_mouseBindings.Count == 0 && !_trackRightButton) return;
 
         var size = RawMouseSize;
         var read = NativeMethods.GetRawInputData(
@@ -296,6 +322,10 @@ public sealed class HotkeyService : IHotkeyService
 
         // GetRawInputData trả về (uint)-1 khi lỗi.
         if (read == uint.MaxValue || raw.header.dwType != Win32Constants.RIM_TYPEMOUSE) return;
+
+        if (_trackRightButton) TrackRight(raw.mouse.usButtonFlags);
+
+        if (_mouseBindings.Count == 0) return;
 
         var button = ToButton(raw.mouse.usButtonFlags);
         if (button == HotkeyMouseButton.None) return;
@@ -309,6 +339,53 @@ public sealed class HotkeyService : IHotkeyService
             Raise(binding.Action);
             return;
         }
+    }
+
+    /// <summary>
+    /// Cập nhật trạng thái nút phải từ một gói Raw Input.
+    /// </summary>
+    /// <remarks>
+    /// Raw Input báo nút VẬT LÝ, nên đúng là nút phải kể cả khi người dùng đổi vai trò nút trong
+    /// Windows. Lưới an toàn: gói "nhả" có thể bị lỡ (vd hộp thoại UAC chiếm màn hình đúng lúc
+    /// đó) — trong khi đang coi là giữ, mỗi gói chuột kế tiếp đối chiếu với trạng thái nút thật
+    /// để crosshair không bị ẩn mãi. Việc đối chiếu chỉ xảy ra lúc đang giữ nút.
+    /// </remarks>
+    private void TrackRight(ushort buttonFlags)
+    {
+        if ((buttonFlags & Win32Constants.RI_MOUSE_RIGHT_BUTTON_DOWN) != 0)
+        {
+            SetRightHeld(true);
+            return;
+        }
+
+        if ((buttonFlags & Win32Constants.RI_MOUSE_RIGHT_BUTTON_UP) != 0)
+        {
+            SetRightHeld(false);
+            return;
+        }
+
+        if (_rightHeld && !IsPhysicalRightButtonDown()) SetRightHeld(false);
+    }
+
+    private static bool IsPhysicalRightButtonDown()
+    {
+        // GetAsyncKeyState làm việc với nút LOGIC; đổi vai trò nút thì nút phải vật lý là VK_LBUTTON.
+        var swapped = NativeMethods.GetSystemMetrics(Win32Constants.SM_SWAPBUTTON) != 0;
+        var key = swapped ? Win32Constants.VK_LBUTTON : Win32Constants.VK_RBUTTON;
+        return (NativeMethods.GetAsyncKeyState(key) & 0x8000) != 0;
+    }
+
+    private void SetRightHeld(bool held)
+    {
+        if (_rightHeld == held) return;
+        _rightHeld = held;
+
+        // Cùng lý do với Raise: không làm việc của người nghe ngay trong WndProc. Ưu tiên Input để
+        // crosshair ẩn/hiện kịp cùng khung hình với cú bấm.
+        _dispatcher.InvokeAsync(() =>
+        {
+            if (!_disposed) RightButtonChanged?.Invoke(this, held);
+        }, DispatcherPriority.Input);
     }
 
     private static HotkeyMouseButton ToButton(ushort buttonFlags)

@@ -63,7 +63,7 @@
 
   <!-- ===== Thư viện preset ===== -->
   <data name="Preset_Header"><value>PRESET</value></data>
-  <data name="Preset_New"><value>Mới</value></data>
+  <data name="Preset_New"><value>Tạo mới</value></data>
   <data name="Preset_Duplicate"><value>Nhân bản</value></data>
   <data name="Preset_TestCrosshair"><value>Test tâm ngắm</value></data>
   <data name="Preset_TestCrosshairTip"><value>Bật overlay và mở Notepad làm nền trắng để xem tâm ngắm đang chọn</value></data>
@@ -337,6 +337,49 @@ Bạn có thể tải thủ công từ trang phát hành.</value></data>
   <data name="Update_UpToDate"><value>Bạn đang dùng phiên bản mới nhất ({0}).</value></data>
   <data name="Update_CheckFailed"><value>Không kiểm tra được cập nhật — hãy thử lại sau.</value></data>
   <data name="Update_AutoCheck"><value>Tự kiểm tra cập nhật khi khởi động</value></data>
+  <data name="Perf_Header"><value>HIỆU NĂNG</value></data>
+  <data name="Perf_FpsLimit"><value>Giới hạn FPS overlay</value></data>
+  <data name="Perf_Fps60"><value>60 FPS</value></data>
+  <data name="Perf_Fps120"><value>120 FPS</value></data>
+  <data name="Perf_Fps144"><value>144 FPS</value></data>
+  <data name="Perf_FpsUnlimited"><value>Không giới hạn</value></data>
+  <data name="Perf_HardwareAcceleration"><value>Sử dụng tăng tốc phần cứng (GPU)</value></data>
+  <data name="Perf_HardwareAccelerationTip"><value>Tắt nếu bạn gặp hiện tượng giật lag game do GPU bị quá tải.</value></data>
+  <data name="Perf_Priority"><value>Mức độ ưu tiên (Process Priority)</value></data>
+  <data name="Perf_PriorityNormal"><value>Bình thường (Normal)</value></data>
+  <data name="Perf_PriorityHigh"><value>Cao (High)</value></data>
+  <data name="Perf_PriorityTip"><value>Cao: Windows ưu tiên chia CPU cho overlay khi máy tải 100%, tránh tâm ngắm bị khựng. Overlay gần như không dùng CPU lúc rảnh nên không giành tài nguyên của game.</value></data>
+  <data name="Data_Header"><value>DỮ LIỆU &amp; BẢO TRÌ</value></data>
+  <data name="Data_OpenFolder"><value>Mở thư mục dữ liệu</value></data>
+  <data name="Data_OpenFolderTip"><value>Mở thư mục chứa settings.json, các preset và ảnh tâm ngắm (CustomImages).</value></data>
+  <data name="Data_OpenFailed"><value>Không mở được thư mục {0}.
+
+{1}</value></data>
+  <data name="Data_Reset"><value>Khôi phục cài đặt gốc</value></data>
+  <data name="Data_ResetTip"><value>Xoá toàn bộ cài đặt, preset và ảnh đã lưu rồi khởi động lại ứng dụng.</value></data>
+  <data name="Data_ResetTitle"><value>Khôi phục cài đặt gốc</value></data>
+  <data name="Data_ResetConfirm"><value>Bạn có chắc chắn muốn xóa toàn bộ cài đặt và tâm ngắm đã lưu? Hành động này không thể hoàn tác.</value></data>
+  <data name="Data_ResetFailed"><value>Không khởi động lại được ứng dụng nên chưa xoá gì cả.
+
+{0}</value></data>
+  <data name="Adv_Header"><value>HÀNH VI NÂNG CAO</value></data>
+  <data name="Adv_HideOnRightClick"><value>Ẩn tâm ngắm khi giữ chuột phải (Ngắm ADS)</value></data>
+  <data name="Adv_HideOnRightClickTip"><value>Hữu ích cho các game FPS khi ngắm qua đầu ruồi súng.</value></data>
+  <data name="Adv_OnlyWhenCursorHidden"><value>Chỉ hiện tâm ngắm khi ẩn con trỏ chuột</value></data>
+  <data name="Adv_OnlyWhenCursorHiddenTip"><value>Giúp tâm ngắm không hiện ra vướng víu khi bạn đang lướt web hoặc mở Menu game.</value></data>
+  <data name="Update_Header"><value>CẬP NHẬT</value></data>
+  <data name="Hotkeys_Header"><value>PHÍM TẮT</value></data>
+  <data name="Hw_Title"><value>THÔNG TIN HỆ THỐNG</value></data>
+  <data name="Hw_Os"><value>Hệ điều hành</value></data>
+  <data name="Hw_Cpu"><value>CPU</value></data>
+  <data name="Hw_Gpu"><value>Card đồ hoạ (GPU)</value></data>
+  <data name="Hw_Ram"><value>RAM</value></data>
+  <data name="Hw_Loading"><value>Đang đọc…</value></data>
+  <data name="Hw_Unknown"><value>Không xác định</value></data>
+  <data name="Hw_OsValue"><value>{0} (build {1}, {2})</value></data>
+  <data name="Hw_CpuValue"><value>{0} · {1} luồng</value></data>
+  <data name="Hw_RamValue"><value>{0} GB (khả dụng {1} GB)</value></data>
+  <data name="Hw_RamUsableOnly"><value>Khả dụng {0} GB</value></data>
 
   <!-- ===== Danh sách tiến trình đang chạy ===== -->
   <data name="Games_RunningHeader"><value>ỨNG DỤNG ĐANG CHẠY</value></data>

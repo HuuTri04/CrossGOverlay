@@ -57,6 +57,12 @@ internal static class ServiceRegistration
         services.AddSingleton<ISingleInstanceGuard, SingleInstanceGuard>();
         services.AddSingleton<IUpdateService, UpdateService>();
         services.AddSingleton<IProcessLauncher, ProcessLauncher>();
+        services.AddSingleton<IAppRestartService>(provider => new AppRestartService(
+            provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<AppRestartService>>(),
+            App.RequestShutdown));
+        services.AddSingleton<IHardwareInfoService, HardwareInfoService>();
+        services.AddSingleton<ICursorVisibilityMonitor, CursorVisibilityMonitor>();
+        services.AddSingleton<OverlayBehaviorController>();
 
         // Vòng phụ thuộc có thật: SettingsViewModel cần IDialogService, mà DialogService lại
         // phải dựng được cửa sổ chứa ViewModel đó. Closure giải vòng vì nó chỉ resolve

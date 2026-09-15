@@ -52,6 +52,12 @@ public interface IProfileAutoSwitcher : IDisposable
     /// <param name="processName">Tên file thực thi, vd <c>notepad.exe</c>. So khớp không phân biệt hoa/thường.</param>
     void BeginCrosshairTest(string processName);
 
+    /// <summary>Foreground đang là cửa sổ của phiên "Test tâm ngắm".</summary>
+    bool IsShowingCrosshairTest { get; }
+
+    /// <summary><see cref="IsShowingCrosshairTest"/> vừa đổi.</summary>
+    event EventHandler? CrosshairTestStateChanged;
+
     /// <summary>Kết thúc phiên test (vd khởi chạy ứng dụng test thất bại).</summary>
     void EndCrosshairTest();
 

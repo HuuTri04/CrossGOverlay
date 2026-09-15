@@ -1,4 +1,4 @@
-using CrosshairOverlay.Core.Models;
+﻿using CrosshairOverlay.Core.Models;
 
 namespace CrosshairOverlay.Core.Abstractions;
 
@@ -24,6 +24,19 @@ public interface IHotkeyService : IDisposable
     void UnregisterAll();
 
     event EventHandler<HotkeyPressedEventArgs>? HotkeyPressed;
+
+    /// <summary>
+    /// Theo dõi nút chuột phải (bấm/nhả) — cho tính năng "ẩn tâm ngắm khi ngắm ADS".
+    /// </summary>
+    /// <remarks>
+    /// Đọc qua Raw Input dùng chung với phím tắt nút chuột: kênh CHỈ ĐỌC, không chặn hay giả lập sự
+    /// kiện nào, và không phải hook cấp thấp (<c>WH_MOUSE_LL</c> chen vào mọi sự kiện chuột của hệ
+    /// thống, gây trễ chuột trong game). Tắt thì gỡ đăng ký nếu không còn phím tắt nào cần.
+    /// </remarks>
+    bool TrackRightButton { get; set; }
+
+    /// <summary>Nút phải vừa được bấm (true) hoặc nhả (false). Phát trên UI thread.</summary>
+    event EventHandler<bool>? RightButtonChanged;
 }
 
 /// <param name="Registered">Các binding đăng ký thành công.</param>
@@ -40,4 +53,21 @@ public sealed record HotkeyRegistrationFailure(HotkeyBinding Binding, string Rea
 public sealed class HotkeyPressedEventArgs(HotkeyAction action) : EventArgs
 {
     public HotkeyAction Action { get; } = action;
+}
+
+/// <summary>
+/// Theo dõi con trỏ chuột của Windows đang hiện hay ẩn — game ẩn con trỏ khi vào trận, hiện lại khi
+/// mở menu.
+/// </summary>
+public interface ICursorVisibilityMonitor : IDisposable
+{
+    /// <summary>Con trỏ đang hiện. Chỉ có ý nghĩa khi đang <see cref="Start"/>.</summary>
+    bool IsCursorVisible { get; }
+
+    void Start();
+
+    void Stop();
+
+    /// <summary>Con trỏ vừa đổi giữa hiện và ẩn. Phát trên UI thread.</summary>
+    event EventHandler<bool>? VisibilityChanged;
 }

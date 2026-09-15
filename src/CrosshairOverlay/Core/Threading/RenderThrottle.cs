@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Windows.Threading;
 
 namespace CrosshairOverlay.Core.Threading;
@@ -34,7 +34,7 @@ internal sealed class RenderThrottle : IDisposable
 
     private readonly DispatcherTimer _timer;
     private readonly Action _action;
-    private readonly TimeSpan _interval;
+    private TimeSpan _interval;
 
     private long _lastRun;
     private bool _pending;
@@ -50,6 +50,16 @@ internal sealed class RenderThrottle : IDisposable
 
         _timer = new DispatcherTimer(DispatcherPriority.Render, dispatcher) { Interval = _interval };
         _timer.Tick += OnTick;
+    }
+
+    /// <summary>
+    /// Khoảng tối thiểu giữa hai lượt chạy — đổi theo giới hạn FPS. <see cref="TimeSpan.Zero"/> là
+    /// không chặn: mỗi yêu cầu chạy ngay.
+    /// </summary>
+    public TimeSpan Interval
+    {
+        get => _interval;
+        set => _interval = value < TimeSpan.Zero ? TimeSpan.Zero : value;
     }
 
     /// <summary>Xin một lượt vẽ lại. Gọi bao nhiêu lần cũng được; chi phí thừa gần bằng không.</summary>

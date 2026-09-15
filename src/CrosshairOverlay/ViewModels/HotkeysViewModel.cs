@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CrosshairOverlay.Core.Abstractions;
@@ -52,6 +52,32 @@ public sealed partial class HotkeysViewModel : ObservableObject, IDisposable
     [ObservableProperty] private IReadOnlyList<HotkeyRow> _rows;
 
     [ObservableProperty] private string _statusMessage = string.Empty;
+
+    /// <summary>Ẩn tâm ngắm khi giữ chuột phải (ngắm ADS). Lưu ngay vào cài đặt.</summary>
+    public bool HideOnRightClick
+    {
+        get => _settings.Current.HideOnRightClick;
+        set
+        {
+            if (_settings.Current.HideOnRightClick == value) return;
+            _settings.Current.HideOnRightClick = value;
+            _settings.RequestSave();
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>Chỉ hiện tâm ngắm khi con trỏ chuột đang bị ẩn. Lưu ngay vào cài đặt.</summary>
+    public bool ShowOnlyWhenCursorHidden
+    {
+        get => _settings.Current.ShowOnlyWhenCursorHidden;
+        set
+        {
+            if (_settings.Current.ShowOnlyWhenCursorHidden == value) return;
+            _settings.Current.ShowOnlyWhenCursorHidden = value;
+            _settings.RequestSave();
+            OnPropertyChanged();
+        }
+    }
 
     [ObservableProperty] private bool _hasFailures;
 

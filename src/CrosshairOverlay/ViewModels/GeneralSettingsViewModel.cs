@@ -16,6 +16,9 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
     private readonly IStartupService _startup;
     private readonly IUpdateService _updates;
     private readonly IDialogService _dialogs;
+    private readonly IAppPathProvider _paths;
+    private readonly IProcessLauncher _launcher;
+    private readonly IAppRestartService _restart;
 
     private bool _disposed;
 
@@ -25,8 +28,14 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
         IOverlayController overlay,
         IStartupService startup,
         IUpdateService updates,
-        IDialogService dialogs)
+        IDialogService dialogs,
+        IAppPathProvider paths,
+        IProcessLauncher launcher,
+        IAppRestartService restart)
     {
+        _paths = paths;
+        _launcher = launcher;
+        _restart = restart;
         _settings = settings;
         _monitors = monitors;
         _overlay = overlay;
@@ -37,6 +46,8 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
         _monitorMode = settings.Current.MonitorSelectionMode;
         _languageCode = settings.Current.Language;
         MonitorModes = BuildMonitorModes();
+        FpsLimits = BuildFpsLimits();
+        PriorityModes = BuildPriorityModes();
         Languages = LanguageCatalog.All;
 
         RefreshMonitors();
@@ -52,6 +63,85 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
     public IReadOnlyList<LocalizedOption<MonitorSelectionMode>> MonitorModes { get; }
 
     public IReadOnlyList<LocalizedOption<string>> Languages { get; }
+
+    /// <summary>Các mức giới hạn FPS của overlay; 0 là không giới hạn.</summary>
+    public IReadOnlyList<LocalizedOption<int>> FpsLimits { get; }
+
+    /// <summary>
+    /// Giới hạn FPS đang chọn (60/120/144, 0 = không giới hạn). Ghi thẳng vào cài đặt và lưu;
+    /// OverlayBehaviorController áp nó lên overlay.
+    /// </summary>
+    public int OverlayFpsLimit
+    {
+        get => _settings.Current.OverlayFpsLimit;
+        set
+        {
+            if (_settings.Current.OverlayFpsLimit == value) return;
+            _settings.Current.OverlayFpsLimit = value;
+            _settings.RequestSave();
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>Các mức ưu tiên tiến trình cho ComboBox.</summary>
+    public IReadOnlyList<LocalizedOption<ProcessPriorityMode>> PriorityModes { get; }
+
+    /// <summary>Mức ưu tiên CPU của ứng dụng; OverlayBehaviorController áp nó lên tiến trình.</summary>
+    public ProcessPriorityMode ProcessPriority
+    {
+        get => _settings.Current.ProcessPriority;
+        set
+        {
+            if (_settings.Current.ProcessPriority == value) return;
+            _settings.Current.ProcessPriority = value;
+            _settings.RequestSave();
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>Thư mục chứa settings.json, preset và ảnh — hiện dưới nút mở thư mục.</summary>
+    public string DataDirectory => _paths.RootDirectory;
+
+    [RelayCommand]
+    private void OpenDataFolder()
+    {
+        try
+        {
+            global::System.IO.Directory.CreateDirectory(_paths.RootDirectory);
+            _launcher.OpenFolder(_paths.RootDirectory);
+        }
+        catch (Exception ex) when (ex is global::System.ComponentModel.Win32Exception or InvalidOperationException
+                                       or global::System.IO.IOException or UnauthorizedAccessException)
+        {
+            _dialogs.ShowMessage(Tr.Get("Data_Header"), Tr.Format("Data_OpenFailed", _paths.RootDirectory, ex.Message), isError: true);
+        }
+    }
+
+    /// <summary>
+    /// Khôi phục cài đặt gốc: hỏi xác nhận, rồi khởi động lại ứng dụng ở chế độ xoá dữ liệu. Việc xoá
+    /// làm ở instance mới, sau khi instance này đã thoát và ghi xong mọi thứ còn treo.
+    /// </summary>
+    [RelayCommand]
+    private void FactoryReset()
+    {
+        if (!_dialogs.Confirm(Tr.Get("Data_ResetTitle"), Tr.Get("Data_ResetConfirm"))) return;
+
+        if (!_restart.RestartWithFactoryReset(out var error))
+            _dialogs.ShowMessage(Tr.Get("Data_ResetTitle"), Tr.Format("Data_ResetFailed", error ?? "?"), isError: true);
+    }
+
+    /// <summary>Tăng tốc phần cứng (GPU) cho việc vẽ của ứng dụng.</summary>
+    public bool UseHardwareAcceleration
+    {
+        get => _settings.Current.UseHardwareAcceleration;
+        set
+        {
+            if (_settings.Current.UseHardwareAcceleration == value) return;
+            _settings.Current.UseHardwareAcceleration = value;
+            _settings.RequestSave();
+            OnPropertyChanged();
+        }
+    }
 
     [ObservableProperty] private IReadOnlyList<MonitorInfo> _availableMonitors = [];
 
@@ -112,6 +202,20 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
         }
     }
 
+    private static IReadOnlyList<LocalizedOption<ProcessPriorityMode>> BuildPriorityModes() =>
+    [
+        new(ProcessPriorityMode.Normal, "Perf_PriorityNormal"),
+        new(ProcessPriorityMode.High, "Perf_PriorityHigh"),
+    ];
+
+    private static IReadOnlyList<LocalizedOption<int>> BuildFpsLimits() =>
+    [
+        new(60, "Perf_Fps60"),
+        new(120, "Perf_Fps120"),
+        new(144, "Perf_Fps144"),
+        new(0, "Perf_FpsUnlimited"),
+    ];
+
     private static IReadOnlyList<LocalizedOption<MonitorSelectionMode>> BuildMonitorModes() =>
     [
         new(MonitorSelectionMode.FollowForegroundWindow, "MonitorMode_Follow"),
@@ -131,6 +235,8 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
     private void OnLanguageChanged(object? sender, PropertyChangedEventArgs e)
     {
         foreach (var mode in MonitorModes) mode.Refresh();
+        foreach (var limit in FpsLimits) limit.Refresh();
+        foreach (var priority in PriorityModes) priority.Refresh();
         LanguageCatalog.RefreshLabels();
 
         StartupHint = string.Empty;

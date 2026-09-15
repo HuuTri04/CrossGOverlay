@@ -1,4 +1,4 @@
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using System.Windows.Media;
 using System.Windows.Threading;
 
@@ -32,6 +32,12 @@ internal static class DrawingAnimations
     /// đếm theo luồng mới đúng — và giữ cho các test chạy song song không đếm lẫn của nhau.
     /// </summary>
     [ThreadStatic] private static int t_active;
+
+    /// <summary>
+    /// Khoảng tối thiểu giữa hai khung GIF, theo giới hạn FPS của overlay. GIF khai delay ngắn hơn
+    /// (vài GIF ghi 10 ms = 100 khung/giây) sẽ bị giãn ra; không giới hạn thì theo đúng GIF.
+    /// </summary>
+    internal static TimeSpan MinFrameInterval { get; set; } = TimeSpan.FromMilliseconds(1000d / 60);
 
     internal static int ActiveCount => t_active;
 
@@ -84,7 +90,7 @@ internal static class DrawingAnimations
             _image.ImageSource = animation.Frames[0];
 
             // Ưu tiên Render: đổi khung cùng lượt với việc vẽ, không chen trước input của người dùng.
-            _timer = new DispatcherTimer(DispatcherPriority.Render) { Interval = animation.Delays[0] };
+            _timer = new DispatcherTimer(DispatcherPriority.Render) { Interval = Clamp(animation.Delays[0]) };
             _timer.Tick += OnTick;
             _timer.Start();
         }
@@ -94,9 +100,11 @@ internal static class DrawingAnimations
             _index = (_index + 1) % _animation.Frames.Count;
             _image.ImageSource = _animation.Frames[_index];
 
-            // Mỗi khung GIF có delay riêng.
-            _timer.Interval = _animation.Delays[_index];
+            // Mỗi khung GIF có delay riêng; đọc giới hạn mỗi nhịp để đổi FPS có hiệu lực ngay.
+            _timer.Interval = Clamp(_animation.Delays[_index]);
         }
+
+        private static TimeSpan Clamp(TimeSpan delay) => delay < MinFrameInterval ? MinFrameInterval : delay;
 
         public void Stop()
         {

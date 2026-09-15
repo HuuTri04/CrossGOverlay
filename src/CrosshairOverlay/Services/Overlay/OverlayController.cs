@@ -51,6 +51,7 @@ public sealed class OverlayController : IOverlayController
     private string? _targetDeviceName;
 
     private bool _visible;
+    private bool _suppressed;
     private bool _placing;
     private bool _disposed;
 
@@ -143,6 +144,33 @@ public sealed class OverlayController : IOverlayController
     }
 
     public void Toggle() => SetVisible(!_visible);
+
+    public void SetSuppressed(bool suppressed)
+    {
+        ThrowIfDisposed();
+        if (_suppressed == suppressed) return;
+
+        _suppressed = suppressed;
+        if (_window is not null) _window.Host.Opacity = suppressed ? 0d : 1d;
+
+        _logger.LogDebug("Overlay {State} tạm thời.", suppressed ? "ẩn" : "hiện lại");
+    }
+
+    public void SetFrameRateLimit(int framesPerSecond)
+    {
+        ThrowIfDisposed();
+
+        var interval = FrameInterval(framesPerSecond);
+        _rebuildThrottle.Interval = interval;
+        Rendering.DrawingAnimations.MinFrameInterval = interval;
+
+        _logger.LogInformation(
+            "Giới hạn khung hình overlay: {Limit}.", framesPerSecond > 0 ? $"{framesPerSecond} FPS" : "không giới hạn");
+    }
+
+    /// <summary>1000 ms / FPS (60 FPS ≈ 16,7 ms); không giới hạn là 0.</summary>
+    internal static TimeSpan FrameInterval(int framesPerSecond) =>
+        framesPerSecond > 0 ? TimeSpan.FromMilliseconds(1000d / framesPerSecond) : TimeSpan.Zero;
 
     public void MoveToMonitor(MonitorInfo monitor)
     {
