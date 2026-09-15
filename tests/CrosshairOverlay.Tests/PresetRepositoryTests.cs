@@ -83,36 +83,6 @@ public class PresetRepositoryTests : IDisposable
     }
 
     [Fact]
-    public async Task ExportRoiImport_CapIdMoi()
-    {
-        var goc = CrosshairProfile.CreateDefault();
-        goc.Name = "Chia sẻ";
-        await _repository.SaveAsync(goc);
-
-        var file = Path.Combine(_root, "export.json");
-        await _repository.ExportAsync(goc, file);
-
-        var nhap = await _repository.ImportAsync(file);
-
-        // Id mới là bắt buộc: trùng Id sẽ ghi đè lên preset đang có.
-        Assert.NotEqual(goc.Id, nhap.Id);
-        Assert.Equal(goc.Name, nhap.Name);
-        Assert.Equal(goc.InnerLines.Thickness, nhap.InnerLines.Thickness);
-
-        Assert.NotNull(await _repository.GetAsync(goc.Id));
-        Assert.NotNull(await _repository.GetAsync(nhap.Id));
-    }
-
-    [Fact]
-    public async Task ImportFileHong_NemInvalidData()
-    {
-        var file = Path.Combine(_root, "hong.json");
-        await File.WriteAllTextAsync(file, "{ day khong phai json");
-
-        await Assert.ThrowsAnyAsync<Exception>(() => _repository.ImportAsync(file));
-    }
-
-    [Fact]
     public async Task FileHongTrongThuVien_BiBoQua_KhongKeoSapCaKho()
     {
         var tot = CrosshairProfile.CreateDefault();

@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace CrosshairOverlay.Core.Models;
 
@@ -34,6 +34,13 @@ public sealed partial class GameProfile : ObservableObject
     /// Thứ tự ưu tiên khi nhiều rule cùng khớp — số nhỏ được xét trước.
     /// </summary>
     [ObservableProperty] private int _priority;
+
+    /// <summary>
+    /// Tên hiển thị. Danh sách dùng <c>DisplayMemberPath</c> chỉ đổi phần CHỮ vẽ ra; tên mà trình
+    /// đọc màn hình (UI Automation) đọc lên vẫn lấy từ <c>ToString()</c> — không ghi đè thì nó đọc
+    /// "CrosshairOverlay.Core.Models.GameProfile" cho mọi mục.
+    /// </summary>
+    public override string ToString() => Name;
 
     public GameProfile Clone() => new()
     {

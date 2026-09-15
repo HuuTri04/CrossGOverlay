@@ -52,8 +52,10 @@
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
 
   <!-- ===== Khung ứng dụng ===== -->
-  <data name="App_Subtitle"><value>overlay tâm ngắm</value></data>
   <data name="Shell_EnableOverlay"><value>Bật overlay</value></data>
+  <data name="Shell_OverlayHintMatchedOnly"><value>Overlay chỉ hiển thị khi đang trong game đúng với profile đã áp dụng.</value></data>
+  <data name="Shell_OverlayHintEverywhere"><value>Overlay hiển thị trên mọi cửa sổ, kể cả khi không ở trong game.</value></data>
+  <data name="Shell_OverlayDisplayModeTip"><value>Game cần chạy ở chế độ Borderless (Fullscreen Windowed) hoặc Windowed. Ở chế độ Exclusive Fullscreen, Windows không cho cửa sổ khác vẽ đè lên game nên overlay sẽ không hiện.</value></data>
   <data name="Tab_Crosshair"><value>Crosshair</value></data>
   <data name="Tab_General"><value>Chung</value></data>
   <data name="Tab_Hotkeys"><value>Phím tắt</value></data>
@@ -63,24 +65,18 @@
   <data name="Preset_Header"><value>PRESET</value></data>
   <data name="Preset_New"><value>Mới</value></data>
   <data name="Preset_Duplicate"><value>Nhân bản</value></data>
-  <data name="Preset_Import"><value>Import</value></data>
-  <data name="Preset_Export"><value>Export</value></data>
+  <data name="Preset_TestCrosshair"><value>Test tâm ngắm</value></data>
+  <data name="Preset_TestCrosshairTip"><value>Bật overlay và mở Notepad làm nền trắng để xem tâm ngắm đang chọn</value></data>
   <data name="Preset_Delete"><value>Xoá</value></data>
   <data name="Preset_FromGameCode"><value>Nhập mã</value></data>
-  <data name="Preset_FromGameCodeTip"><value>Dán mã crosshair từ CS2 hoặc Valorant</value></data>
+  <data name="Preset_FromGameCodeTip"><value>Dán mã crosshair từ CS2, Valorant hoặc mã hình ảnh CrossGOverlay</value></data>
   <data name="Preset_CopySuffix"><value>(Bản sao)</value></data>
   <data name="Preset_DefaultName"><value>Crosshair mới</value></data>
   <data name="Preset_DeleteTitle"><value>Xoá preset</value></data>
-  <data name="Preset_DeleteConfirm"><value>Xoá '{0}'? Thao tác này không hoàn tác được.</value></data>
-  <data name="Preset_ExportTitle"><value>Export preset</value></data>
-  <data name="Preset_ExportDone"><value>Đã ghi '{0}' ra:
-{1}</value></data>
-  <data name="Preset_FileFilter"><value>Preset crosshair (*.json)|*.json|Tất cả file (*.*)|*.*</value></data>
+  <data name="Preset_DeleteConfirm"><value>Bạn có chắc chắn muốn xoá preset '{0}' không? Thao tác này không hoàn tác được.</value></data>
   <data name="Preset_ErrorCreate"><value>Không tạo được preset mới.</value></data>
   <data name="Preset_ErrorDuplicate"><value>Không nhân bản được preset.</value></data>
   <data name="Preset_ErrorDelete"><value>Không xoá được preset.</value></data>
-  <data name="Preset_ErrorImport"><value>Không import được '{0}'. File có thể không phải preset hợp lệ.</value></data>
-  <data name="Preset_ErrorExport"><value>Không export được preset.</value></data>
   <data name="Preset_ErrorFromCode"><value>Không tạo được preset từ mã crosshair.</value></data>
   <data name="Preset_ExportCode"><value>Xuất mã</value></data>
   <data name="Preset_ExportCodeTip"><value>Dựng mã chia sẻ từ preset đang chọn và chép vào clipboard</value></data>
@@ -92,6 +88,24 @@
 
 Lưu ý: định dạng mã chỉ mô tả được chữ thập, chấm giữa và viền. Preset này có thành phần không biểu diễn được (vòng tròn, khung vuông, nhánh chéo, góc xoay hoặc tỉ lệ khác 1) — những phần đó sẽ mất khi người khác nhập mã.</value></data>
   <data name="Preset_ClipboardFailed"><value>Không ghi được vào clipboard — ứng dụng khác đang giữ nó. Hãy thử lại.</value></data>
+  <data name="Preset_ImageCodeNoImage"><value>Preset này chưa có ảnh, hoặc không tìm thấy file ảnh — không tạo được mã.</value></data>
+  <data name="Preset_ImageCodeUnreadable"><value>File ảnh của preset này không đọc được — không tạo được mã.</value></data>
+  <data name="Preset_ImageCodeTooLarge"><value>Ảnh vẫn quá lớn để đưa vào mã chia sẻ sau khi nén (tối đa {0} MB) — thường là GIF động nhiều khung hình, loại ảnh không thu nhỏ được. Hãy dùng ảnh tĩnh hoặc GIF ít khung hình hơn.</value></data>
+  <data name="Preset_ImageCodeCopiedBody"><value>Mã tâm ngắm hình ảnh ({0} ký tự) đã nằm trong clipboard.
+
+Mã chứa luôn cả ảnh, người nhận chỉ cần bấm "Nhập mã" rồi dán vào.</value></data>
+
+  <data name="Test_Title"><value>Test tâm ngắm</value></data>
+  <data name="Test_NotepadMissing"><value>Không tìm thấy Notepad. Bạn có muốn chọn một ứng dụng/game bất kỳ để kiểm tra không?</value></data>
+  <data name="Test_ExeFilter"><value>Executable Files (*.exe)|*.exe</value></data>
+  <data name="Test_ProfileName"><value>Profile {0}</value></data>
+  <data name="Test_LaunchFailed"><value>Không mở được {0}.
+
+{1}</value></data>
+  <data name="Test_ProfileCreated"><value>Đã tạo preset '{0}' (sao chép tâm ngắm đang chọn) và gắn với {1}.
+
+Mỗi khi {1} ở foreground, preset này sẽ tự được áp dụng. Xem hoặc chỉnh trong tab Game.</value></data>
+  <data name="Test_Failed"><value>Không chạy được Test tâm ngắm.</value></data>
 
   <!-- ===== Khung xem trước ===== -->
   <data name="Preview_Zoom"><value>Phóng</value></data>
@@ -181,6 +195,7 @@ Lưu ý: định dạng mã chỉ mô tả được chữ thập, chấm giữa 
 
   <!-- ===== Tab Phím tắt ===== -->
   <data name="Hotkeys_Intro"><value>Bấm vào ô rồi gõ tổ hợp phím muốn gán. Nhấn Esc để xoá gán. Sau khi sửa xong phải bấm "Áp dụng" để đăng ký với Windows.</value></data>
+  <data name="Hotkeys_ComboHint"><value>Nên chọn các tổ hợp phím (ví dụ: Ctrl + Shift + X) để tránh bị trùng lặp với phím di chuyển/kỹ năng trong game.</value></data>
   <data name="Hotkeys_Enabled"><value>Bật</value></data>
   <data name="Hotkeys_Apply"><value>Áp dụng</value></data>
   <data name="Hotkeys_Reset"><value>Về mặc định</value></data>
@@ -246,7 +261,7 @@ Lưu ý: định dạng mã chỉ mô tả được chữ thập, chấm giữa 
 
   <!-- ===== Hộp thoại import mã ===== -->
   <data name="Import_Title"><value>Import mã crosshair</value></data>
-  <data name="Import_Intro"><value>Dán mã crosshair từ CS2 (CSGO-xxxxx-xxxxx-…) hoặc Valorant (0;P;c;5;…). Ứng dụng tự nhận diện định dạng.</value></data>
+  <data name="Import_Intro"><value>Dán mã crosshair từ CS2 (CSGO-xxxxx-xxxxx-…), Valorant (0;P;c;5;…) hoặc mã tâm ngắm hình ảnh của CrossGOverlay (CGO-IMG;…). Ứng dụng tự nhận diện định dạng.</value></data>
   <data name="Import_Result"><value>KẾT QUẢ ĐỌC ĐƯỢC</value></data>
   <data name="Import_Accuracy"><value>Cấu trúc (hình dạng, màu, chấm giữa, viền) được chuyển đúng. Kích thước chỉ là xấp xỉ vì game dùng hệ đơn vị khác — chỉnh lại thanh Tỉ lệ sau khi import nếu cần.</value></data>
   <data name="Import_Create"><value>Tạo preset</value></data>
@@ -268,6 +283,14 @@ Lưu ý: định dạng mã chỉ mô tả được chữ thập, chấm giữa 
   <data name="Import_On"><value>bật, cỡ {0}</value></data>
   <data name="Import_OutlineOn"><value>bật, dày {0}</value></data>
   <data name="Import_Off"><value>tắt</value></data>
+  <data name="Import_ImageCodeInvalid"><value>Mã chia sẻ không hợp lệ hoặc bị lỗi.</value></data>
+  <data name="Import_NameImage"><value>Tâm ngắm hình ảnh</value></data>
+  <data name="Import_KindImage"><value>Tâm ngắm hình ảnh CrossGOverlay</value></data>
+  <data name="Import_FieldImage"><value>Ảnh</value></data>
+  <data name="Import_ImageInfo"><value>{0}, {1}×{2} px, {3} KB</value></data>
+  <data name="Import_FieldScale"><value>Kích thước</value></data>
+  <data name="Import_FieldOffset"><value>Lệch</value></data>
+  <data name="Import_FieldRotation"><value>Xoay (độ)</value></data>
   <data name="Import_ErrEmpty"><value>Mã rỗng.</value></data>
   <data name="Import_ErrNoValidChars"><value>Mã không chứa ký tự hợp lệ nào.</value></data>
   <data name="Import_ErrBadChar"><value>Ký tự '{0}' không thuộc bảng mã của share code.</value></data>

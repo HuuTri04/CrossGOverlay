@@ -117,48 +117,6 @@ public sealed class PresetRepository : IPresetRepository
         return Task.CompletedTask;
     }
 
-    public async Task<CrosshairProfile> ImportAsync(
-        string filePath, CancellationToken cancellationToken = default)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
-
-        var imported = await AtomicFile.ReadJsonAsync<CrosshairProfile>(filePath, cancellationToken)
-                .ConfigureAwait(false)
-            ?? throw new InvalidDataException($"'{filePath}' không phải file preset hợp lệ.");
-
-        // Cấp Id mới: file import về có thể trùng Id với một preset đang có, ghi đè lên nó
-        // là hành vi người dùng không hề mong đợi.
-        imported.Id = Guid.NewGuid();
-        imported.CreatedUtc = DateTimeOffset.UtcNow;
-        MarkMigrated(imported);
-        MaterializeEmbeddedImage(imported);
-
-        if (string.IsNullOrWhiteSpace(imported.Name))
-            imported.Name = Path.GetFileNameWithoutExtension(filePath);
-
-        await SaveAsync(imported, cancellationToken).ConfigureAwait(false);
-
-        _logger.LogInformation("Đã import preset '{Name}' từ {Path}.", imported.Name, filePath);
-        return imported;
-    }
-
-    public async Task ExportAsync(
-        CrosshairProfile profile, string filePath, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(profile);
-        ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
-
-        // Ghi một BẢN SAO có nhúng ảnh, không đụng vào preset đang dùng: chuỗi base64 vài MB không
-        // được phép bám vào preset trong thư viện và bị ghi lại mỗi lần lưu.
-        var export = profile.Clone();
-        export.EmbeddedImage = await TryEmbedImageAsync(profile, cancellationToken).ConfigureAwait(false);
-
-        await AtomicFile.WriteJsonAsync(filePath, export, cancellationToken).ConfigureAwait(false);
-        _logger.LogInformation(
-            "Đã export preset '{Name}' ra {Path} (kèm ảnh: {HasImage}).",
-            profile.Name, filePath, export.EmbeddedImage is not null);
-    }
-
     /// <summary>
     /// Ghi nhận preset đã ở định dạng hiện tại.
     /// </summary>
@@ -171,26 +129,6 @@ public sealed class PresetRepository : IPresetRepository
     {
         if (preset.SchemaVersion < CrosshairProfile.CurrentSchemaVersion)
             preset.SchemaVersion = CrosshairProfile.CurrentSchemaVersion;
-    }
-
-    /// <summary>Đọc ảnh của preset để nhúng vào file export; không có ảnh hoặc ảnh đã mất thì trả null.</summary>
-    private async Task<EmbeddedImageData?> TryEmbedImageAsync(CrosshairProfile profile, CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(profile.Image.FilePath)) return null;
-
-        var resolved = _images.Resolve(profile.Image.FilePath);
-        if (resolved is null || !File.Exists(resolved))
-        {
-            _logger.LogWarning("Preset '{Name}' trỏ tới ảnh không còn tồn tại — export không kèm ảnh.", profile.Name);
-            return null;
-        }
-
-        var bytes = await File.ReadAllBytesAsync(resolved, cancellationToken).ConfigureAwait(false);
-        return new EmbeddedImageData
-        {
-            FileName = Path.GetFileName(resolved),
-            Data = Convert.ToBase64String(bytes),
-        };
     }
 
     /// <summary>

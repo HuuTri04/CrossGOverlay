@@ -19,13 +19,20 @@ public sealed partial class CrosshairEditorViewModel : ObservableObject, IDispos
 {
     private readonly IDialogService _dialogs;
     private readonly ICustomImageStore _images;
+    private readonly IAppSettingsService _settings;
     private bool _disposed;
 
-    public CrosshairEditorViewModel(ICrosshairRenderer renderer, IDialogService dialogs, ICustomImageStore images)
+    public CrosshairEditorViewModel(
+        ICrosshairRenderer renderer, IDialogService dialogs, ICustomImageStore images, IAppSettingsService settings)
     {
         Renderer = renderer;
         _dialogs = dialogs;
         _images = images;
+        _settings = settings;
+
+        // Gán thẳng vào field: đây là ĐỌC giá trị đã lưu, không được kích hoạt lưu ngược lại.
+        _showCheckerboard = settings.Current.PreviewShowCheckerboard;
+        _useDarkPreviewBackground = settings.Current.PreviewShowDarkBackground;
 
         Types = BuildTypes();
         Shapes = BuildShapes();
@@ -40,9 +47,11 @@ public sealed partial class CrosshairEditorViewModel : ObservableObject, IDispos
     /// <summary>Độ phóng của khung preview. Crosshair thật chỉ vài chục pixel nên cần zoom để chỉnh.</summary>
     [ObservableProperty] private double _previewZoom = 4d;
 
-    [ObservableProperty] private bool _showCheckerboard = true;
+    /// <summary>Nền ca-rô của khung preview. Được ghi nhớ qua các lần mở app.</summary>
+    [ObservableProperty] private bool _showCheckerboard;
 
-    [ObservableProperty] private bool _useDarkPreviewBackground = true;
+    /// <summary>Nền tối của khung preview. Được ghi nhớ qua các lần mở app.</summary>
+    [ObservableProperty] private bool _useDarkPreviewBackground;
 
     /// <summary>Hai chế độ: tâm ngắm tiêu chuẩn, hoặc dùng hình ảnh.</summary>
     public IReadOnlyList<LocalizedOption<CrosshairType>> Types { get; }
@@ -112,6 +121,32 @@ public sealed partial class CrosshairEditorViewModel : ObservableObject, IDispos
         OnPropertyChanged(nameof(ImagePathDisplay));
     }
 
+    partial void OnShowCheckerboardChanged(bool value)
+    {
+        if (_settings.Current.PreviewShowCheckerboard == value) return;
+
+        _settings.Current.PreviewShowCheckerboard = value;
+        SavePreviewOptions();
+    }
+
+    partial void OnUseDarkPreviewBackgroundChanged(bool value)
+    {
+        if (_settings.Current.PreviewShowDarkBackground == value) return;
+
+        _settings.Current.PreviewShowDarkBackground = value;
+        SavePreviewOptions();
+    }
+
+    /// <summary>
+    /// Ghi settings.json NGAY, không qua debounce của <see cref="IAppSettingsService.RequestSave"/>.
+    /// </summary>
+    /// <remarks>
+    /// Người dùng chỉ bấm ô này thỉnh thoảng, nên ghi ngay không tốn gì mà không mất lựa chọn nếu
+    /// app bị tắt đột ngột trong khoảng chờ. Ghi chạy nền (ghi file nguyên tử, có khoá chống ghi
+    /// chồng) và tự nuốt lỗi I/O, nên không chặn UI.
+    /// </remarks>
+    private void SavePreviewOptions() => _ = _settings.SaveAsync();
+
     partial void OnProfileChanged(CrosshairProfile? oldValue, CrosshairProfile? newValue)
     {
         if (oldValue is not null) ProfileNotifications.Hook(oldValue, OnProfilePartChanged, subscribe: false);
@@ -173,16 +208,26 @@ public sealed partial class CrosshairEditorViewModel : ObservableObject, IDispos
 
         var profile = Profile;
         string stored;
+        (int Width, int Height)? size;
 
         try
         {
-            stored = await Task.Run(() => _images.Import(path));
+            (stored, size) = await Task.Run(() =>
+            {
+                var result = _images.Import(path);
+                return (result, _images.GetPixelSize(result));
+            });
         }
         catch (Exception ex) when (ex is InvalidDataException or IOException or UnauthorizedAccessException)
         {
             _dialogs.ShowMessage(Tr.Get("Image_ErrTitle"), ex.Message, isError: true);
             return;
         }
+
+        // Chỉnh Scale TRƯỚC khi gán ảnh: overlay và preview dựng lại với đúng cỡ ngay lần đầu, không
+        // loé lên ảnh kích thước gốc che màn hình. Người dùng vẫn kéo thanh trượt lại được.
+        if (size is { } pixels)
+            profile.Image.Scale = CustomImageSettings.SuggestScale(pixels.Width, pixels.Height);
 
         profile.Image.FilePath = stored;
         profile.Type = CrosshairType.Image;

@@ -41,7 +41,15 @@ public interface ICustomImageStore
     /// Không phải PNG/JPG/GIF, không giải mã được, hoặc quá lớn. Message đã được dịch, hiển thị
     /// thẳng cho người dùng được.
     /// </exception>
+    /// <remarks>
+    /// Ảnh có cạnh lớn hơn 256 pixel được thu nhỏ (giữ tỷ lệ) trước khi lưu, trừ GIF động.
+    /// </remarks>
     string Import(string sourcePath);
+
+    /// <summary>
+    /// Kích thước điểm ảnh của một ảnh trong kho, chỉ đọc phần đầu file. Null nếu không đọc được.
+    /// </summary>
+    (int Width, int Height)? GetPixelSize(string? storedPath);
 
     /// <summary>
     /// Như <see cref="Import"/>, nhưng từ nội dung đã có trong bộ nhớ — dùng cho ảnh nhúng trong
@@ -131,8 +139,21 @@ public interface IDialogService
 
     /// <summary>Trả về null nếu người dùng huỷ.</summary>
     string? PickFileToOpen(string filter, string? initialDirectory = null);
+}
 
-    string? PickFileToSave(string filter, string suggestedFileName, string? initialDirectory = null);
+/// <summary>
+/// Mở một ứng dụng khác cho tính năng "Test tâm ngắm". Chỉ khởi chạy tiến trình bằng API chuẩn của
+/// Windows — không đọc, không ghi, không can thiệp gì vào tiến trình đó.
+/// </summary>
+public interface IProcessLauncher
+{
+    /// <param name="fileNameOrPath">
+    /// Tên file tìm theo PATH của hệ thống (vd <c>notepad.exe</c>), hoặc đường dẫn đầy đủ tới file .exe.
+    /// </param>
+    /// <exception cref="System.ComponentModel.Win32Exception">
+    /// Không tìm thấy file, không có quyền, hoặc người dùng từ chối hộp thoại UAC.
+    /// </exception>
+    void Launch(string fileNameOrPath);
 }
 
 /// <summary>Đảm bảo chỉ một instance chạy; instance thứ hai sẽ đánh thức cửa sổ Settings.</summary>

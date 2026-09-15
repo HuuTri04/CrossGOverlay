@@ -185,7 +185,7 @@ public partial class SliderField : UserControl
     /// </summary>
     private string Format(double value)
     {
-        var decimals = Maximum <= 2d ? 2 : 1;
+        var decimals = IsFineGrained ? 2 : 1;
 
         if (Math.Abs(value - Math.Round(value)) < 0.005d)
             return Math.Round(value).ToString("0", CultureInfo.CurrentCulture);
@@ -235,5 +235,11 @@ public partial class SliderField : UserControl
         }
     }
 
-    private double Step() => Maximum <= 2d ? 0.05d : 1d;
+    private double Step() => IsFineGrained ? 0.05d : 1d;
+
+    /// <summary>
+    /// Thông số dạng hệ số cần chỉnh tới hàng phần trăm: khoảng nhỏ (độ mờ 0..1), hoặc khoảng có
+    /// cận dưới lẻ dưới 1 (kích thước ảnh 0.1..8 — ảnh 256px cần đúng 0.25, hiện "0.3" là sai).
+    /// </summary>
+    private bool IsFineGrained => Maximum <= 2d || (Minimum > 0d && Minimum < 1d);
 }

@@ -17,6 +17,9 @@ public static class AppInfo
 {
     public const string DisplayName = "CrossGOverlay";
 
+    /// <summary>Slogan dưới tên ứng dụng. Là một phần thương hiệu nên cũng không dịch.</summary>
+    public const string Tagline = "Overlay for every gamer";
+
     /// <summary>Phiên bản dạng "v1.2.3", bỏ phần revision vì nó luôn là 0.</summary>
     public static string DisplayVersion { get; } = BuildVersion();
 

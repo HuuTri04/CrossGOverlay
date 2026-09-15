@@ -56,6 +56,7 @@ internal static class ServiceRegistration
         services.AddSingleton<ITrayIconController, TrayIconController>();
         services.AddSingleton<ISingleInstanceGuard, SingleInstanceGuard>();
         services.AddSingleton<IUpdateService, UpdateService>();
+        services.AddSingleton<IProcessLauncher, ProcessLauncher>();
 
         // Vòng phụ thuộc có thật: SettingsViewModel cần IDialogService, mà DialogService lại
         // phải dựng được cửa sổ chứa ViewModel đó. Closure giải vòng vì nó chỉ resolve

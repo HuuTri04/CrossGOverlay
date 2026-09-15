@@ -174,6 +174,13 @@ public sealed partial class CrosshairProfile : ObservableObject
     [JsonPropertyOrder(20)] public DateTimeOffset CreatedUtc { get; set; } = DateTimeOffset.UtcNow;
     [JsonPropertyOrder(21)] public DateTimeOffset ModifiedUtc { get; set; } = DateTimeOffset.UtcNow;
 
+    /// <summary>
+    /// Tên hiển thị. Danh sách dùng <c>DisplayMemberPath</c> chỉ đổi phần CHỮ vẽ ra; tên mà trình
+    /// đọc màn hình (UI Automation) đọc lên vẫn lấy từ <c>ToString()</c> — không ghi đè thì nó đọc
+    /// "CrosshairOverlay.Core.Models.CrosshairProfile" cho mọi mục.
+    /// </summary>
+    public override string ToString() => Name;
+
     /// <summary>Bản sao sâu. Dùng khi mở editor (sửa trên bản nháp) và khi nhân bản preset.</summary>
     public CrosshairProfile Clone(bool newIdentity = false) => new()
     {

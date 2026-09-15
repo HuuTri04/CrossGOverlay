@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using CrosshairOverlay.Core.Models;
 
 namespace CrosshairOverlay.Core.Abstractions;
@@ -44,11 +44,6 @@ public interface IPresetLibrary : IDisposable
 
     /// <summary>Xoá preset. Không bao giờ để thư viện rỗng — xoá cái cuối sẽ sinh lại mặc định.</summary>
     Task DeleteAsync(CrosshairProfile profile, CancellationToken cancellationToken = default);
-
-    Task<CrosshairProfile> ImportAsync(string filePath, CancellationToken cancellationToken = default);
-
-    Task ExportAsync(
-        CrosshairProfile profile, string filePath, CancellationToken cancellationToken = default);
 
     /// <summary>Ghi ngay mọi preset còn treo trong hàng đợi debounce. Gọi trước khi thoát app.</summary>
     Task FlushAsync(CancellationToken cancellationToken = default);

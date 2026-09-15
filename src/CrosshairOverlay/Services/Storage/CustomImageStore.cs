@@ -26,6 +26,16 @@ public sealed partial class CustomImageStore : ICustomImageStore
     /// </summary>
     public const int MaxPixelSide = 4096;
 
+    /// <summary>
+    /// Cạnh lớn nhất của ảnh được LƯU vào kho khi người dùng chọn ảnh, pixel. Ảnh lớn hơn được thu
+    /// nhỏ về đúng cạnh này, giữ nguyên tỷ lệ.
+    /// </summary>
+    /// <remarks>
+    /// Tâm ngắm hiển thị cỡ 30–64 pixel, nên giữ ảnh 4096×4096 (64 MB giải mã, nằm trong cache suốt
+    /// phiên) chỉ để vẽ nó bé lại là lãng phí thuần tuý. 256 vẫn dư chỗ để phóng lên 4 lần mà nét.
+    /// </remarks>
+    public const int MaxStoredPixelSide = 256;
+
     private static readonly HashSet<string> AllowedExtensions =
         new(StringComparer.OrdinalIgnoreCase) { ".png", ".jpg", ".jpeg", ".gif" };
 
@@ -54,7 +64,73 @@ public sealed partial class CustomImageStore : ICustomImageStore
 
         // Đọc hết vào bộ nhớ MỘT lần: dùng chung cho kiểm tra, băm và ghi. Đọc file gốc nhiều lần
         // thì người dùng có thể sửa nó giữa chừng, và thứ được kiểm tra khác thứ được lưu.
-        return ImportBytes(Path.GetFileName(source), File.ReadAllBytes(source));
+        var (name, bytes) = ShrinkForStore(Path.GetFileName(source), File.ReadAllBytes(source));
+        return ImportBytes(name, bytes);
+    }
+
+    /// <summary>
+    /// Thu nhỏ ảnh có cạnh vượt <see cref="MaxStoredPixelSide"/> trước khi lưu vào kho.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Chỉ áp cho ảnh người dùng CHỌN (<see cref="Import"/>), không áp cho ảnh nhúng trong preset
+    /// nhận từ người khác (<see cref="ImportBytes"/>): preset đó đã chỉnh Scale theo kích thước
+    /// gốc, thu nhỏ ảnh sẽ làm tâm ngắm của họ bé đi.
+    /// </para>
+    /// <para>
+    /// Không đụng tới: ảnh không giải mã được hay quá <see cref="MaxPixelSide"/> (để
+    /// <see cref="ImportBytes"/> báo đúng lỗi), và GIF động — WPF không ghi lại được thời gian
+    /// từng khung hình, thu nhỏ sẽ làm mất chuyển động.
+    /// </para>
+    /// </remarks>
+    /// <returns>Tên file (đuôi có thể đổi, GIF tĩnh thành PNG) và nội dung sẽ lưu.</returns>
+    internal (string FileName, byte[] Bytes) ShrinkForStore(string fileName, byte[] bytes)
+    {
+        var result = ImageShrinker.Shrink(fileName, bytes, MaxStoredPixelSide);
+
+        switch (result.Outcome)
+        {
+            case ShrinkOutcome.AnimatedKept:
+                _logger.LogInformation(
+                    "Giữ nguyên kích thước GIF động {File} ({Width}×{Height}) để không mất chuyển động.",
+                    fileName, result.OriginalWidth, result.OriginalHeight);
+                break;
+
+            case ShrinkOutcome.Resized:
+                _logger.LogInformation(
+                    "Thu nhỏ ảnh {File} từ {Width}×{Height} xuống {NewWidth}×{NewHeight} trước khi lưu.",
+                    fileName, result.OriginalWidth, result.OriginalHeight, result.Width, result.Height);
+                break;
+        }
+
+        return (result.FileName, result.Bytes);
+    }
+
+    /// <inheritdoc cref="ImageShrinker.FitWithin"/>
+    internal static (int Width, int Height) FitWithin(int width, int height, int maxSide) =>
+        ImageShrinker.FitWithin(width, height, maxSide);
+
+    public (int Width, int Height)? GetPixelSize(string? storedPath)
+    {
+        if (Resolve(storedPath) is not { } path || !File.Exists(path)) return null;
+
+        try
+        {
+            // Chỉ đọc phần đầu file: DelayCreation không giải mã điểm ảnh.
+            using var stream = File.OpenRead(path);
+            var decoder = BitmapDecoder.Create(
+                stream, BitmapCreateOptions.DelayCreation | BitmapCreateOptions.IgnoreColorProfile,
+                BitmapCacheOption.None);
+            var frame = decoder.Frames[0];
+            return (frame.PixelWidth, frame.PixelHeight);
+        }
+        catch (Exception ex) when (ex is NotSupportedException or FileFormatException
+                                       or ArgumentException or InvalidOperationException
+                                       or IOException or OverflowException or UnauthorizedAccessException)
+        {
+            _logger.LogDebug(ex, "Không đọc được kích thước ảnh {File}.", path);
+            return null;
+        }
     }
 
     public string ImportBytes(string originalFileName, byte[] bytes)

@@ -58,6 +58,13 @@ public sealed partial class AppSettings : ObservableObject
     /// <summary>Tự kiểm tra bản cập nhật khi khởi động.</summary>
     [ObservableProperty] private bool _checkForUpdates = true;
 
+    /// <summary>Khung preview vẽ nền ca-rô để thấy rõ phần trong suốt của crosshair.</summary>
+    /// <remarks>File settings.json cũ không có khoá này sẽ giữ mặc định BẬT.</remarks>
+    [ObservableProperty] private bool _previewShowCheckerboard = true;
+
+    /// <summary>Khung preview dùng nền tối thay vì nền sáng.</summary>
+    [ObservableProperty] private bool _previewShowDarkBackground = true;
+
     public ObservableCollection<HotkeyBinding> Hotkeys { get; set; } = [];
 
     public ObservableCollection<GameProfile> GameProfiles { get; set; } = [];

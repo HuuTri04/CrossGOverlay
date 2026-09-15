@@ -485,6 +485,15 @@
         </Setter>
     </Style>
 
+    <!--
+        Nền trong suốt thay vì null: khoảng trống giữa các ô trong vùng cuộn mới "bắt" được con trỏ,
+        nên rê chuột vào đâu trong vùng cũng lăn được. Nền null thì con trỏ xuyên qua, trúng Card
+        phía sau (nằm ngoài ScrollViewer) và cú lăn không đi tới đâu. Xem WheelScrollAssist.
+    -->
+    <Style TargetType="ScrollViewer">
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
+
     <Style TargetType="ScrollBar">
         <Setter Property="Width" Value="10"/>
         <Setter Property="Background" Value="Transparent"/>
@@ -714,6 +723,67 @@
                         -->
                         <StackPanel IsItemsHost="True"
                                     KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ================= Chú thích (hint) & ToolTip ================= -->
+    <!--
+        Dòng chú thích nhỏ: chữ xám phụ, tự xuống dòng, không kèm icon. Dùng như
+        <ContentControl Style="{StaticResource Hint}" Content="..."/>. Chỉ để đọc: không nhận
+        focus, không lọt vào vòng Tab.
+    -->
+    <Style x:Key="Hint" TargetType="ContentControl">
+        <Setter Property="Foreground" Value="{StaticResource TextMuted}"/>
+        <Setter Property="FontSize" Value="11.5"/>
+        <Setter Property="Focusable" Value="False"/>
+        <Setter Property="IsTabStop" Value="False"/>
+        <Setter Property="ToolTipService.InitialShowDelay" Value="250"/>
+        <Setter Property="ToolTipService.ShowDuration" Value="20000"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ContentControl">
+                    <!-- Nền trong suốt để rê chuột vào khoảng trống giữa các chữ vẫn hiện ToolTip. -->
+                    <Border Background="Transparent">
+                        <TextBlock TextWrapping="Wrap"
+                                   Foreground="{TemplateBinding Foreground}"
+                                   FontSize="{TemplateBinding FontSize}"
+                                   Text="{Binding Content, RelativeSource={RelativeSource TemplatedParent}}"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
+        ToolTip nền tối thay cho ToolTip trắng mặc định của Windows, vốn lệch hẳn với giao diện.
+        Không dùng hiệu ứng đổ bóng (Effect), chỉ viền mảnh để tách khỏi nền.
+    -->
+    <Style TargetType="ToolTip">
+        <Setter Property="Background" Value="{StaticResource PanelBg}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}"/>
+        <Setter Property="FontFamily" Value="{StaticResource UiFont}"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToolTip">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1"
+                            CornerRadius="{StaticResource RadiusInput}"
+                            Padding="10,6" MaxWidth="340" SnapsToDevicePixels="True">
+                        <ContentPresenter>
+                            <ContentPresenter.Resources>
+                                <!-- Nội dung dạng chuỗi dài phải tự xuống dòng trong MaxWidth. -->
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                    <Setter Property="TextWrapping" Value="Wrap"/>
+                                    <Setter Property="FontSize" Value="12"/>
+                                    <Setter Property="LineHeight" Value="17"/>
+                                </Style>
+                            </ContentPresenter.Resources>
+                        </ContentPresenter>
                     </Border>
                 </ControlTemplate>
             </Setter.Value>

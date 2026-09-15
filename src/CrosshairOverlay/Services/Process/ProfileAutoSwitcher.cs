@@ -33,6 +33,15 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
     /// <summary>Đã cảnh báo Exclusive Fullscreen cho tiến trình nào rồi — mỗi game chỉ báo một lần.</summary>
     private readonly HashSet<string> _warnedProcesses = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>Ứng dụng của phiên "Test tâm ngắm" đang mở, null nếu không có phiên nào.</summary>
+    private string? _testProcessName;
+
+    /// <summary>PID của cửa sổ test đã thấy ở foreground, để biết khi nào nó đóng.</summary>
+    private int _testProcessId;
+
+    /// <summary>Foreground ngoài gần nhất là cửa sổ test.</summary>
+    private bool _inTestWindow;
+
     private bool _started;
     private bool _disposed;
 
@@ -104,6 +113,22 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
 
         WarnIfExclusiveFullscreen(window);
 
+        if (IsTestTarget(window))
+        {
+            // Test tâm ngắm: người dùng muốn thấy preset ĐANG CHỈNH. Không đổi preset theo game
+            // profile nào (máy có sẵn profile cho Notepad thì test sẽ hiện nhầm preset khác), và hiện
+            // kể cả ở chế độ "chỉ hiện trong game".
+            ActiveGameProfile = null;
+            _matchedProcessId = 0;
+            _inTestWindow = true;
+            _testProcessId = window.ProcessId;
+            _watcher.Track(window);
+            ApplyVisibility();
+            return;
+        }
+
+        _inTestWindow = false;
+
         if (!IsEnabled) return;
 
         var match = _matcher.Match(window, _settings.Current.GameProfiles);
@@ -158,6 +183,13 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
     /// </remarks>
     private void OnTrackedWindowClosed(object? sender, ForegroundWindowInfo closed)
     {
+        if (_testProcessName is not null && closed.ProcessId != 0 && closed.ProcessId == _testProcessId)
+        {
+            _logger.LogInformation("Đóng cửa sổ test {Process}, kết thúc phiên test tâm ngắm.", closed.ProcessName);
+            EndCrosshairTest();
+            return;
+        }
+
         if (ActiveGameProfile is null || closed.ProcessId != _matchedProcessId) return;
 
         _logger.LogDebug("Cửa sổ của {Process} đã đóng, bỏ profile '{Profile}'.",
@@ -217,7 +249,40 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
             _settings.Current.OverlayEnabled,
             IsEnabled,
             _settings.Current.ShowOnlyInMatchedGames,
-            ActiveGameProfile));
+            ActiveGameProfile,
+            _inTestWindow));
+
+    public void BeginCrosshairTest(string processName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(processName);
+
+        _testProcessName = processName.Trim();
+        _testProcessId = 0;
+        _logger.LogInformation("Bắt đầu phiên test tâm ngắm với {Process}.", _testProcessName);
+    }
+
+    public void EndCrosshairTest()
+    {
+        if (_testProcessName is null && !_inTestWindow) return;
+
+        _testProcessName = null;
+        _testProcessId = 0;
+        _inTestWindow = false;
+        ApplyVisibility();
+    }
+
+    public void Reevaluate()
+    {
+        if (!_started) return;
+
+        var current = _watcher.Current;
+        OnForegroundChanged(this, new ForegroundWindowChangedEventArgs(current, current));
+    }
+
+    private bool IsTestTarget(ForegroundWindowInfo window) =>
+        _testProcessName is not null
+        && window.IsValid
+        && string.Equals(window.ProcessName, _testProcessName, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Quy tắc hiện/ẩn overlay, tách thành hàm thuần để kiểm thử từng tổ hợp.
@@ -226,10 +291,15 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
     /// <param name="autoSwitchEnabled">Có tự đổi theo game không. Tắt thì không có khái niệm "khớp".</param>
     /// <param name="showOnlyInMatchedGames">Chỉ hiện khi foreground khớp một game profile.</param>
     /// <param name="activeProfile">Profile đang khớp với cửa sổ foreground, null nếu không khớp.</param>
+    /// <param name="inTestWindow">Foreground là cửa sổ của phiên "Test tâm ngắm".</param>
     internal static bool ShouldShowOverlay(
-        bool overlayEnabled, bool autoSwitchEnabled, bool showOnlyInMatchedGames, GameProfile? activeProfile)
+        bool overlayEnabled, bool autoSwitchEnabled, bool showOnlyInMatchedGames, GameProfile? activeProfile,
+        bool inTestWindow = false)
     {
         if (!overlayEnabled) return false;
+
+        // Phiên test luôn hiện: đó là mục đích duy nhất của nó.
+        if (inTestWindow) return true;
 
         // Không tự đổi theo game thì không có game nào "khớp" được: tuỳ chọn chỉ-hiện-trong-game
         // lẫn profile ẩn overlay đều không còn nghĩa, bật là hiện.

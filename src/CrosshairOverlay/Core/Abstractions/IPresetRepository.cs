@@ -21,11 +21,6 @@ public interface IPresetRepository
 
     Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
 
-    /// <summary>Đọc file JSON bên ngoài, cấp Id mới để không ghi đè preset sẵn có.</summary>
-    Task<CrosshairProfile> ImportAsync(string filePath, CancellationToken cancellationToken = default);
-
-    Task ExportAsync(CrosshairProfile profile, string filePath, CancellationToken cancellationToken = default);
-
     /// <summary>Phát khi tập preset thay đổi để UI và tray menu đồng bộ lại.</summary>
     event EventHandler? PresetsChanged;
 

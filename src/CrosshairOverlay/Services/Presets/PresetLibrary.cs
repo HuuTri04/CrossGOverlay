@@ -150,26 +150,6 @@ public sealed class PresetLibrary : IPresetLibrary
         }
     }
 
-    public async Task<CrosshairProfile> ImportAsync(
-        string filePath, CancellationToken cancellationToken = default)
-    {
-        var imported = await _repository.ImportAsync(filePath, cancellationToken).ConfigureAwait(true);
-        imported.Name = MakeUniqueName(imported.Name);
-
-        // MakeUniqueName có thể đã đổi tên, nên ghi lại.
-        await _repository.SaveAsync(imported, cancellationToken).ConfigureAwait(true);
-
-        Track(imported);
-        _presets.Add(imported);
-        SetActive(imported);
-
-        return imported;
-    }
-
-    public Task ExportAsync(
-        CrosshairProfile profile, string filePath, CancellationToken cancellationToken = default) =>
-        _repository.ExportAsync(profile, filePath, cancellationToken);
-
     public async Task FlushAsync(CancellationToken cancellationToken = default)
     {
         _saveTimer.Change(Timeout.Infinite, Timeout.Infinite);

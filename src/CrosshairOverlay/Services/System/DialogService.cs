@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using CrosshairOverlay.Core.Abstractions;
 using CrosshairOverlay.Core.Models;
 using CrosshairOverlay.Views;
@@ -89,21 +89,6 @@ public sealed class DialogService : IDialogService
             Filter = filter,
             CheckFileExists = true,
             Multiselect = false,
-        };
-
-        if (!string.IsNullOrWhiteSpace(initialDirectory))
-            dialog.InitialDirectory = initialDirectory;
-
-        return dialog.ShowDialog(Owner()) == true ? dialog.FileName : null;
-    }
-
-    public string? PickFileToSave(string filter, string suggestedFileName, string? initialDirectory = null)
-    {
-        var dialog = new SaveFileDialog
-        {
-            Filter = filter,
-            FileName = suggestedFileName,
-            OverwritePrompt = true,
         };
 
         if (!string.IsNullOrWhiteSpace(initialDirectory))

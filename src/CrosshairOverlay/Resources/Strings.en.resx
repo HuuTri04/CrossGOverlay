@@ -51,8 +51,10 @@
   <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
 
-  <data name="App_Subtitle"><value>crosshair overlay</value></data>
   <data name="Shell_EnableOverlay"><value>Overlay on</value></data>
+  <data name="Shell_OverlayHintMatchedOnly"><value>The overlay only shows while you are in a game matching an applied profile.</value></data>
+  <data name="Shell_OverlayHintEverywhere"><value>The overlay shows over every window, even outside games.</value></data>
+  <data name="Shell_OverlayDisplayModeTip"><value>Run the game in Borderless (Fullscreen Windowed) or Windowed mode. In Exclusive Fullscreen, Windows does not let other windows draw over the game, so the overlay will not show.</value></data>
   <data name="Tab_Crosshair"><value>Crosshair</value></data>
   <data name="Tab_General"><value>General</value></data>
   <data name="Tab_Hotkeys"><value>Hotkeys</value></data>
@@ -61,24 +63,18 @@
   <data name="Preset_Header"><value>PRESETS</value></data>
   <data name="Preset_New"><value>New</value></data>
   <data name="Preset_Duplicate"><value>Duplicate</value></data>
-  <data name="Preset_Import"><value>Import</value></data>
-  <data name="Preset_Export"><value>Export</value></data>
+  <data name="Preset_TestCrosshair"><value>Test crosshair</value></data>
+  <data name="Preset_TestCrosshairTip"><value>Turn the overlay on and open Notepad as a plain background to see the selected crosshair</value></data>
   <data name="Preset_Delete"><value>Delete</value></data>
   <data name="Preset_FromGameCode"><value>Import code</value></data>
-  <data name="Preset_FromGameCodeTip"><value>Paste a crosshair code from CS2 or Valorant</value></data>
+  <data name="Preset_FromGameCodeTip"><value>Paste a crosshair code from CS2, Valorant or a CrossGOverlay image code</value></data>
   <data name="Preset_CopySuffix"><value>(Copy)</value></data>
   <data name="Preset_DefaultName"><value>New Crosshair</value></data>
   <data name="Preset_DeleteTitle"><value>Delete preset</value></data>
-  <data name="Preset_DeleteConfirm"><value>Delete '{0}'? This cannot be undone.</value></data>
-  <data name="Preset_ExportTitle"><value>Export preset</value></data>
-  <data name="Preset_ExportDone"><value>Wrote '{0}' to:
-{1}</value></data>
-  <data name="Preset_FileFilter"><value>Crosshair preset (*.json)|*.json|All files (*.*)|*.*</value></data>
+  <data name="Preset_DeleteConfirm"><value>Are you sure you want to delete the preset '{0}'? This cannot be undone.</value></data>
   <data name="Preset_ErrorCreate"><value>Could not create a new preset.</value></data>
   <data name="Preset_ErrorDuplicate"><value>Could not duplicate the preset.</value></data>
   <data name="Preset_ErrorDelete"><value>Could not delete the preset.</value></data>
-  <data name="Preset_ErrorImport"><value>Could not import '{0}'. The file may not be a valid preset.</value></data>
-  <data name="Preset_ErrorExport"><value>Could not export the preset.</value></data>
   <data name="Preset_ErrorFromCode"><value>Could not create a preset from that crosshair code.</value></data>
   <data name="Preset_ExportCode"><value>Export code</value></data>
   <data name="Preset_ExportCodeTip"><value>Build a share code from the selected preset and copy it to the clipboard</value></data>
@@ -90,6 +86,24 @@
 
 Note: the code format can only describe a cross, a centre dot and an outline. This preset contains things it cannot carry (circle, square box, diagonal arms, rotation, or a scale other than 1) — those will be lost when someone imports the code.</value></data>
   <data name="Preset_ClipboardFailed"><value>Could not write to the clipboard — another application is holding it. Try again.</value></data>
+  <data name="Preset_ImageCodeNoImage"><value>This preset has no image, or its image file is missing, so no code can be created.</value></data>
+  <data name="Preset_ImageCodeUnreadable"><value>This preset's image file cannot be read, so no code can be created.</value></data>
+  <data name="Preset_ImageCodeTooLarge"><value>The image is still too large for a share code after compression (max {0} MB) — usually an animated GIF with many frames, which cannot be shrunk. Use a still image or a GIF with fewer frames.</value></data>
+  <data name="Preset_ImageCodeCopiedBody"><value>The image crosshair code ({0} characters) is on your clipboard.
+
+The code includes the image itself; the recipient just clicks "Import code" and pastes it.</value></data>
+
+  <data name="Test_Title"><value>Test crosshair</value></data>
+  <data name="Test_NotepadMissing"><value>Notepad was not found. Would you like to pick any app or game to test with?</value></data>
+  <data name="Test_ExeFilter"><value>Executable Files (*.exe)|*.exe</value></data>
+  <data name="Test_ProfileName"><value>Profile {0}</value></data>
+  <data name="Test_LaunchFailed"><value>Could not open {0}.
+
+{1}</value></data>
+  <data name="Test_ProfileCreated"><value>Created preset '{0}' (a copy of the selected crosshair) and linked it to {1}.
+
+Whenever {1} is in the foreground, this preset is applied automatically. See or edit it in the Games tab.</value></data>
+  <data name="Test_Failed"><value>Could not run the crosshair test.</value></data>
 
   <data name="Preview_Zoom"><value>Zoom</value></data>
   <data name="Preview_Checkerboard"><value>Checkerboard</value></data>
@@ -174,6 +188,7 @@ Note: the code format can only describe a cross, a centre dot and an outline. Th
   <data name="Language_Auto"><value>Match system</value></data>
 
   <data name="Hotkeys_Intro"><value>Click a box and press the combination you want. Press Esc to clear it. After editing, press "Apply" to register with Windows.</value></data>
+  <data name="Hotkeys_ComboHint"><value>Prefer key combinations (e.g. Ctrl + Shift + X) so they don't clash with movement or ability keys in games.</value></data>
   <data name="Hotkeys_Enabled"><value>On</value></data>
   <data name="Hotkeys_Apply"><value>Apply</value></data>
   <data name="Hotkeys_Reset"><value>Restore defaults</value></data>
@@ -237,7 +252,7 @@ Note: the code format can only describe a cross, a centre dot and an outline. Th
   <data name="Display_LikelyExclusive"><value>Likely Exclusive Fullscreen</value></data>
 
   <data name="Import_Title"><value>Import crosshair code</value></data>
-  <data name="Import_Intro"><value>Paste a crosshair code from CS2 (CSGO-xxxxx-xxxxx-…) or Valorant (0;P;c;5;…). The format is detected automatically.</value></data>
+  <data name="Import_Intro"><value>Paste a crosshair code from CS2 (CSGO-xxxxx-xxxxx-…), Valorant (0;P;c;5;…) or a CrossGOverlay image crosshair code (CGO-IMG;…). The format is detected automatically.</value></data>
   <data name="Import_Result"><value>DECODED VALUES</value></data>
   <data name="Import_Accuracy"><value>Structure (shape, colour, centre dot, outline) converts exactly. Sizes are approximate because the games use different units — adjust the Scale slider after importing if needed.</value></data>
   <data name="Import_Create"><value>Create preset</value></data>
@@ -259,6 +274,14 @@ Note: the code format can only describe a cross, a centre dot and an outline. Th
   <data name="Import_On"><value>on, size {0}</value></data>
   <data name="Import_OutlineOn"><value>on, {0} thick</value></data>
   <data name="Import_Off"><value>off</value></data>
+  <data name="Import_ImageCodeInvalid"><value>The share code is invalid or corrupted.</value></data>
+  <data name="Import_NameImage"><value>Image crosshair</value></data>
+  <data name="Import_KindImage"><value>CrossGOverlay image crosshair</value></data>
+  <data name="Import_FieldImage"><value>Image</value></data>
+  <data name="Import_ImageInfo"><value>{0}, {1}×{2} px, {3} KB</value></data>
+  <data name="Import_FieldScale"><value>Size</value></data>
+  <data name="Import_FieldOffset"><value>Offset</value></data>
+  <data name="Import_FieldRotation"><value>Rotation (°)</value></data>
   <data name="Import_ErrEmpty"><value>The code is empty.</value></data>
   <data name="Import_ErrNoValidChars"><value>The code contains no valid characters.</value></data>
   <data name="Import_ErrBadChar"><value>Character '{0}' is not part of the share-code alphabet.</value></data>

@@ -4,12 +4,13 @@ using CrosshairOverlay.Core.Models;
 using CrosshairOverlay.Localization;
 using CrosshairOverlay.Services.Import;
 using CrosshairOverlay.Services.Storage;
+using CrosshairOverlay.Views.Dialogs;
 
 namespace CrosshairOverlay.Views;
 
 /// <summary>
-/// Hộp thoại dán mã crosshair của game. Tự nhận diện CS2 hay Valorant và hiện trước kết quả
-/// đọc được, để người dùng biết mình sắp tạo ra cái gì trước khi bấm.
+/// Hộp thoại dán mã crosshair. Tự nhận diện mã hình ảnh của ứng dụng, CS2 hay Valorant và hiện
+/// trước kết quả đọc được, để người dùng biết mình sắp tạo ra cái gì trước khi bấm.
 /// </summary>
 public partial class ImportCodeWindow : Window
 {
@@ -20,11 +21,19 @@ public partial class ImportCodeWindow : Window
 
     private CrosshairProfile? _parsed;
 
+    /// <summary>
+    /// Đang là mã hình ảnh nhưng đọc không được. Nút "Tạo preset" vẫn bấm được trong trường hợp
+    /// này để hiện hộp thoại lỗi rõ ràng: mã hình ảnh dài hàng chục nghìn ký tự, người dùng không
+    /// tự nhìn ra chỗ bị cắt, nên một dòng chữ đỏ nhỏ dễ bị bỏ qua.
+    /// </summary>
+    private bool _brokenImageCode;
+
     private void OnCodeChanged(object sender, TextChangedEventArgs e) => Parse();
 
     private void Parse()
     {
         _parsed = null;
+        _brokenImageCode = false;
         OkButton.IsEnabled = false;
         DetailText.Text = "—";
 
@@ -35,11 +44,43 @@ public partial class ImportCodeWindow : Window
             return;
         }
 
+        // Mã hình ảnh xét TRƯỚC: nó cũng ngăn bằng dấu chấm phẩy như mã Valorant.
+        if (ImageCrosshairCode.IsImageCode(text))
+            ParseImage(text);
+
         // Mã Valorant là danh sách ngăn bằng dấu chấm phẩy; mã CS2 thì không bao giờ có.
-        if (text.Contains(';', StringComparison.Ordinal))
+        else if (text.Contains(';', StringComparison.Ordinal))
             ParseValorant(text);
         else
             ParseCs2(text);
+    }
+
+    private void ParseImage(string text)
+    {
+        if (!ImageCrosshairCode.TryDecode(text, out var image, out _) || image is null)
+        {
+            Fail(Tr.Get("Import_ImageCodeInvalid"));
+            _brokenImageCode = true;
+            OkButton.IsEnabled = true;
+            return;
+        }
+
+        _parsed = ImageCrosshairCode.ToProfile(image, Tr.Get("Import_NameImage"));
+
+        StatusText.Text = Tr.Format("Import_Detected", Tr.Get("Import_KindImage"));
+        StatusText.Foreground = TryBrush("Accent");
+        OkButton.IsEnabled = true;
+
+        var p = _parsed;
+        DetailText.Text = string.Join(
+            Environment.NewLine,
+            Row("Import_FieldImage", Tr.Format("Import_ImageInfo",
+                image.Extension.TrimStart('.').ToUpperInvariant(), image.PixelWidth, image.PixelHeight,
+                Math.Max(1, image.ImageBytes.Length / 1024))),
+            Row("Import_FieldScale", p.Image.Scale.ToString("0.##")),
+            Row("Import_FieldOpacity", p.Image.Opacity.ToString("0.##")),
+            Row("Import_FieldOffset", $"X {p.Image.OffsetX:0.#} · Y {p.Image.OffsetY:0.#}"),
+            Row("Import_FieldRotation", p.Rotation.ToString("0.#")));
     }
 
     private void ParseValorant(string text)
@@ -120,6 +161,12 @@ public partial class ImportCodeWindow : Window
 
     private void OnAccept(object sender, RoutedEventArgs e)
     {
+        if (_brokenImageCode)
+        {
+            AppDialogWindow.Show(this, Tr.Get("Import_Title"), Tr.Get("Import_ImageCodeInvalid"), DialogKind.Error);
+            return;
+        }
+
         if (_parsed is null) return;
 
         Result = _parsed;

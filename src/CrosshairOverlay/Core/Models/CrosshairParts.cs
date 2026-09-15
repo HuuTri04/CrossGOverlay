@@ -283,6 +283,41 @@ public sealed partial class CustomImageSettings : ObservableObject
 
     private double _scale = 1d;
 
+    /// <summary>Kích thước hiển thị nhắm tới khi vừa chọn ảnh lớn, DIP — cỡ tâm ngắm to điển hình.</summary>
+    public const double TargetDisplaySize = 64d;
+
+    /// <summary>Tâm ngắm nhỏ hơn cỡ này khó nhìn; ảnh bé hơn được phóng lên.</summary>
+    public const double MinComfortableSize = 30d;
+
+    /// <summary>
+    /// <see cref="Scale"/> đề xuất cho ảnh vừa chọn, để tâm ngắm hiện ra trong khoảng 30–64 DIP thay
+    /// vì che nửa màn hình (hay bé tí).
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    /// <item>Cạnh lớn nhất trên 64: thu về 64 (ảnh 256×256 → 0.25). Làm tròn XUỐNG 2 chữ số để
+    /// khớp bước của thanh trượt mà không vượt 64.</item>
+    /// <item>Dưới 30: phóng lên theo bội số NGUYÊN nhỏ nhất đạt 30 — bội nguyên giữ từng pixel sắc
+    /// nét (renderer vẽ nearest-neighbor ở hệ số nguyên), ảnh pixel-art 16×16 thành 32×32.</item>
+    /// <item>Từ 30 đến 64: đã đúng cỡ, giữ 1 để hiển thị đúng từng pixel.</item>
+    /// </list>
+    /// </remarks>
+    public static double SuggestScale(int pixelWidth, int pixelHeight)
+    {
+        var longest = Math.Max(pixelWidth, pixelHeight);
+        if (longest <= 0) return 1d;
+
+        double scale;
+        if (longest > TargetDisplaySize)
+            scale = Math.Floor(TargetDisplaySize / longest * 100d + 1e-9) / 100d;
+        else if (longest < MinComfortableSize)
+            scale = Math.Ceiling(MinComfortableSize / longest);
+        else
+            scale = 1d;
+
+        return CrosshairLimits.ImageScale.Clamp(scale);
+    }
+
     /// <summary>Độ mờ của ảnh.</summary>
     public double Opacity
     {
