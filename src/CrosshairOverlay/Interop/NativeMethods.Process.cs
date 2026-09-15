@@ -1,4 +1,4 @@
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using System.Text;
 
 namespace CrosshairOverlay.Interop;
@@ -75,11 +75,16 @@ internal static partial class NativeMethods
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static extern bool IsWindowVisible(nint hWnd);
 
+    [DllImport(User32)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool IsIconic(nint hWnd);
+
     // ---------------------------------------------------------------- Process metadata
 
     /// <remarks>
     /// Chỉ mở với <see cref="Win32Constants.PROCESS_QUERY_LIMITED_INFORMATION"/> — quyền tối
-    /// thiểu để đọc tên file thực thi. KHÔNG dùng <c>PROCESS_VM_READ</c> hay
+    /// thiểu để đọc tên file thực thi — hoặc <see cref="Win32Constants.SYNCHRONIZE"/> để chờ
+    /// tiến trình thoát. KHÔNG dùng <c>PROCESS_VM_READ</c> hay
     /// <c>PROCESS_QUERY_INFORMATION</c>; mở handle với quyền đọc memory là thứ anti-cheat
     /// coi là hành vi tấn công.
     /// </remarks>

@@ -277,9 +277,10 @@ Lưu ý: định dạng mã chỉ mô tả được chữ thập, chấm giữa 
 
   <!-- ===== Khay hệ thống và thông báo ===== -->
   <data name="Tray_Open"><value>Mở Settings</value></data>
-  <data name="Tray_Toggle"><value>Bật overlay</value></data>
+  <data name="Tray_Overlay"><value>Overlay</value></data>
   <data name="Tray_Exit"><value>Thoát</value></data>
   <data name="Tray_TooltipOff"><value>{0} — đang tắt</value></data>
+  <data name="Tray_TooltipHiddenByProfile"><value>{0} — đang bật, tạm ẩn theo game profile</value></data>
   <data name="Tray_RunningInTray"><value>Đang chạy trong khay hệ thống.</value></data>
   <data name="Tray_HiddenToTray"><value>Ứng dụng vẫn chạy trong khay hệ thống, overlay không bị tắt.</value></data>
   <data name="Fullscreen_WarnTitle"><value>Overlay có thể không hiển thị</value></data>

@@ -1,7 +1,9 @@
+﻿using System.Windows;
 using System.Windows.Controls;
 using CrosshairOverlay.Core;
 using CrosshairOverlay.Core.Abstractions;
 using CrosshairOverlay.Localization;
+using CrosshairOverlay.ViewModels;
 using H.NotifyIcon;
 using H.NotifyIcon.Core;
 using Microsoft.Extensions.Logging;
@@ -14,12 +16,11 @@ public sealed class TrayIconController : ITrayIconController
     private readonly ILogger<TrayIconController> _logger;
 
     private TaskbarIcon? _icon;
-    private MenuItem? _toggleItem;
-    private MenuItem? _openItem;
-    private MenuItem? _exitItem;
+    private TrayMenuViewModel? _menu;
     private global::System.Drawing.Icon? _currentIcon;
     private string _activePresetName = "—";
     private bool _overlayEnabled = true;
+    private bool _overlayVisible = true;
     private bool _disposed;
 
     public TrayIconController(ILogger<TrayIconController> logger) => _logger = logger;
@@ -33,35 +34,31 @@ public sealed class TrayIconController : ITrayIconController
         ObjectDisposedException.ThrowIf(_disposed, this);
         if (_icon is not null) return;
 
-        _toggleItem = new MenuItem
+        // Menu khai báo trong Resources/TrayMenu.xaml, bind vào ViewModel: nhãn nút bật/tắt tự đổi
+        // theo trạng thái thật, các nút gọi lệnh chứ không gắn sự kiện Click.
+        _menu = new TrayMenuViewModel(
+            toggleOverlay: () => ToggleOverlayRequested?.Invoke(this, EventArgs.Empty),
+            openSettings: () => OpenSettingsRequested?.Invoke(this, EventArgs.Empty),
+            exit: () => ExitRequested?.Invoke(this, EventArgs.Empty))
         {
-            Header = Tr.Get("Tray_Toggle"),
-            IsCheckable = true,
-            IsChecked = true,
+            IsOverlayEnabled = _overlayEnabled,
         };
-        _toggleItem.Click += (_, _) => ToggleOverlayRequested?.Invoke(this, EventArgs.Empty);
 
-        _openItem = new MenuItem { Header = Tr.Get("Tray_Open") };
-        _openItem.Click += (_, _) => OpenSettingsRequested?.Invoke(this, EventArgs.Empty);
+        var menu = (ContextMenu)Application.Current.FindResource("TrayContextMenu");
+        menu.DataContext = _menu;
 
-        _exitItem = new MenuItem { Header = Tr.Get("Tray_Exit") };
-        _exitItem.Click += (_, _) => ExitRequested?.Invoke(this, EventArgs.Empty);
-
-        // Menu khay không nằm trong cây XAML nên {loc:Loc} không với tới được; đăng ký thủ công.
+        // Tooltip của icon cũng phải đổi ngôn ngữ; nhãn menu thì ViewModel tự lo.
         TranslationSource.Instance.PropertyChanged += OnLanguageChanged;
-
-        // Giao diện menu do Style ContextMenu/MenuItem trong Theme.xaml quyết định: nền tối,
-        // và quan trọng nhất là KHÔNG còn cột icon sáng màu ở mép trái như template mặc định.
-        var menu = new ContextMenu();
-        menu.Items.Add(_openItem);
-        menu.Items.Add(_toggleItem);
-        menu.Items.Add(new Separator());
-        menu.Items.Add(_exitItem);
 
         _currentIcon = TrayIconFactory.Create(enabled: true);
 
         _icon = new TaskbarIcon
         {
+            // DataContext PHẢI gán cho chính icon, và TRƯỚC ContextMenu. H.NotifyIcon tự đồng bộ
+            // DataContext của icon sang menu: icon không có DataContext thì nó gán menu.DataContext
+            // = chính TaskbarIcon, đè mất ViewModel đã gán cho menu. Kiểm chứng trên app thật: menu
+            // mở ra với cả ba mục trống chữ vì mọi Header bind vào một TaskbarIcon.
+            DataContext = _menu,
             Icon = _currentIcon,
             ToolTipText = AppInfo.DisplayName,
             ContextMenu = menu,
@@ -74,38 +71,45 @@ public sealed class TrayIconController : ITrayIconController
         _logger.LogInformation("Tray icon đã khởi tạo.");
     }
 
-    public void UpdateState(bool overlayEnabled, string activePresetName)
+    public void UpdateState(bool overlayEnabled, bool overlayVisible, string activePresetName)
     {
         // Nhớ lại trạng thái để dựng lại tooltip khi đổi ngôn ngữ.
         _overlayEnabled = overlayEnabled;
+        _overlayVisible = overlayVisible;
         _activePresetName = activePresetName;
 
         if (_icon is null) return;
 
-        _icon.ToolTipText = overlayEnabled
-            ? $"{AppInfo.DisplayName} — {activePresetName}"
-            : Tr.Format("Tray_TooltipOff", AppInfo.DisplayName);
+        _icon.ToolTipText = Tooltip(overlayEnabled, overlayVisible, activePresetName);
 
         var previous = _currentIcon;
         _currentIcon = TrayIconFactory.Create(overlayEnabled);
         _icon.Icon = _currentIcon;
         previous?.Dispose();
 
-        if (_toggleItem is not null) _toggleItem.IsChecked = overlayEnabled;
+        // Binding đẩy nhãn mới ("Bật overlay"/"Tắt overlay") lên menu ngay, kể cả khi menu đang mở.
+        if (_menu is not null) _menu.IsOverlayEnabled = overlayEnabled;
     }
 
     /// <summary>
-    /// Menu khay không nằm trong cây XAML nên markup extension {loc:Loc} không với tới được —
-    /// phải cập nhật nhãn bằng tay khi đổi ngôn ngữ.
+    /// Tooltip của icon: phân biệt ĐƯỢC ba trạng thái mà màu icon gộp làm hai.
     /// </summary>
-    private void OnLanguageChanged(object? sender, global::System.ComponentModel.PropertyChangedEventArgs e)
+    /// <remarks>
+    /// Icon chỉ xám khi người dùng tắt overlay. Trường hợp đang bật mà overlay tạm ẩn theo game
+    /// profile (chế độ "chỉ hiện trong game", hoặc profile ẩn overlay) trông giống lúc đang hiện, nên
+    /// tooltip phải nói rõ — nếu không người dùng không có cách nào biết vì sao không thấy crosshair.
+    /// </remarks>
+    internal static string Tooltip(bool overlayEnabled, bool overlayVisible, string activePresetName)
     {
-        if (_toggleItem is not null) _toggleItem.Header = Tr.Get("Tray_Toggle");
-        if (_openItem is not null) _openItem.Header = Tr.Get("Tray_Open");
-        if (_exitItem is not null) _exitItem.Header = Tr.Get("Tray_Exit");
+        if (!overlayEnabled) return Tr.Format("Tray_TooltipOff", AppInfo.DisplayName);
+        if (!overlayVisible) return Tr.Format("Tray_TooltipHiddenByProfile", AppInfo.DisplayName);
 
-        UpdateState(_overlayEnabled, _activePresetName);
+        return $"{AppInfo.DisplayName} — {activePresetName}";
     }
+
+    /// <summary>Dựng lại tooltip theo ngôn ngữ mới.</summary>
+    private void OnLanguageChanged(object? sender, global::System.ComponentModel.PropertyChangedEventArgs e) =>
+        UpdateState(_overlayEnabled, _overlayVisible, _activePresetName);
 
     public void ShowNotification(string title, string message, bool isWarning = false)
     {
@@ -131,6 +135,9 @@ public sealed class TrayIconController : ITrayIconController
         _disposed = true;
 
         TranslationSource.Instance.PropertyChanged -= OnLanguageChanged;
+
+        _menu?.Dispose();
+        _menu = null;
 
         _icon?.Dispose();
         _icon = null;

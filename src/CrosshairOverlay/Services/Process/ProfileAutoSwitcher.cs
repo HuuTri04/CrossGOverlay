@@ -1,4 +1,4 @@
-using CrosshairOverlay.Core.Abstractions;
+﻿using CrosshairOverlay.Core.Abstractions;
 using CrosshairOverlay.Core.Models;
 using Microsoft.Extensions.Logging;
 
@@ -75,6 +75,7 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
 
         _started = true;
         _watcher.ForegroundChanged += OnForegroundChanged;
+        _watcher.TrackedWindowClosed += OnTrackedWindowClosed;
         _watcher.Start();
     }
 
@@ -84,6 +85,7 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
 
         _started = false;
         _watcher.ForegroundChanged -= OnForegroundChanged;
+        _watcher.TrackedWindowClosed -= OnTrackedWindowClosed;
         _watcher.Stop();
     }
 
@@ -115,6 +117,10 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
         ActiveGameProfile = match;
         _matchedProcessId = window.ProcessId;
 
+        // Để ý riêng cửa sổ này: đóng game xong Windows có thể không trao foreground cho ai, và
+        // nếu chỉ chờ sự kiện foreground thì crosshair nằm lại tới khi người dùng Alt-Tab.
+        _watcher.Track(window);
+
         // Ghi nhớ lựa chọn thủ công ngay trước lần khớp ĐẦU TIÊN.
         if (_presetBeforeMatch == Guid.Empty && _library.Active is { } current)
             _presetBeforeMatch = current.Id;
@@ -122,7 +128,7 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
         if (match.Behavior == GameProfileBehavior.HideOverlay)
         {
             _logger.LogDebug("Game profile '{Name}' yêu cầu ẩn overlay.", match.Name);
-            _overlay.SetVisible(false);
+            ApplyVisibility();
             return;
         }
 
@@ -140,7 +146,23 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
             window.ProcessName, preset.Name, match.Name);
 
         _library.SetActive(preset);
-        if (_settings.Current.OverlayEnabled) _overlay.SetVisible(true);
+        ApplyVisibility();
+    }
+
+    /// <summary>Cửa sổ game đang khớp vừa đóng, hoặc tiến trình game đã thoát.</summary>
+    /// <remarks>
+    /// Nếu foreground đổi theo, watcher báo ngay sau đây và mọi thứ đi qua
+    /// <see cref="OnForegroundChanged"/>. Chỗ cần xử lý riêng là khi foreground KHÔNG đổi vì đang
+    /// là cửa sổ Settings: nhánh đó giữ nguyên profile khi tiến trình game còn sống, mà lúc cửa sổ
+    /// vừa đóng thì tiến trình thường chưa kịp thoát.
+    /// </remarks>
+    private void OnTrackedWindowClosed(object? sender, ForegroundWindowInfo closed)
+    {
+        if (ActiveGameProfile is null || closed.ProcessId != _matchedProcessId) return;
+
+        _logger.LogDebug("Cửa sổ của {Process} đã đóng, bỏ profile '{Profile}'.",
+            closed.ProcessName, ActiveGameProfile.Name);
+        ClearMatch();
     }
 
     private void ClearMatch()
@@ -173,18 +195,50 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
         {
             return false;
         }
+        catch (global::System.ComponentModel.Win32Exception)
+        {
+            // Tiến trình CÓ tồn tại nhưng từ chối cho hỏi trạng thái (game chạy quyền admin, được
+            // anti-cheat bảo vệ). Coi là còn sống; lúc nó thoát thật, watcher sẽ báo.
+            return true;
+        }
     }
 
     private void HandleNoMatch()
     {
-        if (_settings.Current.ShowOnlyInMatchedGames)
-        {
-            _overlay.SetVisible(false);
-            return;
-        }
+        // Chế độ "chỉ hiện trong game": overlay sắp ẩn, giữ nguyên preset để lần vào game kế tiếp
+        // không bị nháy qua preset thủ công.
+        if (!_settings.Current.ShowOnlyInMatchedGames) RestoreManualPreset();
 
-        RestoreManualPreset();
-        if (_settings.Current.OverlayEnabled) _overlay.SetVisible(true);
+        ApplyVisibility();
+    }
+
+    public void ApplyVisibility() =>
+        _overlay.SetVisible(ShouldShowOverlay(
+            _settings.Current.OverlayEnabled,
+            IsEnabled,
+            _settings.Current.ShowOnlyInMatchedGames,
+            ActiveGameProfile));
+
+    /// <summary>
+    /// Quy tắc hiện/ẩn overlay, tách thành hàm thuần để kiểm thử từng tổ hợp.
+    /// </summary>
+    /// <param name="overlayEnabled">Người dùng có bật overlay không (menu khay, phím tắt, Settings).</param>
+    /// <param name="autoSwitchEnabled">Có tự đổi theo game không. Tắt thì không có khái niệm "khớp".</param>
+    /// <param name="showOnlyInMatchedGames">Chỉ hiện khi foreground khớp một game profile.</param>
+    /// <param name="activeProfile">Profile đang khớp với cửa sổ foreground, null nếu không khớp.</param>
+    internal static bool ShouldShowOverlay(
+        bool overlayEnabled, bool autoSwitchEnabled, bool showOnlyInMatchedGames, GameProfile? activeProfile)
+    {
+        if (!overlayEnabled) return false;
+
+        // Không tự đổi theo game thì không có game nào "khớp" được: tuỳ chọn chỉ-hiện-trong-game
+        // lẫn profile ẩn overlay đều không còn nghĩa, bật là hiện.
+        if (!autoSwitchEnabled) return true;
+
+        if (activeProfile is { Behavior: GameProfileBehavior.HideOverlay }) return false;
+        if (activeProfile is not null) return true;
+
+        return !showOnlyInMatchedGames;
     }
 
     private void RestoreManualPreset()

@@ -267,9 +267,10 @@ Note: the code format can only describe a cross, a centre dot and an outline. Th
   <data name="Import_ErrNothingRead"><value>No settings could be read from that code.</value></data>
 
   <data name="Tray_Open"><value>Open Settings</value></data>
-  <data name="Tray_Toggle"><value>Overlay on</value></data>
+  <data name="Tray_Overlay"><value>Overlay</value></data>
   <data name="Tray_Exit"><value>Quit</value></data>
   <data name="Tray_TooltipOff"><value>{0} — off</value></data>
+  <data name="Tray_TooltipHiddenByProfile"><value>{0} — on, hidden by game profile rules</value></data>
   <data name="Tray_RunningInTray"><value>Running in the system tray.</value></data>
   <data name="Tray_HiddenToTray"><value>Still running in the system tray — the overlay stays on.</value></data>
   <data name="Fullscreen_WarnTitle"><value>The overlay may not be visible</value></data>

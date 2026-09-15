@@ -83,11 +83,25 @@ internal static class Win32Constants
 
     // WinEvent
     public const uint EVENT_SYSTEM_FOREGROUND = 0x0003;
+    public const uint EVENT_SYSTEM_MINIMIZESTART = 0x0016;
+    public const uint EVENT_SYSTEM_MINIMIZEEND = 0x0017;
+    public const uint EVENT_OBJECT_DESTROY = 0x8001;
+    public const uint EVENT_OBJECT_SHOW = 0x8002;
+    public const uint EVENT_OBJECT_HIDE = 0x8003;
+
+    /// <summary><c>idObject</c> của sự kiện nói về chính cửa sổ, không phải một phần tử bên trong nó.</summary>
+    public const int OBJID_WINDOW = 0;
+    public const int CHILDID_SELF = 0;
     public const uint WINEVENT_OUTOFCONTEXT = 0x0000;
     public const uint WINEVENT_SKIPOWNPROCESS = 0x0002;
 
     /// <summary>Quyền tối thiểu đủ để đọc tên file thực thi của tiến trình.</summary>
     public const uint PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
+
+    /// <summary>
+    /// Quyền duy nhất để CHỜ tiến trình kết thúc. Không đọc được gì từ tiến trình, kể cả tên file.
+    /// </summary>
+    public const uint SYNCHRONIZE = 0x00100000;
 
     /// <summary>Cửa sổ message-only: không hiển thị, chỉ nhận message.</summary>
     public static readonly nint HWND_MESSAGE = -3;

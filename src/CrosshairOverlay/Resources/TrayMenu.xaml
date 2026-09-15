@@ -1,0 +1,28 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--
+        Menu chuột phải của icon khay. DataContext là TrayMenuViewModel, gán lúc tạo icon.
+
+        Nút bật/tắt mang nhãn cố định "Overlay"; trạng thái nằm ở dấu tích — có dấu tích là overlay
+        đang hiện. Giao diện (nền tối, không có cột icon, dấu tích xanh) đến từ Style
+        ContextMenu/MenuItem trong Theme.xaml.
+
+        x:Shared="False": mỗi lần lấy ra là một menu mới, không dùng chung một instance.
+    -->
+    <ContextMenu x:Key="TrayContextMenu" x:Shared="False">
+        <MenuItem Header="{Binding OpenSettingsText}" Command="{Binding OpenSettingsCommand}"/>
+        <!--
+            Dấu tích = overlay ĐANG HIỆN (trạng thái thật).
+
+            IsChecked bind MỘT CHIỀU và KHÔNG bật IsCheckable: IsCheckable khiến WPF tự đảo dấu tích
+            ngay lúc bấm, trước khi biết overlay có thật sự đổi hay không (vd game profile đang ép
+            ẩn). Dấu tích chỉ được đổi khi trạng thái thật đổi.
+        -->
+        <MenuItem Header="{Binding OverlayText}" Command="{Binding ToggleOverlayCommand}"
+                  IsChecked="{Binding IsOverlayEnabled, Mode=OneWay}"/>
+        <Separator/>
+        <MenuItem Header="{Binding ExitText}" Command="{Binding ExitCommand}"/>
+    </ContextMenu>
+
+</ResourceDictionary>

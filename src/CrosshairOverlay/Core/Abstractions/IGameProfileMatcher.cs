@@ -1,4 +1,4 @@
-using CrosshairOverlay.Core.Models;
+﻿using CrosshairOverlay.Core.Models;
 
 namespace CrosshairOverlay.Core.Abstractions;
 
@@ -27,6 +27,18 @@ public interface IProfileAutoSwitcher : IDisposable
     void Start();
 
     void Stop();
+
+    /// <summary>
+    /// Áp lại quy tắc hiện/ẩn overlay theo trạng thái hiện tại: người dùng có bật overlay không,
+    /// tự đổi theo game có bật không, "chỉ hiện trong game đã khớp", và profile đang khớp.
+    /// </summary>
+    /// <remarks>
+    /// Gọi sau MỌI thay đổi có thể ảnh hưởng: bật/tắt overlay (menu khay, phím tắt, cửa sổ
+    /// Settings) hay đổi một trong hai tuỳ chọn trên. Đây là nơi DUY NHẤT quyết định overlay hiện
+    /// hay ẩn — bật thẳng overlay ở nơi khác sẽ làm nó hiện trên desktop dù đang ở chế độ "chỉ
+    /// hiện trong game".
+    /// </remarks>
+    void ApplyVisibility();
 
     /// <summary>
     /// Phát khi phát hiện foreground có thể đang ở Exclusive Fullscreen. Shell hiển thị

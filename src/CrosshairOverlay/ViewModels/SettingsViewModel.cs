@@ -47,7 +47,10 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
         Hotkeys = new HotkeysViewModel(settings, hotkeys);
         Games = new GameProfilesViewModel(settings, library, watcher, matcher, scanner);
 
-        _overlayEnabled = overlay.IsVisible;
+        // Ô "Bật overlay" là lựa chọn của người dùng, không phải overlay có đang hiện hay không —
+        // xem App.ToggleOverlay. Đồng bộ hai chiều với menu khay và phím tắt qua cài đặt.
+        _overlayEnabled = settings.Current.OverlayEnabled;
+        _settings.Current.PropertyChanged += OnSettingsChanged;
 
         _library.ActiveChanged += OnLibraryActiveChanged;
         SyncFromLibrary();
@@ -75,11 +78,20 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
         _library.SetActive(value);
     }
 
+    /// <summary>Chỉ ghi cài đặt; App áp quy tắc hiện/ẩn (tôn trọng chế độ "chỉ hiện trong game").</summary>
     partial void OnOverlayEnabledChanged(bool value)
     {
-        _overlay.SetVisible(value);
+        if (_settings.Current.OverlayEnabled == value) return;
+
         _settings.Current.OverlayEnabled = value;
         _settings.RequestSave();
+    }
+
+    /// <summary>Bật/tắt từ menu khay hay phím tắt thì ô tick trong cửa sổ đổi theo.</summary>
+    private void OnSettingsChanged(object? sender, global::System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(AppSettings.OverlayEnabled))
+            OverlayEnabled = _settings.Current.OverlayEnabled;
     }
 
     private void OnLibraryActiveChanged(object? sender, EventArgs e) => SyncFromLibrary();
@@ -239,6 +251,7 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
         _disposed = true;
 
         _library.ActiveChanged -= OnLibraryActiveChanged;
+        _settings.Current.PropertyChanged -= OnSettingsChanged;
 
         Editor.Dispose();
         General.Dispose();

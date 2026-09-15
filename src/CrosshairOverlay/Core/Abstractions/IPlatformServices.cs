@@ -87,8 +87,15 @@ public interface ITrayIconController : IDisposable
 {
     void Initialize();
 
-    /// <summary>Cập nhật tooltip / dấu tích trong menu khi trạng thái đổi.</summary>
-    void UpdateState(bool overlayEnabled, string activePresetName);
+    /// <summary>Cập nhật icon, dấu tích trong menu và tooltip.</summary>
+    /// <param name="overlayEnabled">
+    /// Người dùng có BẬT overlay không. Quyết định màu icon và dấu tích — KHÔNG phải overlay có
+    /// đang hiện hay không: ở chế độ "chỉ hiện trong game", overlay cố ý ẩn trên desktop nhưng vẫn
+    /// đang bật, và icon xám lúc đó sẽ khiến người dùng tưởng ứng dụng đã tắt.
+    /// </param>
+    /// <param name="overlayVisible">Overlay có đang hiện thật không; chỉ dùng cho tooltip.</param>
+    /// <param name="activePresetName">Tên preset đang dùng, hiện trong tooltip.</param>
+    void UpdateState(bool overlayEnabled, bool overlayVisible, string activePresetName);
 
     /// <summary>Bong bóng thông báo, dùng cho cảnh báo Exclusive Fullscreen và lỗi hotkey.</summary>
     void ShowNotification(string title, string message, bool isWarning = false);

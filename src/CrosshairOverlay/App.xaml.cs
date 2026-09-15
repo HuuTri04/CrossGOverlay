@@ -92,6 +92,14 @@ public partial class App : Application
             autoSwitcher.ExclusiveFullscreenDetected += OnExclusiveFullscreenDetected;
             autoSwitcher.Start();
 
+            // Áp quy tắc hiện/ẩn ngay từ đầu, kể cả khi cửa sổ foreground lúc khởi động là của chính
+            // ứng dụng (Settings) — trường hợp bộ tự đổi không xử lý.
+            autoSwitcher.ApplyVisibility();
+
+            // Bật/tắt overlay (menu khay, phím tắt, Settings) và hai tuỳ chọn của game profile đều
+            // chỉ ghi vào cài đặt; phản ứng tập trung tại đây để không nơi nào tự bật overlay thẳng.
+            settings.Current.PropertyChanged += OnVisibilitySettingChanged;
+
             if (settings.Current.StartMinimizedToTray)
             {
                 _provider.GetRequiredService<ITrayIconController>()
@@ -151,6 +159,11 @@ public partial class App : Application
         var library = provider.GetRequiredService<IPresetLibrary>();
 
         overlay.Initialize();
+
+        // Menu khay phải theo trạng thái THẬT của overlay: ngoài bật/tắt thủ công, game profile
+        // cũng có thể ẩn/hiện overlay (HideOverlay, "chỉ hiện trong game đã khớp").
+        overlay.VisibilityChanged += (_, _) => RefreshTrayState();
+
         overlay.SetMonitorSelection(
             settings.Current.MonitorSelectionMode,
             settings.Current.TargetMonitorDeviceName);
@@ -160,7 +173,9 @@ public partial class App : Application
         library.ActiveChanged += OnActivePresetChanged;
 
         await library.InitializeAsync(settings.Current.ActivePresetId).ConfigureAwait(true);
-        overlay.SetVisible(settings.Current.OverlayEnabled);
+        // KHÔNG hiện overlay ở đây: quy tắc hiện/ẩn (ApplyVisibility) chạy ngay sau khi bộ tự đổi theo
+        // game khởi động. Hiện trước sẽ làm crosshair nháy lên trên desktop một khoảnh khắc ở chế độ
+        // "chỉ hiện trong game" rồi mới bị ẩn.
     }
 
     private void StartTray()
@@ -300,17 +315,36 @@ public partial class App : Application
         }
     }
 
+    /// <summary>
+    /// Đảo lựa chọn bật/tắt overlay của người dùng.
+    /// </summary>
+    /// <remarks>
+    /// Đảo CÀI ĐẶT chứ không đảo trạng thái hiện/ẩn của cửa sổ overlay. Ở chế độ "chỉ hiện trong
+    /// game", overlay đang ẩn trên desktop dù vẫn bật; đảo trạng thái cửa sổ sẽ làm overlay hiện
+    /// ra giữa desktop, trái với chính tuỳ chọn đó. Việc hiện hay ẩn thật do OnVisibilitySettingChanged
+    /// quyết định.
+    /// </remarks>
     private void ToggleOverlay()
     {
         if (_provider is null) return;
 
-        var overlay = _provider.GetRequiredService<IOverlayController>();
         var settings = _provider.GetRequiredService<IAppSettingsService>();
-
-        overlay.Toggle();
-        settings.Current.OverlayEnabled = overlay.IsVisible;
+        settings.Current.OverlayEnabled = !settings.Current.OverlayEnabled;
         settings.RequestSave();
+    }
 
+    private void OnVisibilitySettingChanged(object? sender, global::System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (_provider is null) return;
+
+        if (e.PropertyName is not (nameof(AppSettings.OverlayEnabled)
+            or nameof(AppSettings.ShowOnlyInMatchedGames)
+            or nameof(AppSettings.AutoSwitchByGameProfile)))
+        {
+            return;
+        }
+
+        _provider.GetRequiredService<IProfileAutoSwitcher>().ApplyVisibility();
         RefreshTrayState();
     }
 
@@ -345,8 +379,9 @@ public partial class App : Application
         if (_provider is null) return;
 
         _provider.GetRequiredService<ITrayIconController>().UpdateState(
-            _provider.GetRequiredService<IOverlayController>().IsVisible,
-            _provider.GetRequiredService<IPresetLibrary>().Active?.Name ?? "—");
+            overlayEnabled: _provider.GetRequiredService<IAppSettingsService>().Current.OverlayEnabled,
+            overlayVisible: _provider.GetRequiredService<IOverlayController>().IsVisible,
+            activePresetName: _provider.GetRequiredService<IPresetLibrary>().Active?.Name ?? "—");
     }
 
     // ------------------------------------------------------------------ xử lý lỗi

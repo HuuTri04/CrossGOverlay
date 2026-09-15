@@ -1,4 +1,4 @@
-using CrosshairOverlay.Core.Models;
+﻿using CrosshairOverlay.Core.Models;
 
 namespace CrosshairOverlay.Core.Abstractions;
 
@@ -28,7 +28,25 @@ public interface IForegroundWindowWatcher : IDisposable
 
     void Stop();
 
+    /// <summary>
+    /// Theo dõi riêng một cửa sổ (thường là game đang khớp profile) để biết ngay khi nó bị đóng,
+    /// ẩn hoặc thu nhỏ — kể cả khi Windows không trao foreground cho cửa sổ nào khác.
+    /// </summary>
+    /// <remarks>
+    /// Chỉ foreground thôi là không đủ: thoát game xong, foreground có thể rơi vào "không ai" và
+    /// không có sự kiện đổi foreground nào cho tới khi người dùng tự Alt-Tab, nên crosshair của
+    /// game cứ nằm lại trên màn hình. Truyền <see cref="ForegroundWindowInfo.Empty"/> để thôi theo dõi.
+    /// Mỗi lúc chỉ theo dõi một cửa sổ; gọi lại với cửa sổ khác sẽ thay thế cửa sổ cũ.
+    /// </remarks>
+    void Track(ForegroundWindowInfo window);
+
     event EventHandler<ForegroundWindowChangedEventArgs>? ForegroundChanged;
+
+    /// <summary>
+    /// Cửa sổ đang <see cref="Track"/> đã bị huỷ, hoặc tiến trình của nó đã thoát. Phát TRƯỚC khi
+    /// foreground được đọc lại; việc theo dõi đã tự dừng.
+    /// </summary>
+    event EventHandler<ForegroundWindowInfo>? TrackedWindowClosed;
 }
 
 public sealed class ForegroundWindowChangedEventArgs(
