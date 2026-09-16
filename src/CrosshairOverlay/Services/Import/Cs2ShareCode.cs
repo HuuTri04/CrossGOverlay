@@ -1,4 +1,4 @@
-using System.Numerics;
+﻿using System.Numerics;
 
 namespace CrosshairOverlay.Services.Import;
 
@@ -20,6 +20,28 @@ public sealed record Cs2Crosshair
     public bool HasCenterDot { get; init; }
     public bool IsTStyle { get; init; }
     public int Style { get; init; }
+
+    /// <summary>
+    /// <c>cl_crosshaircolor</c>: 0–4 là màu dựng sẵn của game, 5 là dùng ba số RGB ở trên.
+    /// </summary>
+    /// <remarks>
+    /// Giá trị 0–4 khiến game LÀM NGƠ RGB. Ứng dụng luôn xuất ra 5 để giữ đúng màu người dùng chọn.
+    /// </remarks>
+    public int ColorIndex { get; init; } = Cs2Crosshair.CustomColorIndex;
+
+    /// <summary>Chỉ dùng cho crosshair kiểu động; giữ lại để mã hoá ngược không làm mất giá trị.</summary>
+    public int SplitDistance { get; init; } = 7;
+
+    public double FixedGap { get; init; } = 3d;
+    public double InnerSplitAlpha { get; init; } = 1d;
+    public double OuterSplitAlpha { get; init; } = 0.5d;
+    public double SplitSizeRatio { get; init; }
+    public bool FollowRecoil { get; init; }
+
+    /// <summary><c>cl_crosshair_deployed_weapon_gap_enabled</c>.</summary>
+    public bool DeployedWeaponGap { get; init; }
+
+    public const int CustomColorIndex = 5;
 }
 
 /// <summary>
@@ -31,7 +53,8 @@ public sealed record Cs2Crosshair
 /// sang 19 byte rồi đọc từng trường theo bảng bit.
 ///
 /// <para>
-/// Bảng chữ cái cố tình bỏ các ký tự I, O và 1 để người dùng không đọc nhầm khi chép tay.
+/// Bảng chữ cái 57 ký tự cố tình bỏ I, g, l, 0 và 1 — những ký tự dễ đọc nhầm thành nhau khi
+/// người dùng chép tay.
 /// </para>
 /// </remarks>
 public static class Cs2ShareCode
@@ -141,12 +164,22 @@ public static class Cs2ShareCode
         Blue = b[7],
         Alpha = b[8],
 
+        SplitDistance = b[9] & 0x07,
+        FollowRecoil = (b[9] & 0x80) != 0,
+        FixedGap = unchecked((sbyte)b[10]) / 10d,
+
+        ColorIndex = b[11] & 0x07,
         HasOutline = (b[11] & 0x08) != 0,
+        InnerSplitAlpha = (b[11] >> 4) / 10d,
+
+        OuterSplitAlpha = (b[12] & 0x0F) / 10d,
+        SplitSizeRatio = (b[12] >> 4) / 10d,
 
         Thickness = b[13] / 10d,
 
         Style = (b[14] & 0x0F) >> 1,
         HasCenterDot = ((b[14] >> 4) & 0x01) != 0,
+        DeployedWeaponGap = ((b[14] >> 4) & 0x02) != 0,
         HasAlpha = ((b[14] >> 4) & 0x04) != 0,
         IsTStyle = ((b[14] >> 4) & 0x08) != 0,
 

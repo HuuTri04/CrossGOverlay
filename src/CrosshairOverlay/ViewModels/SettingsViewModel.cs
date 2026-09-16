@@ -18,6 +18,7 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
     private readonly ICustomImageStore _images;
     private readonly IProfileAutoSwitcher _autoSwitcher;
     private readonly IProcessLauncher _launcher;
+    private readonly ICrosshairTranslator _translator;
     private readonly ILogger<SettingsViewModel> _logger;
 
     private bool _syncingSelection;
@@ -42,6 +43,9 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
         IHardwareInfoService hardware,
         IAppPathProvider paths,
         IAppRestartService restart,
+        IStorageLocationService storage,
+        IDisplayModeReader displayModes,
+        ICrosshairTranslator translator,
         ILogger<SettingsViewModel> logger)
     {
         _library = library;
@@ -51,13 +55,14 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
         _images = images;
         _autoSwitcher = autoSwitcher;
         _launcher = launcher;
+        _translator = translator;
         _logger = logger;
 
         Editor = new CrosshairEditorViewModel(renderer, dialogs, images, settings);
-        General = new GeneralSettingsViewModel(settings, monitors, overlay, startup, updates, dialogs, paths, launcher, restart);
+        General = new GeneralSettingsViewModel(settings, monitors, overlay, startup, updates, dialogs, paths, launcher, restart, storage);
         Hotkeys = new HotkeysViewModel(settings, hotkeys);
         Games = new GameProfilesViewModel(settings, library, watcher, matcher, scanner);
-        SystemInfo = new SystemInfoViewModel(hardware);
+        SystemInfo = new SystemInfoViewModel(hardware, monitors, displayModes);
 
         // Ô "Bật overlay" là lựa chọn của người dùng, không phải overlay có đang hiện hay không —
         // xem App.ToggleOverlay. Đồng bộ hai chiều với menu khay và phím tắt qua cài đặt.
@@ -250,79 +255,87 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// Dựng mã chia sẻ từ preset đang chọn và chép vào clipboard: mã hình ảnh của ứng dụng cho tâm
-    /// ngắm ảnh, mã Valorant cho tâm ngắm vẽ.
+    /// Mở hộp thoại "Xuất mã tâm ngắm": dịch preset đang chọn ra mã Valorant, CS2 và mã nội bộ.
     /// </summary>
+    /// <remarks>
+    /// Trước đây lệnh này chép thẳng MỘT mã vào clipboard. Người dùng chơi nhiều game, và mỗi định
+    /// dạng giữ được một phần khác nhau của preset — nên đưa cả ba mã ra cùng lúc, kèm câu nói rõ
+    /// mã nào mất gì, rồi để họ tự chọn.
+    /// </remarks>
     [RelayCommand]
-    private void ExportCode()
+    private async Task ExportCodeAsync()
     {
         if (SelectedPreset is not { } preset) return;
 
-        if (preset.Type == CrosshairType.Image)
-        {
-            ExportImageCode(preset);
-            return;
-        }
+        // Bản chụp: phần dựng mã ảnh chạy ở luồng nền, mà người dùng vẫn kéo thanh trượt được.
+        var snapshot = preset.Clone();
 
-        var code = Services.Import.ValorantCrosshairCode.Encode(
-            Services.Import.CrosshairCodeConverter.ToValorantCrosshair(preset));
+        string? imageCode = null;
+        string? imageError = null;
 
-        if (!_dialogs.CopyToClipboard(code))
-        {
-            _dialogs.ShowMessage(Core.AppInfo.DisplayName, Tr.Get("Preset_ClipboardFailed"), isError: true);
-            return;
-        }
+        if (snapshot.Type == CrosshairType.Image)
+            (imageCode, imageError) = await BuildImageCodeAsync(snapshot);
 
-        var body = Tr.Format("Preset_CodeCopiedBody", code);
-
-        // Nói trước cho người dùng biết sẽ mất gì, thay vì đưa ra một mã trông có vẻ đúng.
-        if (!Services.Import.CrosshairCodeConverter.CanExportFaithfully(preset))
-            body += Tr.Get("Preset_CodeLossy");
-
-        _dialogs.ShowMessage(Tr.Get("Preset_CodeCopiedTitle"), body);
+        _dialogs.ShowExportCodes(_translator.BuildCodes(snapshot, imageCode, imageError));
     }
 
-    private void ExportImageCode(CrosshairProfile preset)
+    /// <summary>
+    /// Dựng mã tâm ngắm ảnh; trả về (mã, null) hoặc (null, lý do đọc được).
+    /// </summary>
+    /// <remarks>
+    /// Đọc file, thu nhỏ, nén GZip và Base64 đều chạy trên luồng nền (<see cref="Task.Run(Action)"/>):
+    /// ảnh GIF lớn mất hàng trăm mili giây, làm tại chỗ thì cửa sổ đứng hình ngay lúc bấm nút.
+    /// Lệnh bất đồng bộ tự vô hiệu hoá nút trong lúc chạy nên không bấm chồng được.
+    /// </remarks>
+    private async Task<(string? Code, string? Error)> BuildImageCodeAsync(CrosshairProfile preset)
     {
         var path = _images.Resolve(preset.Image.FilePath);
-        if (path is null || !global::System.IO.File.Exists(path))
-        {
-            _dialogs.ShowMessage(Tr.Get("Preset_CodeCopiedTitle"), Tr.Get("Preset_ImageCodeNoImage"), isError: true);
-            return;
-        }
+        var image = preset.Image.Clone();
+        var rotation = preset.Rotation;
 
-        byte[] bytes;
-        try
+        var (outcome, code, error, failure) = await Task.Run(() =>
         {
-            bytes = global::System.IO.File.ReadAllBytes(path);
-        }
-        catch (Exception ex) when (ex is global::System.IO.IOException or UnauthorizedAccessException)
-        {
-            Report(ex, Tr.Get("Preset_ImageCodeNoImage"));
-            return;
-        }
+            if (path is null || !global::System.IO.File.Exists(path))
+                return (ImageExportOutcome.NoImage, (string?)null, default(Services.Import.ImageCodeExportError), (Exception?)null);
 
-        // Ảnh lớn được thu nhỏ rồi nén trước khi nhúng; Scale trong mã được bù để tâm ngắm của
-        // người nhận hiện ra đúng kích thước này.
-        if (!Services.Import.ImageCrosshairCode.TryEncode(bytes, preset.Image, preset.Rotation, out var code, out var error))
-        {
-            var message = error == Services.Import.ImageCodeExportError.TooLarge
-                ? Tr.Format("Preset_ImageCodeTooLarge", Services.Import.ImageCrosshairCode.MaxImageBytes / (1024 * 1024))
-                : Tr.Get("Preset_ImageCodeUnreadable");
-            _dialogs.ShowMessage(Tr.Get("Preset_CodeCopiedTitle"), message, isError: true);
-            return;
-        }
+            byte[] bytes;
+            try
+            {
+                bytes = global::System.IO.File.ReadAllBytes(path);
+            }
+            catch (Exception ex) when (ex is global::System.IO.IOException or UnauthorizedAccessException)
+            {
+                return (ImageExportOutcome.ReadFailed, null, default, ex);
+            }
 
-        if (!_dialogs.CopyToClipboard(code!))
-        {
-            _dialogs.ShowMessage(Core.AppInfo.DisplayName, Tr.Get("Preset_ClipboardFailed"), isError: true);
-            return;
-        }
+            // Ảnh lớn được thu nhỏ rồi nén trước khi nhúng; Scale trong mã được bù để tâm ngắm của
+            // người nhận hiện ra đúng kích thước này.
+            return Services.Import.ImageCrosshairCode.TryEncode(bytes, image, rotation, out var encoded, out var encodeError)
+                ? (ImageExportOutcome.Encoded, encoded, encodeError, null)
+                : (ImageExportOutcome.EncodeFailed, null, encodeError, null);
+        });
 
-        // Không in nguyên mã ra như mã Valorant: nó dài hàng chục nghìn ký tự.
-        _dialogs.ShowMessage(Tr.Get("Preset_CodeCopiedTitle"),
-            Tr.Format("Preset_ImageCodeCopiedBody", code!.Length.ToString("N0", Localization.TranslationSource.Instance.CurrentCulture)));
+        switch (outcome)
+        {
+            case ImageExportOutcome.Encoded:
+                return (code, null);
+
+            case ImageExportOutcome.ReadFailed:
+                _logger.LogWarning(failure, "Không đọc được ảnh của preset khi xuất mã.");
+                return (null, Tr.Get("Preset_ImageCodeNoImage"));
+
+            case ImageExportOutcome.EncodeFailed when error == Services.Import.ImageCodeExportError.TooLarge:
+                return (null, Tr.Format("Preset_ImageCodeTooLarge", Services.Import.ImageCrosshairCode.MaxImageBytes / (1024 * 1024)));
+
+            case ImageExportOutcome.EncodeFailed:
+                return (null, Tr.Get("Preset_ImageCodeUnreadable"));
+
+            default:
+                return (null, Tr.Get("Preset_ImageCodeNoImage"));
+        }
     }
+
+    private enum ImageExportOutcome { NoImage, ReadFailed, EncodeFailed, Encoded }
 
     // ================================================================== test tâm ngắm
 

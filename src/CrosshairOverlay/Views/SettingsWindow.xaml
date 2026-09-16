@@ -32,7 +32,7 @@
                         <Style TargetType="ctl:SliderField">
                             <Setter Property="Label" Value="{loc:Loc Editor_Length}"/>
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding SeparateVerticalLength}" Value="True">
+                                <DataTrigger Binding="{Binding SeparateVerticalLength, Mode=OneWay}" Value="True">
                                     <Setter Property="Label" Value="{loc:Loc Editor_HorizontalLength}"/>
                                 </DataTrigger>
                             </Style.Triggers>
@@ -44,7 +44,7 @@
                 <ctl:SliderField Label="{loc:Loc Editor_VerticalLength}" Range="{x:Static lim:CrosshairLimits.LineLength}"
                                  Value="{Binding VerticalLength, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  Visibility="{Binding SeparateVerticalLength,
-                                              Converter={StaticResource BoolToVisibility}}"/>
+                                              Converter={StaticResource BoolToVisibility}, Mode=OneWay}"/>
                 <ctl:SliderField Label="{loc:Loc Editor_Thickness}" Range="{x:Static lim:CrosshairLimits.LineThickness}"
                                  Value="{Binding Thickness, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                 <ctl:SliderField Label="{loc:Loc Editor_Offset}" Range="{x:Static lim:CrosshairLimits.LineOffset}"
@@ -109,7 +109,7 @@
                 -->
                 <ContentControl Style="{StaticResource Hint}" HorizontalAlignment="Right"
                                 Margin="0,5,0,0"
-                                Content="{Binding OverlayHint}"
+                                Content="{Binding OverlayHint, Mode=OneWay}"
                                 ToolTip="{loc:Loc Shell_OverlayDisplayModeTip}"/>
             </StackPanel>
         </Grid>
@@ -118,7 +118,7 @@
 
             <!-- ============================================ TAB CROSSHAIR -->
             <TabItem Header="{loc:Loc Tab_Crosshair}">
-                <Grid Margin="0,14,0,0">
+                <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="240"/>
                         <ColumnDefinition Width="14"/>
@@ -149,13 +149,13 @@
                                     <Button Content="{loc:Loc Preset_FromGameCode}" Command="{Binding ImportCodeCommand}"
                                             ToolTip="{loc:Loc Preset_FromGameCodeTip}" Margin="0,4,3,4"/>
                                     <Button Content="{loc:Loc Preset_ExportCode}" Command="{Binding ExportCodeCommand}"
-                                            IsEnabled="{Binding SelectedPreset, Converter={StaticResource NotNullToBool}}"
+                                            IsEnabled="{Binding SelectedPreset, Converter={StaticResource NotNullToBool}, Mode=OneWay}"
                                             ToolTip="{loc:Loc Preset_ExportCodeTip}" Margin="3,4,0,4"/>
                                     <Button Content="{loc:Loc Preset_Duplicate}" Command="{Binding DuplicatePresetCommand}"
-                                            IsEnabled="{Binding SelectedPreset, Converter={StaticResource NotNullToBool}}"
+                                            IsEnabled="{Binding SelectedPreset, Converter={StaticResource NotNullToBool}, Mode=OneWay}"
                                             Margin="0,4,3,0"/>
                                     <Button Content="{loc:Loc Preset_Delete}" Command="{Binding DeletePresetCommand}"
-                                            IsEnabled="{Binding SelectedPreset, Converter={StaticResource NotNullToBool}}"
+                                            IsEnabled="{Binding SelectedPreset, Converter={StaticResource NotNullToBool}, Mode=OneWay}"
                                             Style="{StaticResource DangerButton}" Margin="3,4,0,0"/>
                                 </UniformGrid>
                             </StackPanel>
@@ -203,11 +203,11 @@
                             </Border>
 
                             <ctl:CrosshairPreview
-                                Profile="{Binding Editor.Profile}"
-                                Renderer="{Binding Editor.Renderer}"
-                                Zoom="{Binding Editor.PreviewZoom}"
-                                ShowCheckerboard="{Binding Editor.ShowCheckerboard}"
-                                UseDarkBackground="{Binding Editor.UseDarkPreviewBackground}"/>
+                                Profile="{Binding Editor.Profile, Mode=OneWay}"
+                                Renderer="{Binding Editor.Renderer, Mode=OneWay}"
+                                Zoom="{Binding Editor.PreviewZoom, Mode=OneWay}"
+                                ShowCheckerboard="{Binding Editor.ShowCheckerboard, Mode=OneWay}"
+                                UseDarkBackground="{Binding Editor.UseDarkPreviewBackground, Mode=OneWay}"/>
                         </DockPanel>
                     </Border>
 
@@ -233,7 +233,7 @@
                                 <!-- Hình dạng, màu, độ mờ và tỉ lệ tổng thể chỉ có nghĩa với tâm ngắm vẽ tay;
                                      chế độ ảnh có thanh độ mờ/kích thước riêng trong nhóm Hình ảnh. -->
                                 <StackPanel Visibility="{Binding Editor.IsStandardMode,
-                                            Converter={StaticResource BoolToVisibility}}">
+                                            Converter={StaticResource BoolToVisibility}, Mode=OneWay}">
                                     <TextBlock Text="{loc:Loc Editor_Shape}" Style="{StaticResource FieldLabel}"
                                                Margin="0,12,0,4"/>
                                     <ComboBox ItemsSource="{Binding Editor.Shapes}"
@@ -256,9 +256,9 @@
                                 <!-- ===== Tâm giữa → Nhánh trong → Nhánh ngoài: đúng thứ tự renderer vẽ ===== -->
                                 <Expander Header="{loc:Loc Editor_CenterDot}" Style="{StaticResource SettingsExpander}"
                                           Margin="0,16,0,0"
-                                          Tag="{Binding Editor.Profile.CenterDot.Enabled}"
+                                          Tag="{Binding Editor.Profile.CenterDot.Enabled, Mode=OneWay}"
                                           Visibility="{Binding Editor.IsStandardMode,
-                                                       Converter={StaticResource BoolToVisibility}}">
+                                                       Converter={StaticResource BoolToVisibility}, Mode=OneWay}">
                                     <StackPanel>
                                         <CheckBox Content="{loc:Loc Editor_Show}" Margin="0,6,0,4"
                                                   IsChecked="{Binding Editor.Profile.CenterDot.Enabled, Mode=TwoWay}"/>
@@ -274,20 +274,20 @@
                                 </Expander>
 
                                 <StackPanel Visibility="{Binding Editor.ShowLineSettings,
-                                            Converter={StaticResource BoolToVisibility}}">
+                                            Converter={StaticResource BoolToVisibility}, Mode=OneWay}">
                                     <Expander Header="{loc:Loc Editor_InnerLines}" Style="{StaticResource SettingsExpander}"
-                                              Tag="{Binding Editor.Profile.InnerLines.Enabled}"
-                                              Content="{Binding Editor.Profile.InnerLines}"
+                                              Tag="{Binding Editor.Profile.InnerLines.Enabled, Mode=OneWay}"
+                                              Content="{Binding Editor.Profile.InnerLines, Mode=OneWay}"
                                               ContentTemplate="{StaticResource LineLayerEditor}"/>
 
                                     <Expander Header="{loc:Loc Editor_OuterLines}" Style="{StaticResource SettingsExpander}"
-                                              Tag="{Binding Editor.Profile.OuterLines.Enabled}"
-                                              Content="{Binding Editor.Profile.OuterLines}"
+                                              Tag="{Binding Editor.Profile.OuterLines.Enabled, Mode=OneWay}"
+                                              Content="{Binding Editor.Profile.OuterLines, Mode=OneWay}"
                                               ContentTemplate="{StaticResource LineLayerEditor}"/>
                                 </StackPanel>
 
                                 <StackPanel Visibility="{Binding Editor.ShowRingSettings,
-                                            Converter={StaticResource BoolToVisibility}}">
+                                            Converter={StaticResource BoolToVisibility}, Mode=OneWay}">
                                     <TextBlock Text="{loc:Loc Editor_Ring}" Style="{StaticResource SectionHeader}"/>
                                     <CheckBox Content="{loc:Loc Editor_ShowRing}" Margin="0,0,0,6"
                                               IsChecked="{Binding Editor.Profile.Ring.Enabled, Mode=TwoWay}"/>
@@ -300,7 +300,7 @@
                                 </StackPanel>
 
                                 <StackPanel Visibility="{Binding Editor.ShowOutlineSettings,
-                                            Converter={StaticResource BoolToVisibility}}">
+                                            Converter={StaticResource BoolToVisibility}, Mode=OneWay}">
                                     <TextBlock Text="{loc:Loc Editor_Outline}" Style="{StaticResource SectionHeader}"/>
                                     <CheckBox Content="{loc:Loc Editor_ShowOutline}" Margin="0,0,0,6"
                                               IsChecked="{Binding Editor.Profile.Outline.Enabled, Mode=TwoWay}"/>
@@ -315,12 +315,12 @@
                                 <!-- ===== Chế độ ảnh: thay thế toàn bộ nhóm vẽ tay ===== -->
                                 <Expander Header="{loc:Loc Editor_Image}" Style="{StaticResource SettingsExpander}"
                                           Margin="0,16,0,0"
-                                          Tag="{Binding Editor.IsImageMode}"
+                                          Tag="{Binding Editor.IsImageMode, Mode=OneWay}"
                                           Visibility="{Binding Editor.ShowImageSettings,
-                                                       Converter={StaticResource BoolToVisibility}}">
+                                                       Converter={StaticResource BoolToVisibility}, Mode=OneWay}">
                                     <StackPanel>
                                         <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
-                                                   Margin="0,8,0,8" Text="{Binding Editor.ImagePathDisplay}"/>
+                                                   Margin="0,8,0,8" Text="{Binding Editor.ImagePathDisplay, Mode=OneWay}"/>
                                         <UniformGrid Columns="2">
                                             <Button Content="{loc:Loc Editor_BrowseImage}" Style="{StaticResource AccentButton}"
                                                     Command="{Binding Editor.BrowseImageCommand}" Margin="0,0,3,0"/>
@@ -352,7 +352,7 @@
                                 </Expander>
 
                                 <StackPanel Visibility="{Binding Editor.IsStandardMode,
-                                            Converter={StaticResource BoolToVisibility}}">
+                                            Converter={StaticResource BoolToVisibility}, Mode=OneWay}">
                                 <TextBlock Text="{loc:Loc Editor_Position}" Style="{StaticResource SectionHeader}"/>
                                 <ctl:SliderField Label="{loc:Loc Editor_OffsetX}" Range="{x:Static lim:CrosshairLimits.Offset}"
                                                  Value="{Binding Editor.Profile.OffsetX, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
@@ -375,8 +375,8 @@
             <!-- ============================================ TAB CHUNG -->
             <!-- Hai cột bằng nhau: màn hình bên trái, ứng dụng + cập nhật bên phải — dàn đều hết cửa sổ. -->
             <TabItem Header="{loc:Loc Tab_General}">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,14,0,0">
-                    <Grid Margin="0,0,0,16">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="14"/>
@@ -395,7 +395,7 @@
 
                                 <StackPanel Margin="0,10,0,0"
                                             Visibility="{Binding General.ShowMonitorPicker,
-                                                         Converter={StaticResource BoolToVisibility}}">
+                                                         Converter={StaticResource BoolToVisibility}, Mode=OneWay}">
                                     <ComboBox ItemsSource="{Binding General.AvailableMonitors}"
                                               SelectedItem="{Binding General.PinnedMonitor, Mode=TwoWay}"
                                               DisplayMemberPath="DeviceName"/>
@@ -451,7 +451,7 @@
                         </Border>
                         </StackPanel>
 
-                        <!-- ======== Cột phải: ỨNG DỤNG + CẬP NHẬT -->
+                        <!-- ======== Cột phải: ỨNG DỤNG (gồm cập nhật) + DỮ LIỆU & BẢO TRÌ -->
                         <StackPanel Grid.Column="2">
                             <Border Style="{StaticResource Card}">
                                 <StackPanel>
@@ -466,7 +466,7 @@
 
                                     <CheckBox Content="{loc:Loc General_StartWithWindows}" Margin="0,14,0,4"
                                               IsChecked="{Binding General.StartWithWindows, Mode=TwoWay}"/>
-                                    <TextBlock Text="{Binding General.StartupHint}" Style="{StaticResource FieldLabel}"
+                                    <TextBlock Text="{Binding General.StartupHint, Mode=OneWay}" Style="{StaticResource FieldLabel}"
                                                TextWrapping="Wrap" Margin="25,0,0,4"/>
                                     <CheckBox Content="{loc:Loc General_StartMinimized}" Margin="0,6"
                                               IsChecked="{Binding General.Settings.StartMinimizedToTray, Mode=TwoWay}"
@@ -477,25 +477,27 @@
                                     <CheckBox Content="{loc:Loc General_WarnExclusive}" Margin="0,6"
                                               IsChecked="{Binding General.Settings.WarnOnExclusiveFullscreen, Mode=TwoWay}"
                                               Command="{Binding General.PersistSettingsCommand}"/>
-                                </StackPanel>
-                            </Border>
 
-                            <Border Style="{StaticResource Card}" Margin="0,14,0,0">
-                                <StackPanel>
+                                    <!--
+                                        Cập nhật nằm CHUNG thẻ với ứng dụng, không tách riêng: cột này cao
+                                        hơn khung nhìn nên thẻ cuối ("Dữ liệu & bảo trì") bị hụt một nửa ở
+                                        mép dưới. Bỏ một tiêu đề nhóm và một khung thẻ là đủ chỗ, mà nội
+                                        dung vẫn đúng chỗ — cập nhật cũng là chuyện của ứng dụng.
+                                    -->
                                     <TextBlock Text="{loc:Loc Update_Header}" Style="{StaticResource SectionHeader}"
-                                               Margin="0,0,0,8"/>
+                                               Margin="0,12,0,6"/>
                                     <CheckBox Content="{loc:Loc Update_AutoCheck}" Margin="0,2,0,6"
                                               IsChecked="{Binding General.Settings.CheckForUpdates, Mode=TwoWay}"
                                               Command="{Binding General.PersistSettingsCommand}"/>
 
-                                    <Grid Margin="0,10,0,0">
+                                    <Grid Margin="0,8,0,0">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
                                         <Button Content="{loc:Loc Update_CheckNow}"
                                                 Command="{Binding General.CheckForUpdatesCommand}"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding General.UpdateStatus}" Margin="14,0,0,0"
+                                        <TextBlock Grid.Column="1" Text="{Binding General.UpdateStatus, Mode=OneWay}" Margin="14,0,0,0"
                                                    VerticalAlignment="Center" TextWrapping="Wrap"
                                                    Style="{StaticResource FieldLabel}"/>
                                     </Grid>
@@ -507,9 +509,27 @@
                                 <StackPanel>
                                     <TextBlock Text="{loc:Loc Data_Header}" Style="{StaticResource SectionHeader}"
                                                Margin="0,0,0,8"/>
-                                    <TextBlock Text="{Binding General.DataDirectory}" Style="{StaticResource FieldLabel}"
-                                               FontFamily="Consolas" FontSize="11" TextWrapping="Wrap"
-                                               Margin="0,0,0,10"/>
+
+                                    <!-- Vị trí lưu trữ: đường dẫn chỉ đọc + nút đổi. Đổi xong phải khởi động lại mới áp dụng. -->
+                                    <TextBlock Text="{loc:Loc Storage_Label}" Style="{StaticResource FieldLabel}"
+                                               Margin="0,0,0,4"/>
+                                    <Grid Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox Grid.Column="0" IsReadOnly="True" FontFamily="Consolas" FontSize="11.5"
+                                                 VerticalContentAlignment="Center"
+                                                 Text="{Binding General.DataDirectory, Mode=OneWay}"
+                                                 ToolTip="{Binding General.DataDirectory, Mode=OneWay}"/>
+                                        <Button Grid.Column="1" Content="{loc:Loc Storage_Change}" Margin="8,0,0,0"
+                                                Command="{Binding General.ChangeStorageLocationCommand}"/>
+                                    </Grid>
+                                    <TextBlock Text="{loc:Loc Storage_Copying}" Style="{StaticResource FieldLabel}"
+                                               FontSize="11.5" Margin="0,2,0,0"
+                                               Visibility="{Binding General.IsChangingStorage,
+                                                            Converter={StaticResource BoolToVisibility}, Mode=OneWay}"/>
+                                    <Border Height="12"/>
                                     <UniformGrid Columns="2">
                                         <Button Content="{loc:Loc Data_OpenFolder}" Margin="0,0,5,0"
                                                 ToolTip="{loc:Loc Data_OpenFolderTip}"
@@ -529,7 +549,7 @@
             <!-- ============================================ TAB PHÍM TẮT -->
             <!-- 65% phím tắt, 35% thông tin hệ thống. -->
             <TabItem Header="{loc:Loc Tab_Hotkeys}">
-                <Grid Margin="0,14,0,0">
+                <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="6.5*"/>
                         <ColumnDefinition Width="14"/>
@@ -546,7 +566,7 @@
                             chia, nên ép Grid ít nhất cao bằng khung — đủ chỗ thì thẻ dưới lấp phần còn lại,
                             thiếu chỗ thì cuộn.
                         -->
-                        <Grid MinHeight="{Binding ViewportHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}}">
+                        <Grid MinHeight="{Binding ViewportHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}, Mode=OneWay}">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="*"/>
@@ -580,7 +600,7 @@
                                                         <RowDefinition Height="Auto"/>
                                                     </Grid.RowDefinitions>
 
-                                                    <TextBlock Grid.Column="0" Text="{Binding Label}" Margin="0,0,16,0"
+                                                    <TextBlock Grid.Column="0" Text="{Binding Label, Mode=OneWay}" Margin="0,0,16,0"
                                                                Style="{StaticResource FieldLabel}"/>
 
                                                     <ctl:HotkeyInputBox Grid.Column="1" MaxWidth="320" HorizontalAlignment="Stretch"
@@ -591,14 +611,14 @@
 
                                                     <CheckBox Grid.Column="2" Style="{StaticResource ToggleSwitch}"
                                                               Margin="16,0,0,0" VerticalAlignment="Center"
-                                                              AutomationProperties.Name="{Binding Label}"
+                                                              AutomationProperties.Name="{Binding Label, Mode=OneWay}"
                                                               ToolTip="{loc:Loc Hotkeys_Enabled}"
                                                               IsChecked="{Binding Binding.Enabled, Mode=TwoWay}"/>
 
                                                     <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
                                                                Margin="0,4,0,0" TextWrapping="Wrap" FontSize="11.5"
                                                                Foreground="{StaticResource Danger}"
-                                                               Text="{Binding Binding.RegistrationError}">
+                                                               Text="{Binding Binding.RegistrationError, Mode=OneWay}">
                                                         <TextBlock.Style>
                                                             <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
                                                                 <Style.Triggers>
@@ -625,7 +645,7 @@
                                                 Command="{Binding Hotkeys.ResetToDefaultsCommand}"/>
                                     </StackPanel>
                                     <TextBlock Margin="0,10,0,0" TextWrapping="Wrap" FontSize="12.5"
-                                               Text="{Binding Hotkeys.StatusMessage}">
+                                               Text="{Binding Hotkeys.StatusMessage, Mode=OneWay}">
                                         <TextBlock.Style>
                                             <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
                                                 <Style.Triggers>
@@ -680,25 +700,37 @@
                                 <Border Style="{StaticResource InnerCard}" Padding="12,10" Margin="0,0,0,8">
                                     <StackPanel>
                                         <TextBlock Text="{loc:Loc Hw_Os}" Style="{StaticResource HwLabel}"/>
-                                        <TextBlock Text="{Binding SystemInfo.OsInfo}" Style="{StaticResource HwValue}"/>
+                                        <TextBlock Text="{Binding SystemInfo.OsInfo, Mode=OneWay}" Style="{StaticResource HwValue}"/>
                                     </StackPanel>
                                 </Border>
                                 <Border Style="{StaticResource InnerCard}" Padding="12,10" Margin="0,0,0,8">
                                     <StackPanel>
                                         <TextBlock Text="{loc:Loc Hw_Cpu}" Style="{StaticResource HwLabel}"/>
-                                        <TextBlock Text="{Binding SystemInfo.CpuName}" Style="{StaticResource HwValue}"/>
+                                        <TextBlock Text="{Binding SystemInfo.CpuName, Mode=OneWay}" Style="{StaticResource HwValue}"/>
                                     </StackPanel>
                                 </Border>
                                 <Border Style="{StaticResource InnerCard}" Padding="12,10" Margin="0,0,0,8">
                                     <StackPanel>
                                         <TextBlock Text="{loc:Loc Hw_Gpu}" Style="{StaticResource HwLabel}"/>
-                                        <TextBlock Text="{Binding SystemInfo.GpuName}" Style="{StaticResource HwValue}"/>
+                                        <TextBlock Text="{Binding SystemInfo.GpuName, Mode=OneWay}" Style="{StaticResource HwValue}"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Style="{StaticResource InnerCard}" Padding="12,10" Margin="0,0,0,8">
+                                    <StackPanel>
+                                        <TextBlock Text="{loc:Loc Hw_Ram}" Style="{StaticResource HwLabel}"/>
+                                        <TextBlock Text="{Binding SystemInfo.RamInfo, Mode=OneWay}" Style="{StaticResource HwValue}"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Style="{StaticResource InnerCard}" Padding="12,10" Margin="0,0,0,8">
+                                    <StackPanel>
+                                        <TextBlock Text="{loc:Loc Hw_Display}" Style="{StaticResource HwLabel}"/>
+                                        <TextBlock Text="{Binding SystemInfo.DisplayInfo, Mode=OneWay}" Style="{StaticResource HwValue}"/>
                                     </StackPanel>
                                 </Border>
                                 <Border Style="{StaticResource InnerCard}" Padding="12,10">
                                     <StackPanel>
-                                        <TextBlock Text="{loc:Loc Hw_Ram}" Style="{StaticResource HwLabel}"/>
-                                        <TextBlock Text="{Binding SystemInfo.RamInfo}" Style="{StaticResource HwValue}"/>
+                                        <TextBlock Text="{loc:Loc Hw_Uptime}" Style="{StaticResource HwLabel}"/>
+                                        <TextBlock Text="{Binding SystemInfo.UptimeInfo, Mode=OneWay}" Style="{StaticResource HwValue}"/>
                                     </StackPanel>
                                 </Border>
                             </StackPanel>
@@ -709,7 +741,7 @@
 
             <!-- ============================================ TAB GAME -->
             <TabItem Header="{loc:Loc Tab_Games}">
-                <Grid Margin="0,14,0,0">
+                <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="300"/>
                         <ColumnDefinition Width="14"/>
@@ -750,7 +782,7 @@
                                               IsChecked="{Binding Games.AutoSwitchEnabled, Mode=TwoWay}"/>
                                     <CheckBox Content="{loc:Loc Games_OnlyMatched}" Margin="0,10,0,0"
                                               IsChecked="{Binding Games.ShowOnlyInMatchedGames, Mode=TwoWay}"/>
-                                    <TextBlock Text="{Binding Games.Hint}" Style="{StaticResource FieldLabel}"
+                                    <TextBlock Text="{Binding Games.Hint, Mode=OneWay}" Style="{StaticResource FieldLabel}"
                                                TextWrapping="Wrap" Margin="0,12,0,0"/>
                                 </StackPanel>
                             </Border>
@@ -759,7 +791,7 @@
                             <Border Style="{StaticResource Card}" Margin="0,14,0,0"
                                     BorderBrush="{StaticResource AccentBright}"
                                     Visibility="{Binding Games.IsCreatingProfile,
-                                                 Converter={StaticResource BoolToVisibility}}">
+                                                 Converter={StaticResource BoolToVisibility}, Mode=OneWay}">
                                 <StackPanel>
                                     <TextBlock Text="{loc:Loc Games_NewProfile}"
                                                Style="{StaticResource SectionHeader}" Margin="0,0,0,10"/>
@@ -782,7 +814,7 @@
                                         <Button Content="{loc:Loc Games_UseSelected}"
                                                 Command="{Binding Games.UseSelectedRunningAppCommand}"
                                                 IsEnabled="{Binding Games.SelectedRunningApp,
-                                                            Converter={StaticResource NotNullToBool}}"
+                                                            Converter={StaticResource NotNullToBool}, Mode=OneWay}"
                                                 Margin="0,0,10,0"/>
                                         <Button Content="{loc:Loc Games_RefreshRunning}"
                                                 Command="{Binding Games.ScanRunningAppsCommand}"/>
@@ -851,32 +883,32 @@
                                                    Style="{StaticResource FieldLabel}" Margin="0,3"/>
                                         <TextBlock Grid.Row="0" Grid.Column="1" Margin="0,3" TextWrapping="Wrap"
                                                    FontFamily="Consolas" FontSize="11.5"
-                                                   Text="{Binding Games.DetectedProcess}"/>
+                                                   Text="{Binding Games.DetectedProcess, Mode=OneWay}"/>
 
                                         <TextBlock Grid.Row="1" Grid.Column="0" Text="{loc:Loc Games_WindowTitle}"
                                                    Style="{StaticResource FieldLabel}" Margin="0,3"/>
                                         <TextBlock Grid.Row="1" Grid.Column="1" Margin="0,3" TextWrapping="Wrap"
                                                    FontFamily="Consolas" FontSize="11.5"
-                                                   Text="{Binding Games.DetectedTitle}"/>
+                                                   Text="{Binding Games.DetectedTitle, Mode=OneWay}"/>
 
                                         <TextBlock Grid.Row="2" Grid.Column="0" Text="{loc:Loc Games_DisplayMode}"
                                                    Style="{StaticResource FieldLabel}" Margin="0,3"/>
                                         <TextBlock Grid.Row="2" Grid.Column="1" Margin="0,3" TextWrapping="Wrap"
                                                    FontFamily="Consolas" FontSize="11.5"
-                                                   Text="{Binding Games.DetectedDisplayMode}"/>
+                                                   Text="{Binding Games.DetectedDisplayMode, Mode=OneWay}"/>
 
                                         <TextBlock Grid.Row="3" Grid.Column="0" Text="{loc:Loc Games_MatchedProfile}"
                                                    Style="{StaticResource FieldLabel}" Margin="0,3"/>
                                         <TextBlock Grid.Row="3" Grid.Column="1" Margin="0,3" TextWrapping="Wrap"
                                                    FontFamily="Consolas" FontSize="11.5"
                                                    Foreground="{StaticResource AccentBright}"
-                                                   Text="{Binding Games.DetectedMatch}"/>
+                                                   Text="{Binding Games.DetectedMatch, Mode=OneWay}"/>
                                     </Grid>
 
                                     <TextBlock TextWrapping="Wrap" Margin="0,12,0,0" FontSize="11.5"
                                                Foreground="{StaticResource Warning}"
                                                Visibility="{Binding Games.ProcessNameBlocked,
-                                                            Converter={StaticResource BoolToVisibility}}"
+                                                            Converter={StaticResource BoolToVisibility}, Mode=OneWay}"
                                                Text="{loc:Loc Games_AdminWarning}"/>
                                 </StackPanel>
                             </Border>
@@ -884,7 +916,7 @@
                             <!-- ===== Chi tiết profile đang chọn ===== -->
                             <Border Style="{StaticResource Card}" Margin="0,14,0,0"
                                     Visibility="{Binding Games.SelectedProfile,
-                                                 Converter={StaticResource NotNullToVisibility}}">
+                                                 Converter={StaticResource NotNullToVisibility}, Mode=OneWay}">
                                 <StackPanel MaxWidth="460" HorizontalAlignment="Left"
                                             DataContext="{Binding Games.SelectedProfile}">
 

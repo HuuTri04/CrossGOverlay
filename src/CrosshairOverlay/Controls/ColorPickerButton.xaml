@@ -28,9 +28,9 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Border Width="24" Height="24" Margin="0,0,5,5" CornerRadius="4"
-                                        Background="{Binding Brush}" Cursor="Hand"
+                                        Background="{Binding Brush, Mode=OneWay}" Cursor="Hand"
                                         BorderBrush="#33FFFFFF" BorderThickness="1"
-                                        MouseLeftButtonUp="OnSwatchClick" Tag="{Binding Color}"/>
+                                        MouseLeftButtonUp="OnSwatchClick" Tag="{Binding Color, Mode=OneWay}"/>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>

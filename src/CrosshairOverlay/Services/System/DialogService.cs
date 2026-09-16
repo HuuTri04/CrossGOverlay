@@ -74,12 +74,31 @@ public sealed class DialogService : IDialogService
         }
     }
 
+    public void ShowExportCodes(CrosshairExportCodes codes)
+    {
+        // Hộp thoại chỉ hiển thị dữ liệu đã dựng sẵn nên không cần gì từ DI.
+        var window = new ExportCodeWindow(codes) { Owner = Owner() };
+        window.ShowDialog();
+    }
+
     public CrosshairProfile? PromptForCrosshairCode()
     {
         // Hộp thoại này chỉ dùng các bộ đọc mã thuần tuý nên không cần gì từ DI.
         var window = new ImportCodeWindow { Owner = Owner() };
 
         return window.ShowDialog() == true ? window.Result : null;
+    }
+
+    public DialogChoice Ask(string title, string message, string primaryText, string secondaryText, string cancelText) =>
+        AppDialogWindow.Ask(Owner(), title, message, primaryText, secondaryText, cancelText);
+
+    public string? PickFolder(string title, string? initialDirectory = null)
+    {
+        var dialog = new OpenFolderDialog { Title = title, Multiselect = false };
+        if (!string.IsNullOrWhiteSpace(initialDirectory) && global::System.IO.Directory.Exists(initialDirectory))
+            dialog.InitialDirectory = initialDirectory;
+
+        return dialog.ShowDialog(Owner()) == true ? dialog.FolderName : null;
     }
 
     public string? PickFileToOpen(string filter, string? initialDirectory = null)

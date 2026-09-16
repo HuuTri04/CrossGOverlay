@@ -1,5 +1,6 @@
 ﻿using CrosshairOverlay.Core.Abstractions;
 using CrosshairOverlay.Services.Display;
+using CrosshairOverlay.Services.Export;
 using CrosshairOverlay.Services.Input;
 using CrosshairOverlay.Services.Overlay;
 using CrosshairOverlay.Services.Presets;
@@ -34,12 +35,14 @@ internal static class ServiceRegistration
         // ---- hạ tầng ----
         services.AddSingleton(paths);
         services.AddSingleton<IAppSettingsService, AppSettingsService>();
+        services.AddSingleton<IStorageLocationService, StorageLocationService>();
         services.AddSingleton<IPresetRepository, PresetRepository>();
         services.AddSingleton<IPresetLibrary, PresetLibrary>();
         services.AddSingleton<ICustomImageStore, CustomImageStore>();
 
         // ---- hiển thị ----
         services.AddSingleton<IMonitorService, MonitorService>();
+        services.AddSingleton<IDisplayModeReader, DisplayModeReader>();
         services.AddSingleton<ICrosshairRenderer, CrosshairRenderer>();
         services.AddSingleton<IOverlayController, OverlayController>();
 
@@ -62,6 +65,7 @@ internal static class ServiceRegistration
             App.RequestShutdown));
         services.AddSingleton<IHardwareInfoService, HardwareInfoService>();
         services.AddSingleton<ICursorVisibilityMonitor, CursorVisibilityMonitor>();
+        services.AddSingleton<ICrosshairTranslator, CrosshairTranslatorService>();
         services.AddSingleton<OverlayBehaviorController>();
 
         // Vòng phụ thuộc có thật: SettingsViewModel cần IDialogService, mà DialogService lại

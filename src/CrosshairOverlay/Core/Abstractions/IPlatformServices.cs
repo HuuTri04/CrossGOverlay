@@ -113,6 +113,16 @@ public interface ITrayIconController : IDisposable
     event EventHandler? ExitRequested;
 }
 
+/// <summary>Nút người dùng bấm trong hộp thoại ba lựa chọn.</summary>
+public enum DialogChoice
+{
+    Primary,
+    Secondary,
+
+    /// <summary>Nút huỷ, hoặc Esc.</summary>
+    Cancel,
+}
+
 /// <summary>Tương tác UI mà ViewModel cần nhưng không được tự gọi (giữ VM test được).</summary>
 public interface IDialogService
 {
@@ -137,8 +147,17 @@ public interface IDialogService
     /// <summary>Chép chuỗi vào clipboard. Trả về false nếu ứng dụng khác đang giữ clipboard.</summary>
     bool CopyToClipboard(string text);
 
+    /// <summary>Mở hộp thoại "Xuất mã tâm ngắm" với mã của từng game.</summary>
+    void ShowExportCodes(CrosshairExportCodes codes);
+
     /// <summary>Trả về null nếu người dùng huỷ.</summary>
     string? PickFileToOpen(string filter, string? initialDirectory = null);
+
+    /// <summary>Hộp thoại chọn thư mục. Trả về null nếu người dùng huỷ.</summary>
+    string? PickFolder(string title, string? initialDirectory = null);
+
+    /// <summary>Hộp thoại ba nút, vd Có / Không / Huỷ.</summary>
+    DialogChoice Ask(string title, string message, string primaryText, string secondaryText, string cancelText);
 }
 
 /// <summary>
@@ -169,6 +188,36 @@ public interface IAppRestartService
     /// </summary>
     /// <param name="error">Lý do khi không khởi chạy được instance mới — lúc đó ứng dụng KHÔNG thoát.</param>
     bool RestartWithFactoryReset(out string? error);
+
+    /// <summary>Mở instance mới (chờ instance này thoát hẳn) rồi thoát instance này.</summary>
+    bool Restart(out string? error);
+}
+
+/// <param name="CopiedFiles">Số file đã sao chép (0 nếu không chép).</param>
+/// <param name="Error">Lý do thất bại; khi đó con trỏ KHÔNG bị đổi.</param>
+public sealed record StorageChangeResult(bool Success, int CopiedFiles, string? Error)
+{
+    public static StorageChangeResult Succeeded(int copiedFiles) => new(true, copiedFiles, null);
+
+    public static StorageChangeResult Failed(string error) => new(false, 0, error);
+}
+
+/// <summary>Đổi thư mục gốc chứa dữ liệu người dùng (settings.json, presets, CustomImages).</summary>
+public interface IStorageLocationService
+{
+    /// <summary>Thư mục dữ liệu ĐANG dùng trong phiên chạy này.</summary>
+    string CurrentRoot { get; }
+
+    /// <summary>Thư mục thật sẽ dùng khi người dùng chọn một thư mục (có thể là thư mục con bên trong).</summary>
+    string ResolveTarget(string pickedFolder);
+
+    Services.Storage.StorageLocation.Problem Validate(string target);
+
+    /// <summary>
+    /// Sao chép dữ liệu hiện tại sang thư mục mới (nếu yêu cầu) rồi ghi con trỏ để lần khởi động tới dùng
+    /// thư mục đó. Dữ liệu cũ được GIỮ NGUYÊN. Không ném exception.
+    /// </summary>
+    Task<StorageChangeResult> ChangeAsync(string target, bool copyExistingData);
 }
 
 /// <summary>Thông tin phần cứng/hệ điều hành đọc được. Mục nào không đọc được thì null/rỗng/0.</summary>

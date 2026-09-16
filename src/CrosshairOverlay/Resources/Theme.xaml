@@ -97,7 +97,8 @@
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}"/>
         <Setter Property="FontFamily" Value="{StaticResource UiFont}"/>
-        <Setter Property="FontSize" Value="12.5"/>
+        <!-- 13 = đúng cỡ chữ các nút đang hiện, vốn do style TextBlock chung áp vào. -->
+        <Setter Property="FontSize" Value="13"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="Padding" Value="14,7"/>
         <Setter Property="Cursor" Value="Hand"/>
@@ -111,7 +112,23 @@
                             BorderThickness="1"
                             CornerRadius="{StaticResource RadiusInput}">
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
-                                          Margin="{TemplateBinding Padding}"/>
+                                          Margin="{TemplateBinding Padding}">
+                            <!--
+                                BẮT BUỘC. Nội dung nút là chuỗi nên WPF tự dựng một TextBlock, và style
+                                TextBlock chung của theme (màu TextPrimary, cỡ 13) đặt thẳng lên nó — ghi
+                                đè màu và cỡ chữ kế thừa từ Button. Thiếu đoạn này thì nút xanh và nút đỏ
+                                đều ra chữ trắng: chữ trắng trên nền xanh sáng đọc rất chói, còn nút nguy
+                                hiểm mất luôn màu đỏ cảnh báo. Lấy lại đúng hai giá trị đó từ Button.
+                            -->
+                            <ContentPresenter.Resources>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                    <Setter Property="Foreground"
+                                            Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                                    <Setter Property="FontSize"
+                                            Value="{Binding FontSize, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                                </Style>
+                            </ContentPresenter.Resources>
+                        </ContentPresenter>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
@@ -141,7 +158,23 @@
                             BorderBrush="{StaticResource Accent}" BorderThickness="1"
                             CornerRadius="{StaticResource RadiusInput}">
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
-                                          Margin="{TemplateBinding Padding}"/>
+                                          Margin="{TemplateBinding Padding}">
+                            <!--
+                                BẮT BUỘC. Nội dung nút là chuỗi nên WPF tự dựng một TextBlock, và style
+                                TextBlock chung của theme (màu TextPrimary, cỡ 13) đặt thẳng lên nó — ghi
+                                đè màu và cỡ chữ kế thừa từ Button. Thiếu đoạn này thì nút xanh và nút đỏ
+                                đều ra chữ trắng: chữ trắng trên nền xanh sáng đọc rất chói, còn nút nguy
+                                hiểm mất luôn màu đỏ cảnh báo. Lấy lại đúng hai giá trị đó từ Button.
+                            -->
+                            <ContentPresenter.Resources>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                    <Setter Property="Foreground"
+                                            Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                                    <Setter Property="FontSize"
+                                            Value="{Binding FontSize, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                                </Style>
+                            </ContentPresenter.Resources>
+                        </ContentPresenter>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
@@ -209,39 +242,91 @@
         <Setter Property="VerticalContentAlignment" Value="Center"/>
     </Style>
 
-    <!-- ================= CheckBox ================= -->
+    <!--
+        ================= CheckBox =================
+        Style dùng chung cho MỌI CheckBox của ứng dụng (không đặt x:Key nên áp dụng tự động).
+        Ô vuông 18x18 bo góc 4, dấu tick vẽ bằng <Path> vector — không dùng ký tự ✓ của font, vì
+        glyph đổi hình theo font hệ thống và không canh giữa được chính xác ở mọi DPI.
+        Không có animation hay Effect: đổi trạng thái chỉ bằng setter, không tạo clock nào.
+    -->
     <Style TargetType="CheckBox">
         <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
         <Setter Property="FontFamily" Value="{StaticResource UiFont}"/>
-        <Setter Property="FontSize" Value="12.5"/>
+        <!-- 13 = đúng cỡ chữ các ô này đang hiện, vốn do style TextBlock chung áp vào nhãn. -->
+        <Setter Property="FontSize" Value="13"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="CheckBox">
-                    <StackPanel Orientation="Horizontal" Background="Transparent">
-                        <Border x:Name="Box" Width="16" Height="16" CornerRadius="3"
+                    <!-- Nền trong suốt: cả hàng (ô vuông + chữ) đều là vùng bấm và vùng rê chuột. -->
+                    <StackPanel Orientation="Horizontal" Background="Transparent" SnapsToDevicePixels="True">
+                        <Border x:Name="Box" Width="18" Height="18" CornerRadius="4"
                                 Background="{StaticResource WindowBg}"
-                                BorderBrush="{StaticResource LG.Gray.Dark1Brush}" BorderThickness="1.4"
-                                VerticalAlignment="Center">
+                                BorderBrush="{StaticResource LG.Gray.Dark1Brush}" BorderThickness="1.5"
+                                VerticalAlignment="Center" SnapsToDevicePixels="True">
+                            <!--
+                                Toạ độ tuyệt đối (Stretch mặc định là None) và canh giữa trong ô: nét tick
+                                không bị co giãn nên luôn sắc, dày đúng 2px ở mọi trạng thái.
+                            -->
                             <Path x:Name="Tick" Visibility="Collapsed"
-                                  Data="M 2.5,6 L 5.5,9.5 L 11,3"
+                                  Data="M 0,3.6 L 3.5,7.2 L 9.6,0.6"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center"
                                   Stroke="{StaticResource OnAccent}" StrokeThickness="2"
-                                  StrokeEndLineCap="Round" StrokeStartLineCap="Round"/>
+                                  StrokeEndLineCap="Round" StrokeStartLineCap="Round"
+                                  StrokeLineJoin="Round"/>
                         </Border>
-                        <ContentPresenter Margin="9,0,0,0" VerticalAlignment="Center"/>
+                        <ContentPresenter x:Name="Label" Margin="8,0,0,0" VerticalAlignment="Center"
+                                          RecognizesAccessKey="True">
+                            <!--
+                                BẮT BUỘC. Content là chuỗi nên WPF tự dựng một TextBlock, và style TextBlock
+                                chung của theme (màu TextPrimary, cỡ 13) đặt thẳng lên nó — ghi đè màu và cỡ
+                                chữ kế thừa từ CheckBox. Thiếu đoạn này thì chữ luôn trắng cỡ 13, không đổi
+                                theo trạng thái. Lấy lại đúng hai giá trị đó từ CheckBox.
+                            -->
+                            <ContentPresenter.Resources>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                    <Setter Property="Foreground"
+                                            Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=CheckBox}}"/>
+                                    <Setter Property="FontSize"
+                                            Value="{Binding FontSize, RelativeSource={RelativeSource AncestorType=CheckBox}}"/>
+                                </Style>
+                            </ContentPresenter.Resources>
+                        </ContentPresenter>
                     </StackPanel>
                     <ControlTemplate.Triggers>
+                        <!-- Ô không có chữ (vd trong bảng phím tắt): bỏ luôn khoảng cách 8px. -->
+                        <Trigger Property="Content" Value="{x:Null}">
+                            <Setter TargetName="Label" Property="Visibility" Value="Collapsed"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource TextDim}"/>
+                        </Trigger>
+                        <!-- Bàn phím (Tab tới rồi Space): phải thấy rõ ô nào đang được chọn. -->
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource AccentBright}"/>
+                        </Trigger>
+                        <!--
+                            Đứng SAU hai trigger trên nên thắng khi cùng đúng: ô đã tick vẫn giữ nền xanh
+                            lúc rê chuột, chỉ viền sáng thêm.
+                        -->
                         <Trigger Property="IsChecked" Value="True">
                             <Setter TargetName="Box" Property="Background" Value="{StaticResource AccentBright}"/>
                             <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource AccentBright}"/>
                             <Setter TargetName="Tick" Property="Visibility" Value="Visible"/>
                         </Trigger>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource AccentBright}"/>
-                        </Trigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsChecked" Value="True"/>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                            </MultiTrigger.Conditions>
+                            <!-- Giữ nguyên nền xanh, chỉ viền sáng lên: rê chuột không làm ô nhấp nháy đổi màu. -->
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource LG.Green.Light2Brush}"/>
+                        </MultiTrigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Opacity" Value="0.45"/>
+                            <Setter Property="Cursor" Value="Arrow"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -495,32 +580,125 @@
     </Style>
 
     <!-- ================= TabControl ================= -->
+    <!--
+        Khung chứa nội dung tab ("thư mục"): sáng hơn nền cửa sổ một bậc (#001E2B → #112733) và tối hơn Card
+        bên trong (#1C2D38) — ba lớp nền tạo chiều sâu. Nền ĐẶC, không mờ: tab đang chọn phải che được
+        đúng 1px viền trên của khung, nền trong suốt thì viền vẫn lộ qua và ảo giác "một khối" bị gãy.
+    -->
+    <SolidColorBrush x:Key="TabContentBg" Color="{StaticResource LG.Gray.Dark4}"/>
+    <!-- Viền mảnh: trắng 10% (#1AFFFFFF), đủ tách khung khỏi nền mà không thành đường kẻ gắt. -->
+    <SolidColorBrush x:Key="TabContentBorder" Color="#1AFFFFFF"/>
+    <CornerRadius x:Key="TabContentRadius">8</CornerRadius>
+
+    <!--
+        TabControl dạng thư mục: thanh tab ở trên, khung chứa (Border) bao toàn bộ nội dung bên dưới.
+        Thanh tab đè xuống 1px (Margin -1, ZIndex 1): tab đang chọn có nền trùng màu khung và không có
+        viền dưới, nên phủ lên viền trên của khung ngay dưới nó — tab và khung liền thành một khối, như
+        chiếc hộp đang mở. Tab không chọn thì trong suốt, viền khung vẫn chạy ngang dưới chúng.
+    -->
     <Style TargetType="TabControl">
-        <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Background" Value="{StaticResource TabContentBg}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource TabContentBorder}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="16"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TabControl">
+                    <Grid KeyboardNavigation.TabNavigation="Local" SnapsToDevicePixels="True">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <TabPanel x:Name="HeaderPanel" Grid.Row="0" IsItemsHost="True" Panel.ZIndex="1"
+                                  Margin="0,0,0,-1" KeyboardNavigation.TabIndex="1" Background="Transparent"/>
+
+                        <Border x:Name="Container" Grid.Row="1"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="{StaticResource TabContentRadius}"
+                                Padding="{TemplateBinding Padding}"
+                                KeyboardNavigation.TabNavigation="Local"
+                                KeyboardNavigation.DirectionalNavigation="Contained"
+                                KeyboardNavigation.TabIndex="2">
+                            <ContentPresenter x:Name="PART_SelectedContentHost" ContentSource="SelectedContent"/>
+                        </Border>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <!-- Tab đầu tiên đang chọn: góc trên-trái vuông để mép tab chạy thẳng xuống mép khung. -->
+                        <Trigger Property="SelectedIndex" Value="0">
+                            <Setter TargetName="Container" Property="CornerRadius" Value="0,8,8,8"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
+    <!-- Nền tab khi rê chuột: sáng hơn nền cửa sổ một chút. -->
+    <SolidColorBrush x:Key="TabHoverBg" Color="#FF1A2B35"/>
+
+    <!--
+        Thanh tab: chữ 15px SemiBold, vùng bấm rộng (Padding 14,8).
+        Ba trạng thái — thường: chữ xám, nền trong suốt; rê chuột: nền xám tối bo góc, chữ sáng lên;
+        đang chọn: nền TRÙNG khung chứa, viền trái/trên/phải trùng viền khung, KHÔNG có viền dưới (mở vào
+        khung), chữ xanh và vạch xanh 3px ở MÉP TRÊN — vạch không thể nằm ở đáy vì đáy tab phải liền với khung.
+        Mọi trạng thái đều giữ viền dày 1px (trong suốt khi không chọn) nên chọn tab không làm chữ nhảy.
+        Trigger "đang chọn" đứng SAU trigger rê chuột nên thắng khi cả hai cùng đúng. Không có animation hay Effect.
+    -->
     <Style TargetType="TabItem">
         <Setter Property="Foreground" Value="{StaticResource TextDim}"/>
         <Setter Property="FontFamily" Value="{StaticResource UiFont}"/>
-        <Setter Property="FontSize" Value="13.5"/>
+        <Setter Property="FontSize" Value="15"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Padding" Value="14,8"/>
         <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TabItem">
-                    <Border x:Name="Root" Background="Transparent" Padding="16,9" Margin="0,0,4,0"
-                            CornerRadius="4,4,0,0" BorderThickness="0,0,0,2" BorderBrush="Transparent">
-                        <ContentPresenter ContentSource="Header"/>
-                    </Border>
+                    <Grid Margin="0,0,6,0" SnapsToDevicePixels="True">
+                        <Border x:Name="Surface" Background="Transparent" CornerRadius="8,8,0,0"
+                                BorderBrush="Transparent" BorderThickness="1,1,1,0"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter ContentSource="Header" Margin="0,3,0,1"
+                                              HorizontalAlignment="Center" VerticalAlignment="Center"
+                                              RecognizesAccessKey="True">
+                                <!--
+                                    BẮT BUỘC. Tiêu đề là chuỗi nên WPF tự dựng một TextBlock, và style TextBlock
+                                    chung của theme (màu TextPrimary, cỡ 13) đặt thẳng lên nó — ghi đè màu và cỡ
+                                    chữ kế thừa từ TabItem. Thiếu đoạn này, mọi tab luôn chữ trắng cỡ 13 bất kể
+                                    trạng thái. Lấy lại đúng hai giá trị đó từ TabItem.
+                                -->
+                                <ContentPresenter.Resources>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                        <Setter Property="Foreground"
+                                                Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=TabItem}}"/>
+                                        <Setter Property="FontSize"
+                                                Value="{Binding FontSize, RelativeSource={RelativeSource AncestorType=TabItem}}"/>
+                                    </Style>
+                                </ContentPresenter.Resources>
+                            </ContentPresenter>
+                        </Border>
+                        <!-- Vạch xanh ở mép trên, thụt vào khỏi hai góc bo. -->
+                        <Border x:Name="AccentBar" Height="3" VerticalAlignment="Top" Margin="10,1,10,0"
+                                CornerRadius="0,0,2,2" Background="Transparent"/>
+                    </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Surface" Property="Background" Value="{StaticResource TabHoverBg}"/>
+                            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Surface" Property="Background" Value="{StaticResource TabHoverBg}"/>
                             <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="Surface" Property="Background" Value="{StaticResource TabContentBg}"/>
+                            <Setter TargetName="Surface" Property="BorderBrush" Value="{StaticResource TabContentBorder}"/>
+                            <Setter TargetName="AccentBar" Property="Background" Value="{StaticResource AccentBright}"/>
                             <Setter Property="Foreground" Value="{StaticResource AccentBright}"/>
-                            <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource AccentBright}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

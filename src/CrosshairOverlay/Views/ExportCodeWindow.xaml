@@ -1,0 +1,132 @@
+<Window x:Class="CrosshairOverlay.Views.ExportCodeWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:loc="clr-namespace:CrosshairOverlay.Localization"
+        Title="{loc:Loc Export_Title}"
+        Icon="pack://application:,,,/images/app.ico"
+        Width="680" Height="780"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource WindowBg}">
+
+    <Window.Resources>
+        <!--
+            Ô mã: chỉ đọc nhưng VẪN bôi đen và Ctrl+C được (IsReadOnly, không phải IsEnabled=False —
+            ô bị vô hiệu hoá thì không chọn được chữ). Chữ đẳng khoảng để đọc mã dễ hơn.
+        -->
+        <Style x:Key="CodeBox" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+            <Setter Property="IsReadOnly" Value="True"/>
+            <Setter Property="FontFamily" Value="Consolas"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+            <!-- Hai dòng là đủ thấy đầu mã; mã dài thì cuộn trong ô, không kéo dài cả hộp thoại. -->
+            <Setter Property="MaxHeight" Value="56"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="0,0,0,12">
+            <TextBlock x:Name="HeaderText" Style="{StaticResource SectionHeader}"
+                       Text="{loc:Loc Export_Header}"/>
+            <TextBlock x:Name="PresetText" Style="{StaticResource FieldLabel}" Margin="0,4,0,0"
+                       TextTrimming="CharacterEllipsis"/>
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <!-- VALORANT -->
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="{loc:Loc Export_Valorant}" Style="{StaticResource SectionHeader}"/>
+                        <Grid Margin="0,8,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="ValorantBox" Style="{StaticResource CodeBox}"/>
+                            <Button x:Name="ValorantCopy" Grid.Column="1" Margin="10,0,0,0" MinWidth="92"
+                                    VerticalAlignment="Top" Content="{loc:Loc Export_Copy}"
+                                    Click="OnCopyValorant"/>
+                        </Grid>
+                        <TextBlock x:Name="ValorantNote" Style="{StaticResource FieldLabel}"
+                                   TextWrapping="Wrap" Margin="0,8,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- COUNTER-STRIKE 2 -->
+                <Border Style="{StaticResource Card}" Margin="0,14,0,0">
+                    <StackPanel>
+                        <TextBlock Text="{loc:Loc Export_Cs2}" Style="{StaticResource SectionHeader}"/>
+                        <Grid Margin="0,8,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="Cs2Box" Style="{StaticResource CodeBox}"/>
+                            <Button x:Name="Cs2Copy" Grid.Column="1" Margin="10,0,0,0" MinWidth="92"
+                                    VerticalAlignment="Top" Content="{loc:Loc Export_Copy}"
+                                    Click="OnCopyCs2"/>
+                        </Grid>
+                        <TextBlock x:Name="Cs2Note" Style="{StaticResource FieldLabel}"
+                                   TextWrapping="Wrap" Margin="0,8,0,0"/>
+
+                        <!-- Cùng crosshair, chỉ khác cách đưa vào game: dán vào console hoặc autoexec.cfg. -->
+                        <StackPanel x:Name="Cs2ConsolePanel" Margin="0,12,0,0">
+                            <TextBlock Text="{loc:Loc Export_Cs2Console}" Style="{StaticResource FieldLabel}"/>
+                            <Grid Margin="0,6,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox x:Name="Cs2ConsoleBox" Style="{StaticResource CodeBox}" MaxHeight="52"/>
+                                <Button x:Name="Cs2ConsoleCopy" Grid.Column="1" Margin="10,0,0,0" MinWidth="92"
+                                        VerticalAlignment="Top" Content="{loc:Loc Export_Copy}"
+                                        Click="OnCopyCs2Console"/>
+                            </Grid>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- MÃ NỘI BỘ CỦA ỨNG DỤNG -->
+                <Border Style="{StaticResource Card}" Margin="0,14,0,0">
+                    <StackPanel>
+                        <TextBlock Text="{loc:Loc Export_App}" Style="{StaticResource SectionHeader}"/>
+                        <Grid Margin="0,8,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="AppBox" Style="{StaticResource CodeBox}"/>
+                            <Button x:Name="AppCopy" Grid.Column="1" Margin="10,0,0,0" MinWidth="92"
+                                    VerticalAlignment="Top" Content="{loc:Loc Export_Copy}"
+                                    Click="OnCopyApp"/>
+                        </Grid>
+                        <TextBlock x:Name="AppNote" Style="{StaticResource FieldLabel}"
+                                   TextWrapping="Wrap" Margin="0,8,0,0"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <Grid Grid.Row="2" Margin="0,14,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Báo đã chép: hiện ngay tại chỗ, không chặn người dùng bằng thêm một hộp thoại nữa. -->
+            <TextBlock x:Name="StatusText" VerticalAlignment="Center" FontSize="12.5"
+                       Foreground="{StaticResource AccentBright}" TextTrimming="CharacterEllipsis"/>
+
+            <Button Grid.Column="1" Content="{loc:Loc Export_Close}" IsCancel="True" IsDefault="True"
+                    Click="OnClose" MinWidth="100"/>
+        </Grid>
+    </Grid>
+</Window>

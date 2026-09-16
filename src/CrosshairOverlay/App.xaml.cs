@@ -67,7 +67,7 @@ public partial class App : Application
     {
         try
         {
-            var paths = new AppPathProvider();
+            var paths = AppPathProvider.FromStorageLocation();
             paths.EnsureCreated();
 
             _logging = AppLogging.Create(paths);
@@ -99,6 +99,7 @@ public partial class App : Application
             await StartOverlayAsync(settings).ConfigureAwait(true);
 
             StartTray();
+            WarnIfStorageFallback(paths);
             StartHotkeys(settings);
             var autoSwitcher = _provider.GetRequiredService<IProfileAutoSwitcher>();
             autoSwitcher.ExclusiveFullscreenDetected += OnExclusiveFullscreenDetected;
@@ -142,6 +143,19 @@ public partial class App : Application
     }
 
     // ------------------------------------------------------------------ các bước khởi động
+
+    /// <summary>
+    /// Thư mục dữ liệu tuỳ chỉnh không truy cập được (ổ đã rút, ổ mạng mất kết nối): nói rõ cho người dùng,
+    /// thay vì để họ tưởng toàn bộ preset đã mất. Con trỏ giữ nguyên để lần sau cắm lại là dùng lại được.
+    /// </summary>
+    private void WarnIfStorageFallback(AppPathProvider paths)
+    {
+        if (paths.StorageFallbackFrom is not { } missing) return;
+
+        _log!.LogWarning("Không truy cập được thư mục dữ liệu {Missing}, tạm dùng {Root}.", missing, paths.RootDirectory);
+        _provider!.GetRequiredService<ITrayIconController>()
+            .ShowNotification(Core.AppInfo.DisplayName, Tr.Format("Storage_FallbackNotice", missing), isWarning: true);
+    }
 
     private void WaitForPreviousInstance(int processId)
     {

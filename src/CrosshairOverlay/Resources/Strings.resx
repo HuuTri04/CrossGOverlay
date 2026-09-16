@@ -80,20 +80,10 @@
   <data name="Preset_ErrorFromCode"><value>Không tạo được preset từ mã crosshair.</value></data>
   <data name="Preset_ExportCode"><value>Xuất mã</value></data>
   <data name="Preset_ExportCodeTip"><value>Dựng mã chia sẻ từ preset đang chọn và chép vào clipboard</value></data>
-  <data name="Preset_CodeCopiedTitle"><value>Đã chép mã chia sẻ</value></data>
-  <data name="Preset_CodeCopiedBody"><value>Mã đã nằm trong clipboard:
-
-{0}</value></data>
-  <data name="Preset_CodeLossy"><value>
-
-Lưu ý: định dạng mã chỉ mô tả được chữ thập, chấm giữa và viền. Preset này có thành phần không biểu diễn được (vòng tròn, khung vuông, nhánh chéo, góc xoay hoặc tỉ lệ khác 1) — những phần đó sẽ mất khi người khác nhập mã.</value></data>
   <data name="Preset_ClipboardFailed"><value>Không ghi được vào clipboard — ứng dụng khác đang giữ nó. Hãy thử lại.</value></data>
   <data name="Preset_ImageCodeNoImage"><value>Preset này chưa có ảnh, hoặc không tìm thấy file ảnh — không tạo được mã.</value></data>
   <data name="Preset_ImageCodeUnreadable"><value>File ảnh của preset này không đọc được — không tạo được mã.</value></data>
   <data name="Preset_ImageCodeTooLarge"><value>Ảnh vẫn quá lớn để đưa vào mã chia sẻ sau khi nén (tối đa {0} MB) — thường là GIF động nhiều khung hình, loại ảnh không thu nhỏ được. Hãy dùng ảnh tĩnh hoặc GIF ít khung hình hơn.</value></data>
-  <data name="Preset_ImageCodeCopiedBody"><value>Mã tâm ngắm hình ảnh ({0} ký tự) đã nằm trong clipboard.
-
-Mã chứa luôn cả ảnh, người nhận chỉ cần bấm "Nhập mã" rồi dán vào.</value></data>
 
   <data name="Test_Title"><value>Test tâm ngắm</value></data>
   <data name="Test_NotepadMissing"><value>Không tìm thấy Notepad. Bạn có muốn chọn một ứng dụng/game bất kỳ để kiểm tra không?</value></data>
@@ -263,6 +253,25 @@ Mỗi khi {1} ở foreground, preset này sẽ tự được áp dụng. Xem ho�
   <data name="Import_Title"><value>Import mã crosshair</value></data>
   <data name="Import_Intro"><value>Dán mã crosshair từ CS2 (CSGO-xxxxx-xxxxx-…), Valorant (0;P;c;5;…) hoặc mã tâm ngắm hình ảnh của CrossGOverlay (CGO-IMG;…). Ứng dụng tự nhận diện định dạng.</value></data>
   <data name="Import_Result"><value>KẾT QUẢ ĐỌC ĐƯỢC</value></data>
+  <data name="Import_KindApp"><value>Tâm ngắm CrossGOverlay</value></data>
+  <data name="Export_Title"><value>Xuất mã tâm ngắm</value></data>
+  <data name="Export_Header"><value>XUẤT MÃ TÂM NGẮM</value></data>
+  <data name="Export_PresetName"><value>Preset: {0}</value></data>
+  <data name="Export_Valorant"><value>VALORANT</value></data>
+  <data name="Export_Cs2"><value>COUNTER-STRIKE 2</value></data>
+  <data name="Export_Cs2Console"><value>Lệnh console (dán vào console hoặc autoexec.cfg)</value></data>
+  <data name="Export_App"><value>MÃ NỘI BỘ CROSSGOVERLAY</value></data>
+  <data name="Export_Copy"><value>Copy</value></data>
+  <data name="Export_Copied"><value>Đã chép mã {0} vào clipboard.</value></data>
+  <data name="Export_Close"><value>Đóng</value></data>
+  <data name="Export_Unavailable"><value>(không có mã)</value></data>
+  <data name="Export_ImageNotSupported"><value>Game không nhận tâm ngắm bằng hình ảnh, nên không có mã cho định dạng này.</value></data>
+  <data name="Export_ValorantNote"><value>Dán vào Valorant: Settings → Crosshair → Import Profile Code. Chuyển đúng toàn bộ thông số.</value></data>
+  <data name="Export_ValorantLossy"><value>Dán vào Valorant: Settings → Crosshair → Import Profile Code. Preset có phần Valorant không mô tả được (vòng tròn, khung vuông, góc xoay, nhánh chéo hoặc bo đầu vạch) nên mã sẽ khác đôi chút.</value></data>
+  <data name="Export_Cs2Note"><value>Dán vào CS2: Settings → Game → Crosshair → Share or Import. Kích thước chỉ là xấp xỉ vì CS2 co giãn tâm ngắm theo độ phân giải và FOV.</value></data>
+  <data name="Export_Cs2Lossy"><value>Dán vào CS2: Settings → Game → Crosshair → Share or Import. CS2 chỉ có một lớp nhánh và không có vòng tròn hay góc xoay, nên mã chỉ giữ được phần gần nhất với preset.</value></data>
+  <data name="Export_AppNote"><value>Giữ nguyên mọi thứ, kể cả những gì hai game không có. Gửi cho người dùng CrossGOverlay khác, họ bấm “Nhập mã” là ra đúng preset này.</value></data>
+  <data name="Export_AppNoteImage"><value>Mã chứa luôn cả ảnh. Người nhận bấm “Nhập mã” rồi dán vào là có đúng tâm ngắm này.</value></data>
   <data name="Import_Accuracy"><value>Cấu trúc (hình dạng, màu, chấm giữa, viền) được chuyển đúng. Kích thước chỉ là xấp xỉ vì game dùng hệ đơn vị khác — chỉnh lại thanh Tỉ lệ sau khi import nếu cần.</value></data>
   <data name="Import_Create"><value>Tạo preset</value></data>
   <data name="Import_Cancel"><value>Huỷ</value></data>
@@ -283,6 +292,7 @@ Mỗi khi {1} ở foreground, preset này sẽ tự được áp dụng. Xem ho�
   <data name="Import_On"><value>bật, cỡ {0}</value></data>
   <data name="Import_OutlineOn"><value>bật, dày {0}</value></data>
   <data name="Import_Off"><value>tắt</value></data>
+  <data name="Import_Decoding"><value>Đang đọc mã…</value></data>
   <data name="Import_ImageCodeInvalid"><value>Mã chia sẻ không hợp lệ hoặc bị lỗi.</value></data>
   <data name="Import_NameImage"><value>Tâm ngắm hình ảnh</value></data>
   <data name="Import_KindImage"><value>Tâm ngắm hình ảnh CrossGOverlay</value></data>
@@ -350,6 +360,39 @@ Bạn có thể tải thủ công từ trang phát hành.</value></data>
   <data name="Perf_PriorityHigh"><value>Cao (High)</value></data>
   <data name="Perf_PriorityTip"><value>Cao: Windows ưu tiên chia CPU cho overlay khi máy tải 100%, tránh tâm ngắm bị khựng. Overlay gần như không dùng CPU lúc rảnh nên không giành tài nguyên của game.</value></data>
   <data name="Data_Header"><value>DỮ LIỆU &amp; BẢO TRÌ</value></data>
+  <data name="Storage_Label"><value>Vị trí lưu trữ dữ liệu</value></data>
+  <data name="Storage_Change"><value>Thay đổi...</value></data>
+  <data name="Storage_Title"><value>Vị trí lưu trữ dữ liệu</value></data>
+  <data name="Storage_PickTitle"><value>Chọn thư mục lưu preset, hình ảnh và cài đặt</value></data>
+  <data name="Storage_SameFolder"><value>Đây đã là thư mục dữ liệu đang dùng.</value></data>
+  <data name="Storage_InsideCurrent"><value>Không thể chọn một thư mục nằm bên trong thư mục dữ liệu hiện tại. Hãy chọn thư mục ở chỗ khác.</value></data>
+  <data name="Storage_NotWritable"><value>Không ghi được vào thư mục:
+{0}
+
+Hãy chọn thư mục khác.</value></data>
+  <data name="Storage_CopyQuestion"><value>Bạn có muốn sao chép toàn bộ dữ liệu hiện tại (tâm ngắm, hình ảnh, cài đặt) sang thư mục mới này không?
+
+{0}
+
+Có: sao chép rồi dùng thư mục mới.
+Không: dùng thư mục mới với dữ liệu sẵn có trong đó (hoặc bắt đầu trống).
+Dữ liệu ở thư mục cũ luôn được giữ nguyên.</value></data>
+  <data name="Storage_Copying"><value>Đang sao chép dữ liệu…</value></data>
+  <data name="Storage_Failed"><value>Không đổi được thư mục dữ liệu. Ứng dụng vẫn dùng thư mục cũ.
+
+{0}</value></data>
+  <data name="Storage_DoneCopied"><value>Đã sao chép {1} file sang:
+{0}
+
+Ứng dụng sẽ khởi động lại để áp dụng.</value></data>
+  <data name="Storage_DoneEmpty"><value>Từ lần khởi động tới, dữ liệu sẽ nằm ở:
+{0}
+
+Ứng dụng sẽ khởi động lại để áp dụng.</value></data>
+  <data name="Storage_RestartManually"><value>Không tự khởi động lại được. Hãy đóng và mở lại ứng dụng để áp dụng.
+
+{0}</value></data>
+  <data name="Storage_FallbackNotice"><value>Không truy cập được thư mục dữ liệu {0}. Đang tạm dùng thư mục mặc định — dữ liệu của bạn vẫn còn ở thư mục kia.</value></data>
   <data name="Data_OpenFolder"><value>Mở thư mục dữ liệu</value></data>
   <data name="Data_OpenFolderTip"><value>Mở thư mục chứa settings.json, các preset và ảnh tâm ngắm (CustomImages).</value></data>
   <data name="Data_OpenFailed"><value>Không mở được thư mục {0}.
@@ -380,6 +423,12 @@ Bạn có thể tải thủ công từ trang phát hành.</value></data>
   <data name="Hw_CpuValue"><value>{0} · {1} luồng</value></data>
   <data name="Hw_RamValue"><value>{0} GB (khả dụng {1} GB)</value></data>
   <data name="Hw_RamUsableOnly"><value>Khả dụng {0} GB</value></data>
+  <data name="Hw_Display"><value>Màn hình chính (Display)</value></data>
+  <data name="Hw_DisplayValue"><value>{0}x{1} @ {2}Hz</value></data>
+  <data name="Hw_DisplayNoRefresh"><value>{0}x{1}</value></data>
+  <data name="Hw_DisplayOthers"><value> (+{0} màn hình khác)</value></data>
+  <data name="Hw_Uptime"><value>Thời gian hoạt động (Uptime)</value></data>
+  <data name="Hw_UptimeValue"><value>{0} ngày, {1} giờ {2} phút</value></data>
 
   <!-- ===== Danh sách tiến trình đang chạy ===== -->
   <data name="Games_RunningHeader"><value>ỨNG DỤNG ĐANG CHẠY</value></data>

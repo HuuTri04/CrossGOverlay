@@ -154,20 +154,7 @@ public static class ImageCrosshairCode
     /// <summary>
     /// Nối trường checksum vào một mã chưa ký: <c>;c</c> + CRC32 (8 chữ số hex thường) của phần sau tiền tố.
     /// </summary>
-    internal static string AppendChecksum(string unsignedCode)
-    {
-        ArgumentNullException.ThrowIfNull(unsignedCode);
-        if (!unsignedCode.StartsWith(Prefix, StringComparison.OrdinalIgnoreCase))
-            throw new ArgumentException("Thiếu tiền tố " + Prefix, nameof(unsignedCode));
-
-        return unsignedCode + ";c" + Checksum(unsignedCode.AsSpan(Prefix.Length)).ToString("x8", CultureInfo.InvariantCulture);
-    }
-
-    /// <summary>
-    /// CRC32 trên các ký tự (đều là ASCII với mã hợp lệ). Tính trên chuỗi đã bỏ khoảng trắng và không
-    /// gồm tiền tố, nên mã bị app chat tự xuống dòng hay đổi hoa/thường tiền tố vẫn khớp.
-    /// </summary>
-    private static uint Checksum(ReadOnlySpan<char> signedPart) => Crc32.Compute(Encoding.UTF8.GetBytes(signedPart.ToArray()));
+    internal static string AppendChecksum(string unsignedCode) => ShareCodeChecksum.Append(unsignedCode, Prefix);
 
     private static byte[] Gzip(byte[] data)
     {
@@ -265,37 +252,8 @@ public static class ImageCrosshairCode
     /// </summary>
     /// <param name="body">Mã đã bỏ khoảng trắng, không gồm tiền tố.</param>
     /// <param name="signedPart">Phần được ký — mọi thứ trước <c>;c</c>.</param>
-    private static bool TryVerifyChecksum(ReadOnlySpan<char> body, out string signedPart, out string? reason)
-    {
-        signedPart = string.Empty;
-
-        var separator = body.LastIndexOf(';');
-        var last = separator < 0 ? ReadOnlySpan<char>.Empty : body[(separator + 1)..];
-
-        if (last.Length == 0 || char.ToLowerInvariant(last[0]) != 'c')
-        {
-            reason = "Thiếu checksum ở cuối mã (mã có thể bị cắt mất đuôi).";
-            return false;
-        }
-
-        if (last.Length != 9
-            || !uint.TryParse(last[1..], NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture, out var expected))
-        {
-            reason = "Checksum không đúng dạng 8 chữ số hex (mã có thể bị cắt).";
-            return false;
-        }
-
-        var signed = body[..separator];
-        if (Checksum(signed) != expected)
-        {
-            reason = "Checksum không khớp: mã bị cắt hoặc bị sửa.";
-            return false;
-        }
-
-        signedPart = signed.ToString();
-        reason = null;
-        return true;
-    }
+    private static bool TryVerifyChecksum(ReadOnlySpan<char> body, out string signedPart, out string? reason) =>
+        ShareCodeChecksum.TryVerify(body, out signedPart, out reason);
 
     /// <summary>Đọc thông số dạng khoá-giá trị (<c>s0.5;a1;x10;y-5;r15</c>).</summary>
     private static bool TryReadParameters(
@@ -399,7 +357,7 @@ public static class ImageCrosshairCode
         var expectedCrc = BitConverter.ToUInt32(payload, payload.Length - 8);
         var expectedLength = BitConverter.ToUInt32(payload, payload.Length - 4);
 
-        if ((uint)data.Length != expectedLength || Crc32.Compute(data) != expectedCrc)
+        if ((uint)data.Length != expectedLength || ShareCodeChecksum.Crc32.Compute(data) != expectedCrc)
         {
             reason = "Dữ liệu nén bị cắt hoặc bị sửa (CRC32/độ dài không khớp).";
             return false;
@@ -501,31 +459,4 @@ public static class ImageCrosshairCode
         return true;
     }
 
-    /// <summary>CRC-32 chuẩn (đa thức 0xEDB88320) — đúng loại GZip ghi ở đuôi gói.</summary>
-    private static class Crc32
-    {
-        private static readonly uint[] Table = BuildTable();
-
-        public static uint Compute(ReadOnlySpan<byte> data)
-        {
-            var crc = 0xFFFFFFFFu;
-            foreach (var b in data)
-                crc = Table[(crc ^ b) & 0xFF] ^ (crc >> 8);
-            return ~crc;
-        }
-
-        private static uint[] BuildTable()
-        {
-            var table = new uint[256];
-            for (var i = 0u; i < 256; i++)
-            {
-                var c = i;
-                for (var k = 0; k < 8; k++)
-                    c = (c & 1) != 0 ? 0xEDB88320u ^ (c >> 1) : c >> 1;
-                table[i] = c;
-            }
-
-            return table;
-        }
-    }
 }

@@ -28,10 +28,14 @@ public partial class ImportCodeWindow : Window
     /// </summary>
     private bool _brokenImageCode;
 
+    /// <summary>Tăng mỗi lần nội dung đổi; kết quả giải mã nền mang số cũ thì bị bỏ.</summary>
+    private int _parseVersion;
+
     private void OnCodeChanged(object sender, TextChangedEventArgs e) => Parse();
 
     private void Parse()
     {
+        _parseVersion++;
         _parsed = null;
         _brokenImageCode = false;
         OkButton.IsEnabled = false;
@@ -48,6 +52,10 @@ public partial class ImportCodeWindow : Window
         if (ImageCrosshairCode.IsImageCode(text))
             ParseImage(text);
 
+        // Mã nội bộ của ứng dụng: chở nguyên preset, không mất tính năng nào.
+        else if (AppCrosshairCode.IsAppCode(text))
+            ParseAppCode(text);
+
         // Mã Valorant là danh sách ngăn bằng dấu chấm phẩy; mã CS2 thì không bao giờ có.
         else if (text.Contains(';', StringComparison.Ordinal))
             ParseValorant(text);
@@ -55,9 +63,39 @@ public partial class ImportCodeWindow : Window
             ParseCs2(text);
     }
 
-    private void ParseImage(string text)
+    /// <summary>
+    /// Mã hình ảnh: Base64 + giải nén GZip + kiểm CRC + đọc kích thước ảnh — với mã dài hàng chục
+    /// nghìn ký tự là việc đáng kể, nên chạy trên luồng nền. Gõ sửa từng ký tự thì chờ một nhịp ngắn
+    /// cho người dùng gõ xong; kết quả về trễ của nội dung cũ bị bỏ qua.
+    /// </summary>
+    private async void ParseImage(string text)
     {
-        if (!ImageCrosshairCode.TryDecode(text, out var image, out _) || image is null)
+        var version = _parseVersion;
+        StatusText.Text = Tr.Get("Import_Decoding");
+        StatusText.Foreground = TryBrush("TextDim");
+
+        ImageCrosshair? image = null;
+        var ok = false;
+        try
+        {
+            await Task.Delay(ParseDebounce);
+            if (version != _parseVersion) return;
+
+            (ok, image) = await Task.Run(() =>
+            {
+                var decoded = ImageCrosshairCode.TryDecode(text, out var result, out _);
+                return (decoded && result is not null, result);
+            });
+        }
+        catch (Exception)
+        {
+            ok = false;
+        }
+
+        // Người dùng đã sửa mã hoặc đóng hộp thoại (OnClosed tăng số phiên bản) trong lúc chờ.
+        if (version != _parseVersion) return;
+
+        if (!ok || image is null)
         {
             Fail(Tr.Get("Import_ImageCodeInvalid"));
             _brokenImageCode = true;
@@ -81,6 +119,24 @@ public partial class ImportCodeWindow : Window
             Row("Import_FieldOpacity", p.Image.Opacity.ToString("0.##")),
             Row("Import_FieldOffset", $"X {p.Image.OffsetX:0.#} · Y {p.Image.OffsetY:0.#}"),
             Row("Import_FieldRotation", p.Rotation.ToString("0.#")));
+    }
+
+    /// <summary>Đủ ngắn để dán mã thấy kết quả gần như ngay, đủ dài để gõ sửa không giải mã từng phím.</summary>
+    private static readonly TimeSpan ParseDebounce = TimeSpan.FromMilliseconds(120);
+
+    /// <summary>
+    /// Mã nội bộ CGO-CH. Nhẹ hơn mã ảnh rất nhiều (preset chỉ vài KB JSON) nên giải ngay tại chỗ.
+    /// </summary>
+    private void ParseAppCode(string text)
+    {
+        if (!AppCrosshairCode.TryDecode(text, out var profile, out _) || profile is null)
+        {
+            Fail(Tr.Get("Import_ImageCodeInvalid"));
+            return;
+        }
+
+        _parsed = profile;
+        Succeed(Tr.Get("Import_KindApp"));
     }
 
     private void ParseValorant(string text)
@@ -174,4 +230,11 @@ public partial class ImportCodeWindow : Window
     }
 
     private void OnCancel(object sender, RoutedEventArgs e) => DialogResult = false;
+
+    protected override void OnClosed(EventArgs e)
+    {
+        // Vô hiệu mọi lượt giải mã nền còn đang chạy.
+        _parseVersion++;
+        base.OnClosed(e);
+    }
 }

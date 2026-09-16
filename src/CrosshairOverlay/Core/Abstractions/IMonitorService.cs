@@ -1,4 +1,4 @@
-using CrosshairOverlay.Core.Models;
+﻿using CrosshairOverlay.Core.Models;
 
 namespace CrosshairOverlay.Core.Abstractions;
 
@@ -30,4 +30,15 @@ public interface IMonitorService : IDisposable
     /// (WM_DISPLAYCHANGE / WM_DPICHANGED). Overlay phải canh lại vị trí khi nhận sự kiện này.
     /// </summary>
     event EventHandler? DisplayConfigurationChanged;
+}
+
+/// <summary>Chế độ hiển thị đang chạy của một màn hình.</summary>
+/// <param name="RefreshRate">Tần số quét (Hz); 0 nếu driver không báo.</param>
+public sealed record DisplayMode(int Width, int Height, int RefreshRate);
+
+/// <summary>Đọc độ phân giải và tần số quét hiện tại của một màn hình.</summary>
+public interface IDisplayModeReader
+{
+    /// <param name="deviceName">Vd "\\.\DISPLAY1". Null nếu không đọc được.</param>
+    DisplayMode? Read(string? deviceName);
 }

@@ -10,13 +10,13 @@
         </Grid.ColumnDefinitions>
 
         <TextBlock Grid.Column="0" Style="{DynamicResource FieldLabel}"
-                   Text="{Binding Label, ElementName=Root}"
+                   Text="{Binding Label, ElementName=Root, Mode=OneWay}"
                    TextTrimming="CharacterEllipsis"
-                   ToolTip="{Binding Label, ElementName=Root}"/>
+                   ToolTip="{Binding Label, ElementName=Root, Mode=OneWay}"/>
 
         <Slider Grid.Column="1" VerticalAlignment="Center" Margin="6,0,10,0"
-                Minimum="{Binding Minimum, ElementName=Root}"
-                Maximum="{Binding Maximum, ElementName=Root}"
+                Minimum="{Binding Minimum, ElementName=Root, Mode=OneWay}"
+                Maximum="{Binding Maximum, ElementName=Root, Mode=OneWay}"
                 Value="{Binding Value, ElementName=Root, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
 
         <!--

@@ -71,6 +71,90 @@ public static class CrosshairCodeConverter
     }
 
     /// <summary>
+    /// Đổi preset của ứng dụng sang giá trị crosshair của CS2, để
+    /// <see cref="Cs2ShareCodeEncoder.Encode"/> dựng thành share code.
+    /// </summary>
+    /// <remarks>
+    /// Đảo lại đúng hệ số của <see cref="ToProfile(Cs2Crosshair, string)"/> nên import rồi export
+    /// ra đúng con số ban đầu. CS2 nghèo hơn model của ứng dụng rất nhiều: chỉ có MỘT lớp nhánh,
+    /// không có vòng tròn, không xoay, không có độ dài dọc riêng — những thứ đó mất khi xuất, và
+    /// <see cref="CanExportToCs2Faithfully"/> báo trước.
+    ///
+    /// <para>
+    /// Mọi giá trị đều bị kẹp vào khoảng CS2 chấp nhận. Kẹp là cố ý: thà ra một crosshair hơi khác
+    /// còn hơn một share code mà game từ chối hoặc hiển thị kỳ dị.
+    /// </para>
+    /// </remarks>
+    public static Cs2Crosshair ToCs2Crosshair(CrosshairProfile profile)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+
+        // Lớp nhánh trong là lớp CS2 mô tả được; nếu nó tắt thì thử lớp ngoài.
+        var lines = profile.InnerLines.Enabled ? profile.InnerLines
+            : profile.OuterLines.Enabled ? profile.OuterLines
+            : profile.InnerLines;
+
+        var visible = lines.Enabled && profile.Shape is not CrosshairShape.Dot;
+        var scale = profile.Scale;
+
+        return new Cs2Crosshair
+        {
+            Size = visible ? Math.Clamp(lines.Length * scale / UnitToDip, 0d, 25d) : 0d,
+            Thickness = Math.Clamp(lines.Thickness * scale / UnitToDip, 0d, 25d),
+            Gap = visible ? Math.Clamp((lines.Offset * scale / UnitToDip) - GapOrigin, -12.8d, 12.7d) : 0d,
+
+            HasOutline = profile.Outline.Enabled,
+            OutlineThickness = profile.Outline.Enabled
+                ? Math.Clamp(profile.Outline.Thickness * scale / UnitToDip, 0.5d, 3d)
+                : 0d,
+
+            Red = profile.Color.R,
+            Green = profile.Color.G,
+            Blue = profile.Color.B,
+
+            // CS2 tách alpha riêng; ứng dụng gộp độ mờ tổng thể vào mọi thành phần.
+            Alpha = (byte)Math.Clamp(Math.Round(profile.Opacity * 255d), 0d, 255d),
+            HasAlpha = true,
+
+            HasCenterDot = profile.CenterDot.Enabled,
+            IsTStyle = profile.Shape == CrosshairShape.TShape || (visible && !lines.ShowTop && lines.ShowBottom),
+
+            // Cổ điển, KHÔNG giãn theo bước chân: giống overlay tĩnh của ứng dụng nhất.
+            Style = Cs2ShareCodeEncoder.ClassicStaticStyle,
+        };
+    }
+
+    /// <summary>
+    /// Preset này có xuất sang CS2 mà không mất gì không.
+    /// </summary>
+    /// <remarks>
+    /// Khắt khe hơn <see cref="CanExportFaithfully"/> (Valorant) vì CS2 chỉ có một lớp nhánh và
+    /// không có độ dài dọc riêng. Kích thước thì LUÔN chỉ là xấp xỉ: CS2 co giãn crosshair theo
+    /// độ phân giải và FOV, nên giao diện vẫn nhắc người dùng chỉnh lại trong game.
+    /// </remarks>
+    public static bool CanExportToCs2Faithfully(CrosshairProfile profile)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+
+        if (profile.Shape is not (CrosshairShape.Cross or CrosshairShape.TShape or CrosshairShape.Dot)) return false;
+        if (profile.Ring.Enabled) return false;
+        if (profile.OuterLines.Enabled && profile.InnerLines.Enabled) return false;
+        if (Math.Abs(profile.Rotation) > 0.01d) return false;
+
+        var lines = profile.InnerLines.Enabled ? profile.InnerLines : profile.OuterLines;
+        if (!lines.Enabled) return true;
+
+        if (lines.RoundedCaps) return false;
+        if (lines.SeparateVerticalLength) return false;
+
+        // CS2 chỉ vẽ đủ bốn nhánh, hoặc bỏ nhánh trên (kiểu chữ T).
+        if (lines.ShowLeft != lines.ShowRight) return false;
+        if (!lines.ShowBottom) return false;
+
+        return true;
+    }
+
+    /// <summary>
     /// Chiều ngược lại: đổi preset của ứng dụng sang giá trị crosshair kiểu Valorant, để
     /// <see cref="ValorantCrosshairCode.Encode"/> dựng thành mã chia sẻ.
     /// </summary>

@@ -19,6 +19,7 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
     private readonly IAppPathProvider _paths;
     private readonly IProcessLauncher _launcher;
     private readonly IAppRestartService _restart;
+    private readonly IStorageLocationService _storage;
 
     private bool _disposed;
 
@@ -31,8 +32,10 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
         IDialogService dialogs,
         IAppPathProvider paths,
         IProcessLauncher launcher,
-        IAppRestartService restart)
+        IAppRestartService restart,
+        IStorageLocationService storage)
     {
+        _storage = storage;
         _paths = paths;
         _launcher = launcher;
         _restart = restart;
@@ -99,8 +102,67 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
         }
     }
 
-    /// <summary>Thư mục chứa settings.json, preset và ảnh — hiện dưới nút mở thư mục.</summary>
+    /// <summary>Thư mục chứa settings.json, preset và ảnh đang dùng trong phiên này.</summary>
     public string DataDirectory => _paths.RootDirectory;
+
+    /// <summary>Đang sao chép dữ liệu sang thư mục mới — khoá nút và hiện trạng thái.</summary>
+    [ObservableProperty] private bool _isChangingStorage;
+
+    /// <summary>
+    /// Đổi thư mục dữ liệu: chọn thư mục → hỏi có chép dữ liệu hiện tại không → chép (nếu có) → ghi con trỏ
+    /// → khởi động lại. Dữ liệu ở thư mục cũ được giữ nguyên, phòng khi cần quay lại.
+    /// </summary>
+    [RelayCommand]
+    private async Task ChangeStorageLocationAsync()
+    {
+        var title = Tr.Get("Storage_Title");
+
+        var picked = _dialogs.PickFolder(Tr.Get("Storage_PickTitle"), _paths.RootDirectory);
+        if (picked is null) return;
+
+        var target = _storage.ResolveTarget(picked);
+        switch (_storage.Validate(target))
+        {
+            case Services.Storage.StorageLocation.Problem.SameAsCurrent:
+                _dialogs.ShowMessage(title, Tr.Get("Storage_SameFolder"));
+                return;
+            case Services.Storage.StorageLocation.Problem.InsideCurrent:
+                _dialogs.ShowMessage(title, Tr.Get("Storage_InsideCurrent"), isError: true);
+                return;
+            case Services.Storage.StorageLocation.Problem.NotWritable:
+                _dialogs.ShowMessage(title, Tr.Format("Storage_NotWritable", target), isError: true);
+                return;
+        }
+
+        var choice = _dialogs.Ask(title, Tr.Format("Storage_CopyQuestion", target),
+            Tr.Get("Dialog_Yes"), Tr.Get("Dialog_No"), Tr.Get("Dialog_Cancel"));
+        if (choice == DialogChoice.Cancel) return;
+
+        StorageChangeResult result;
+        IsChangingStorage = true;
+        try
+        {
+            result = await _storage.ChangeAsync(target, copyExistingData: choice == DialogChoice.Primary);
+        }
+        finally
+        {
+            IsChangingStorage = false;
+        }
+
+        if (!result.Success)
+        {
+            _dialogs.ShowMessage(title, Tr.Format("Storage_Failed", result.Error ?? "?"), isError: true);
+            return;
+        }
+
+        var done = choice == DialogChoice.Primary
+            ? Tr.Format("Storage_DoneCopied", target, result.CopiedFiles)
+            : Tr.Format("Storage_DoneEmpty", target);
+        _dialogs.ShowMessage(title, done);
+
+        if (!_restart.Restart(out var error))
+            _dialogs.ShowMessage(title, Tr.Format("Storage_RestartManually", error ?? "?"), isError: true);
+    }
 
     [RelayCommand]
     private void OpenDataFolder()

@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -30,6 +30,7 @@ public partial class AppDialogWindow : Window
     private AppDialogWindow() => InitializeComponent();
 
     private bool _result;
+    private CrosshairOverlay.Core.Abstractions.DialogChoice _choice = CrosshairOverlay.Core.Abstractions.DialogChoice.Cancel;
 
     /// <summary>Hộp thoại thông báo, chỉ một nút.</summary>
     public static void Show(Window? owner, string title, string message, DialogKind kind = DialogKind.Info)
@@ -57,6 +58,20 @@ public partial class AppDialogWindow : Window
 
         dialog.ShowDialog();
         return dialog._result;
+    }
+
+    /// <summary>Hộp thoại ba nút (vd Có / Không / Huỷ). Esc tương đương Huỷ.</summary>
+    public static CrosshairOverlay.Core.Abstractions.DialogChoice Ask(
+        Window? owner, string title, string message, string primaryText, string secondaryText, string cancelText,
+        DialogKind kind = DialogKind.Question)
+    {
+        var dialog = Create(owner, title, message, kind, primaryText, secondaryText);
+        dialog.CancelButton.Content = cancelText;
+        dialog.CancelButton.Visibility = Visibility.Visible;
+        dialog.CancelButton.IsCancel = true;
+
+        dialog.ShowDialog();
+        return dialog._choice;
     }
 
     private static AppDialogWindow Create(
@@ -140,12 +155,21 @@ public partial class AppDialogWindow : Window
     private void OnPrimary(object sender, RoutedEventArgs e)
     {
         _result = true;
+        _choice = CrosshairOverlay.Core.Abstractions.DialogChoice.Primary;
         Close();
     }
 
     private void OnSecondary(object sender, RoutedEventArgs e)
     {
         _result = false;
+        _choice = CrosshairOverlay.Core.Abstractions.DialogChoice.Secondary;
+        Close();
+    }
+
+    private void OnCancel(object sender, RoutedEventArgs e)
+    {
+        _result = false;
+        _choice = CrosshairOverlay.Core.Abstractions.DialogChoice.Cancel;
         Close();
     }
 
