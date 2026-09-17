@@ -161,6 +161,19 @@ public sealed class AppSettingsService : IAppSettingsService
         }
 
         settings.SchemaVersion = AppSettings.CurrentSchemaVersion;
+
+        // An toàn trước anti-cheat: chỉ Normal hoặc High. JSON chấp nhận cả số, nên người dùng sửa tay
+        // "ProcessPriority": 24 (mã Realtime của Windows) vẫn đọc được thành một giá trị enum không tồn
+        // tại. Nơi áp dụng đã chỉ chọn High/Normal, nhưng chặn luôn ở đây để giá trị lạ không nằm lại
+        // trong cài đặt và bị ghi ngược ra file.
+        if (!Enum.IsDefined(settings.ProcessPriority))
+        {
+            _logger.LogWarning(
+                "Mức ưu tiên tiến trình không hợp lệ ({Value}) trong settings.json — dùng Normal.",
+                (int)settings.ProcessPriority);
+            settings.ProcessPriority = ProcessPriorityMode.Normal;
+        }
+
         return settings;
     }
 

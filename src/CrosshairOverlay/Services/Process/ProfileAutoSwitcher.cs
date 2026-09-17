@@ -177,11 +177,17 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
             return;
         }
 
-        _logger.LogInformation(
-            "{Process} → áp preset '{Preset}' theo profile '{Profile}'.",
-            window.ProcessName, preset.Name, match.Name);
+        // Quay lại game đang khớp sẵn (Alt-Tab, đóng menu ngoài game) là chuyện xảy ra liên tục: preset
+        // đã đúng thì không có gì để áp — SetActive tự bỏ qua, và log cũng không được ghi lại mỗi lần.
+        if (!ReferenceEquals(_library.Active, preset))
+        {
+            _logger.LogInformation(
+                "{Process} → áp preset '{Preset}' theo profile '{Profile}'.",
+                window.ProcessName, preset.Name, match.Name);
 
-        _library.SetActive(preset);
+            _library.SetActive(preset);
+        }
+
         ApplyVisibility();
     }
 

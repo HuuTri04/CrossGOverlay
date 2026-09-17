@@ -1,5 +1,4 @@
-﻿using System.Collections.Concurrent;
-using System.IO;
+﻿using System.IO;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -20,9 +19,12 @@ public sealed class CrosshairRenderer : ICrosshairRenderer
 
     /// <summary>
     /// Cache ảnh tuỳ chỉnh. Thiếu nó thì mỗi lần vẽ lại là một lần đọc đĩa — không chấp nhận
-    /// được khi người dùng đang kéo slider.
+    /// được khi người dùng đang kéo slider. Có giới hạn dung lượng: xem <see cref="ImageCache"/>.
     /// </summary>
-    private readonly ConcurrentDictionary<string, CachedImage> _imageCache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ImageCache _imageCache = new();
+
+    /// <summary>Số ảnh và dung lượng đang giữ trong cache — cho kiểm thử và chẩn đoán.</summary>
+    internal (int Count, long Bytes) ImageCacheUsage => (_imageCache.Count, _imageCache.Bytes);
 
     /// <param name="images">
     /// Kho ảnh để đổi đường dẫn tương đối trong preset ra file thật. Không có kho (trong test) thì
@@ -591,8 +593,8 @@ public sealed class CrosshairRenderer : ICrosshairRenderer
             return (null, null);
         }
 
-        if (_imageCache.TryGetValue(path, out var cached) && cached.Stamp == stamp)
-            return (cached.Source, cached.Animation);
+        if (_imageCache.TryGet(path, stamp, out var cachedSource, out var cachedAnimation))
+            return (cachedSource, cachedAnimation);
 
         try
         {
@@ -618,17 +620,16 @@ public sealed class CrosshairRenderer : ICrosshairRenderer
             // Khung đầu ĐÃ GHÉP có đúng cỡ canvas; khung thô của BitmapImage có thể nhỏ hơn.
             var source = animation?.Frames[0] ?? bitmap;
 
-            _imageCache[path] = new CachedImage(source, animation, stamp);
+            _imageCache.Set(path, stamp, source, animation);
             return (source, animation);
         }
         catch (Exception ex)
         {
             // File hỏng hoặc định dạng không hỗ trợ — ghi nhớ thất bại để khỏi thử lại mỗi lần vẽ.
             _logger.LogWarning(ex, "Không tải được ảnh crosshair: {Path}", path);
-            _imageCache[path] = new CachedImage(null, null, stamp);
+            _imageCache.Set(path, stamp, null, null);
             return (null, null);
         }
     }
 
-    private readonly record struct CachedImage(BitmapSource? Source, AnimatedImage? Animation, DateTime Stamp);
 }

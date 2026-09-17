@@ -609,32 +609,43 @@ public partial class App : Application
 
     // ------------------------------------------------------------------ dọn dẹp
 
+    /// <remarks>
+    /// Gỡ hook (foreground, con trỏ), hotkey và Raw Input nằm trong <c>_provider.Dispose()</c>. Bước đó
+    /// PHẢI chạy kể cả khi ghi file lúc thoát thất bại: trước đây hai lệnh ghi và lệnh Dispose chung một
+    /// khối try, nên ổ đầy hay file bị khoá là nhảy thẳng xuống catch và bỏ qua toàn bộ việc gỡ hook.
+    /// Mỗi bước giờ có lỗi riêng, không bước nào chặn được bước sau.
+    /// </remarks>
     protected override void OnExit(ExitEventArgs e)
+    {
+        if (_provider is not null)
+        {
+            // Ghi nốt phần còn treo trong hàng đợi debounce TRƯỚC khi dispose.
+            TryDuringExit("ghi preset", () => _provider.GetRequiredService<IPresetLibrary>().FlushAsync().GetAwaiter().GetResult());
+            TryDuringExit("ghi cài đặt", () => _provider.GetRequiredService<IAppSettingsService>().FlushAsync().GetAwaiter().GetResult());
+
+            TryDuringExit("gỡ đăng ký sự kiện", () =>
+            {
+                _provider.GetRequiredService<IPresetLibrary>().ActiveChanged -= OnActivePresetChanged;
+                _provider.GetRequiredService<IHotkeyService>().HotkeyPressed -= OnHotkeyPressed;
+            });
+
+            _log?.LogInformation("CrosshairOverlay đang thoát.");
+            TryDuringExit("giải phóng dịch vụ (gỡ hook, hotkey, Raw Input)", () => _provider.Dispose());
+        }
+
+        _logging?.Dispose();
+        base.OnExit(e);
+    }
+
+    private void TryDuringExit(string step, Action action)
     {
         try
         {
-            if (_provider is not null)
-            {
-                // Ghi nốt phần còn treo trong hàng đợi debounce TRƯỚC khi dispose.
-                _provider.GetRequiredService<IPresetLibrary>().FlushAsync().GetAwaiter().GetResult();
-                _provider.GetRequiredService<IAppSettingsService>().FlushAsync().GetAwaiter().GetResult();
-
-                _provider.GetRequiredService<IPresetLibrary>().ActiveChanged -= OnActivePresetChanged;
-                _provider.GetRequiredService<IHotkeyService>().HotkeyPressed -= OnHotkeyPressed;
-
-                _log?.LogInformation("CrosshairOverlay đang thoát.");
-                _provider.Dispose();
-            }
+            action();
         }
         catch (Exception ex)
         {
-            _log?.LogError(ex, "Lỗi khi dọn dẹp lúc thoát.");
+            _log?.LogError(ex, "Lỗi khi thoát ở bước {Step}.", step);
         }
-        finally
-        {
-            _logging?.Dispose();
-        }
-
-        base.OnExit(e);
     }
 }
