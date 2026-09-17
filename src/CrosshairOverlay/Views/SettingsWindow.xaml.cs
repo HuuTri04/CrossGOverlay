@@ -12,22 +12,62 @@ public partial class SettingsWindow : Window
 {
     private readonly SettingsViewModel _viewModel;
     private readonly ITrayIconController _tray;
+    private readonly Microsoft.Extensions.Logging.ILogger<SettingsWindow> _logger;
 
     /// <summary>Chỉ nhắc "app vẫn đang chạy" một lần mỗi phiên, không nhắc mỗi lần ẩn.</summary>
     private bool _hintShown;
 
-    public SettingsWindow(SettingsViewModel viewModel, ITrayIconController tray)
+    public SettingsWindow(
+        SettingsViewModel viewModel, ITrayIconController tray, Microsoft.Extensions.Logging.ILogger<SettingsWindow> logger)
     {
         InitializeComponent();
 
         _viewModel = viewModel;
         _tray = tray;
+        _logger = logger;
         DataContext = viewModel;
 
         // ViewModel đăng ký sự kiện lên các service singleton (thư viện preset, màn hình,
         // theo dõi foreground). Cửa sổ này được tạo mới mỗi lần mở, nên không giải phóng thì
         // mỗi lần mở lại là một ViewModel nữa bị giữ sống mãi.
         Closed += (_, _) => (DataContext as IDisposable)?.Dispose();
+    }
+
+    /// <summary>
+    /// Nạp cột trình chỉnh sửa SAU khi khung hình đầu tiên đã vẽ xong.
+    /// </summary>
+    /// <remarks>
+    /// Đo trên máy thật: dựng cửa sổ Settings tốn ~1000 ms lúc khởi động, trong đó riêng cột chỉnh
+    /// sửa (mấy chục thanh trượt, ô chọn màu, nhóm gập) chiếm ~450 ms. Người dùng không cần nó ở
+    /// mili-giây đầu tiên — họ cần thấy cửa sổ. Nên cửa sổ hiện ra với danh sách preset và khung xem
+    /// trước trước, cột chỉnh sửa điền vào ngay nhịp dispatcher kế tiếp.
+    ///
+    /// <para>
+    /// <see cref="OnContentRendered"/> chạy SAU khung hình đầu tiên, và còn lùi thêm một nhịp ưu tiên
+    /// Background để khung hình đó kịp lên màn hình. Gán ContentTemplate là thứ kích hoạt việc dựng
+    /// cây giao diện từ DataTemplate.
+    /// </para>
+    /// </remarks>
+    protected override void OnContentRendered(EventArgs e)
+    {
+        base.OnContentRendered(e);
+
+        var editor = (DataTemplate)FindResource("EditorPanel");
+        if (ReferenceEquals(EditorHost.ContentTemplate, editor)) return;
+
+        // Loaded: ngay sau khung hình đầu tiên, TRƯỚC khi xử lý chuột/bàn phím — khoảng trống chỉ
+        // kéo dài đúng thời gian dựng cây, không bị lùi thêm vì người dùng động vào cửa sổ.
+        Dispatcher.InvokeAsync(
+            () =>
+            {
+                var watch = global::System.Diagnostics.Stopwatch.StartNew();
+                EditorHost.ContentTemplate = editor;
+                EditorHost.UpdateLayout();
+
+                Microsoft.Extensions.Logging.LoggerExtensions.LogDebug(
+                    _logger, "Cột chỉnh sửa nạp trong {Elapsed:0} ms sau khung hình đầu.", watch.Elapsed.TotalMilliseconds);
+            },
+            System.Windows.Threading.DispatcherPriority.Loaded);
     }
 
     /// <summary>

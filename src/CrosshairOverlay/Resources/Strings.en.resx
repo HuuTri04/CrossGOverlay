@@ -116,6 +116,7 @@ Whenever {1} is in the foreground, this preset is applied automatically. See or 
   <data name="Editor_CenterDot"><value>Centre dot</value></data>
   <data name="Editor_InnerLines"><value>Inner lines</value></data>
   <data name="Editor_OuterLines"><value>Outer lines</value></data>
+  <data name="Editor_Loading"><value>Loading…</value></data>
   <data name="Editor_Show"><value>Show</value></data>
   <data name="Editor_Offset"><value>Offset</value></data>
   <data name="Editor_SeparateVertical"><value>Separate vertical length</value></data>

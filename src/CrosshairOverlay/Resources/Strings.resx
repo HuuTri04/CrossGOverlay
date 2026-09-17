@@ -120,6 +120,7 @@ Mỗi khi {1} ở foreground, preset này sẽ tự được áp dụng. Xem ho�
   <data name="Editor_CenterDot"><value>Tâm giữa</value></data>
   <data name="Editor_InnerLines"><value>Nhánh trong</value></data>
   <data name="Editor_OuterLines"><value>Nhánh ngoài</value></data>
+  <data name="Editor_Loading"><value>Đang tải…</value></data>
   <data name="Editor_Show"><value>Hiển thị</value></data>
   <data name="Editor_Offset"><value>Khoảng cách</value></data>
   <data name="Editor_SeparateVertical"><value>Độ dài vạch dọc riêng</value></data>

@@ -71,10 +71,7 @@ internal static class ServiceRegistration
         // Vòng phụ thuộc có thật: SettingsViewModel cần IDialogService, mà DialogService lại
         // phải dựng được cửa sổ chứa ViewModel đó. Closure giải vòng vì nó chỉ resolve
         // ViewModel tại thời điểm người dùng mở cửa sổ, khi singleton đã tồn tại.
-        services.AddSingleton<IDialogService>(provider => new DialogService(
-            () => new SettingsWindow(
-                provider.GetRequiredService<SettingsViewModel>(),
-                provider.GetRequiredService<ITrayIconController>())));
+        services.AddSingleton<IDialogService>(provider => new DialogService(() => CreateSettingsWindow(provider)));
 
         // Transient: mỗi lần mở cửa sổ Settings là một ViewModel mới, vì cửa sổ cũ đã bị đóng
         // và các đăng ký sự kiện của nó không còn giá trị.
@@ -85,5 +82,31 @@ internal static class ServiceRegistration
             ValidateOnBuild = true,
             ValidateScopes = true,
         });
+    }
+
+    /// <summary>
+    /// Dựng cửa sổ Settings và ghi lại chi phí từng phần.
+    /// </summary>
+    /// <remarks>
+    /// Đây là bước nặng nhất của lần khởi động đầu tiên (đo được ~1,1 giây), nên phải tách được
+    /// phần ViewModel với phần dựng giao diện thì mới biết tối ưu vào đâu.
+    /// </remarks>
+    private static SettingsWindow CreateSettingsWindow(IServiceProvider provider)
+    {
+        var watch = global::System.Diagnostics.Stopwatch.StartNew();
+
+        var viewModel = provider.GetRequiredService<SettingsViewModel>();
+        var viewModelMs = watch.Elapsed.TotalMilliseconds;
+
+        var window = new SettingsWindow(
+            viewModel,
+            provider.GetRequiredService<ITrayIconController>(),
+            provider.GetRequiredService<ILogger<SettingsWindow>>());
+
+        provider.GetRequiredService<ILogger<SettingsWindow>>().LogDebug(
+            "Dựng cửa sổ Settings: ViewModel {ViewModel:0} ms, giao diện {Ui:0} ms.",
+            viewModelMs, watch.Elapsed.TotalMilliseconds - viewModelMs);
+
+        return window;
     }
 }

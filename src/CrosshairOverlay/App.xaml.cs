@@ -49,9 +49,32 @@ public partial class App : Application
         Current?.Shutdown();
     }
 
+    /// <summary>
+    /// Từ lúc Windows tạo tiến trình tới lúc dòng mã đầu tiên của ứng dụng chạy.
+    /// </summary>
+    /// <remarks>
+    /// Khoảng này KHÔNG thuộc quyền ứng dụng: nạp .NET runtime, nạp các assembly của WPF, dựng
+    /// đối tượng Application và đọc App.xaml. Đo được mới biết phần còn lại đáng tối ưu tới đâu.
+    /// </remarks>
+    private static readonly double RuntimeStartupMs = MeasureRuntimeStartup();
+
+    private static double MeasureRuntimeStartup()
+    {
+        try
+        {
+            using var process = global::System.Diagnostics.Process.GetCurrentProcess();
+            return (DateTime.Now - process.StartTime).TotalMilliseconds;
+        }
+        catch (Exception)
+        {
+            return -1;
+        }
+    }
+
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        _ = RuntimeStartupMs;
         _arguments = StartupArguments.Parse(e.Args);
 
         // Một đợt thu gom gen2 gây khựng sẽ thành micro-stutter nhìn thấy được trong game.
@@ -65,14 +88,20 @@ public partial class App : Application
 
     private async Task InitializeAsync()
     {
+        // Đo từng bước ngay từ đầu: "app khởi động chậm" chỉ sửa được khi biết chậm ở bước nào.
+        var boot = new Core.Diagnostics.BootTimeline();
+
         try
         {
             var paths = AppPathProvider.FromStorageLocation();
             paths.EnsureCreated();
 
             _logging = AppLogging.Create(paths);
+            boot.Mark("log");
+
             _provider = ServiceRegistration.Build(paths, _logging.Factory);
             _log = _provider.GetRequiredService<ILogger<App>>();
+            boot.Mark("DI");
 
             _log.LogInformation(
                 "CrosshairOverlay {Version} khởi động. Dữ liệu: {Root}",
@@ -89,6 +118,7 @@ public partial class App : Application
             var settings = _provider.GetRequiredService<IAppSettingsService>();
             await settings.LoadAsync().ConfigureAwait(true);
             _logging.SetLevel(settings.Current.LogLevel);
+            boot.Mark("cài đặt");
 
             // Áp ngôn ngữ TRƯỚC khi dựng bất kỳ cửa sổ hay menu khay nào.
             LanguageCatalog.Apply(settings.Current.Language);
@@ -96,14 +126,17 @@ public partial class App : Application
             // Chế độ render cũng phải có trước cửa sổ đầu tiên.
             Services.Overlay.OverlayBehaviorController.ApplyRenderMode(settings.Current.UseHardwareAcceleration);
 
-            await StartOverlayAsync(settings).ConfigureAwait(true);
+            await StartOverlayAsync(settings, boot).ConfigureAwait(true);
 
             StartTray();
+            boot.Mark("khay");
+
             WarnIfStorageFallback(paths);
             StartHotkeys(settings);
             var autoSwitcher = _provider.GetRequiredService<IProfileAutoSwitcher>();
             autoSwitcher.ExclusiveFullscreenDetected += OnExclusiveFullscreenDetected;
             autoSwitcher.Start();
+            boot.Mark("phím tắt + theo dõi game");
 
             // Áp quy tắc hiện/ẩn ngay từ đầu, kể cả khi cửa sổ foreground lúc khởi động là của chính
             // ứng dụng (Settings) — trường hợp bộ tự đổi không xử lý.
@@ -126,8 +159,12 @@ public partial class App : Application
                 _provider.GetRequiredService<IDialogService>().ShowSettingsWindow();
             }
 
+            boot.Mark(settings.Current.StartMinimizedToTray ? "thông báo khay" : "cửa sổ Settings");
+
             RefreshTrayState();
-            _log.LogInformation("Khởi động hoàn tất.");
+            _log.LogInformation(
+                "Khởi động hoàn tất: {Runtime:0} ms nạp runtime + {Total:0} ms trong app — nặng nhất {Summary}",
+                RuntimeStartupMs, boot.TotalMs, boot.Summary());
 
             ScheduleImageCleanup();
 
@@ -207,7 +244,7 @@ public partial class App : Application
         return true;
     }
 
-    private async Task StartOverlayAsync(IAppSettingsService settings)
+    private async Task StartOverlayAsync(IAppSettingsService settings, Core.Diagnostics.BootTimeline boot)
     {
         // Bắt vào biến cục bộ: sau mỗi lời gọi phương thức, phân tích nullable phải đặt lại
         // trạng thái của field, nên dùng _provider! lặp lại sẽ sinh cảnh báo ở mọi dòng sau.
@@ -216,6 +253,7 @@ public partial class App : Application
         var library = provider.GetRequiredService<IPresetLibrary>();
 
         overlay.Initialize();
+        boot.Mark("overlay");
 
         // Menu khay phải theo trạng thái THẬT của overlay: ngoài bật/tắt thủ công, game profile
         // cũng có thể ẩn/hiện overlay (HideOverlay, "chỉ hiện trong game đã khớp").
@@ -230,6 +268,7 @@ public partial class App : Application
         library.ActiveChanged += OnActivePresetChanged;
 
         await library.InitializeAsync(settings.Current.ActivePresetId).ConfigureAwait(true);
+        boot.Mark("preset");
         // KHÔNG hiện overlay ở đây: quy tắc hiện/ẩn (ApplyVisibility) chạy ngay sau khi bộ tự đổi theo
         // game khởi động. Hiện trước sẽ làm crosshair nháy lên trên desktop một khoảnh khắc ở chế độ
         // "chỉ hiện trong game" rồi mới bị ẩn.

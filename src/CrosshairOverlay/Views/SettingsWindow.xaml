@@ -63,6 +63,179 @@
                 </UniformGrid>
             </StackPanel>
         </DataTemplate>
+
+        <!--
+            Khung chỗ-trống của cột chỉnh sửa: cùng nền thẻ, chỉ thêm một dòng chữ mờ. Rẻ tới mức
+            không đo được, nhưng khiến khoảnh khắc chờ trông như đang tải chứ không như hỏng.
+        -->
+        <DataTemplate x:Key="EditorPlaceholder">
+            <Border Style="{StaticResource Card}">
+                <TextBlock Text="{loc:Loc Editor_Loading}" Style="{StaticResource FieldLabel}"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+        </DataTemplate>
+
+        <!-- Nội dung cột trình chỉnh sửa; dựng trễ một nhịp sau khi cửa sổ đã hiện. -->
+        <DataTemplate x:Key="EditorPanel">
+                        <Border Style="{StaticResource Card}" Padding="6,0,6,0">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="10,0">
+                                <StackPanel Margin="0,4,8,16">
+
+                                    <!-- Chế độ đứng TRÊN CÙNG: nó quyết định mọi thứ bên dưới hiện hay ẩn. -->
+                                    <TextBlock Text="{loc:Loc Editor_Mode}" Style="{StaticResource SectionHeader}"
+                                               Margin="0,12,0,6"/>
+                                    <ComboBox ItemsSource="{Binding Editor.Types}"
+                                              DisplayMemberPath="Label" SelectedValuePath="Value"
+                                              SelectedValue="{Binding Editor.Profile.Type, Mode=TwoWay}"/>
+
+                                    <TextBlock Text="{loc:Loc Editor_General}" Style="{StaticResource SectionHeader}"
+                                               Margin="0,16,0,6"/>
+
+                                    <TextBlock Text="{loc:Loc Editor_PresetName}" Style="{StaticResource FieldLabel}"
+                                               Margin="0,0,0,4"/>
+                                    <TextBox Text="{Binding Editor.Profile.Name, Mode=TwoWay,
+                                                    UpdateSourceTrigger=PropertyChanged}"/>
+
+                                    <!-- Hình dạng, màu, độ mờ và tỉ lệ tổng thể chỉ có nghĩa với tâm ngắm vẽ tay;
+                                         chế độ ảnh có thanh độ mờ/kích thước riêng trong nhóm Hình ảnh. -->
+                                    <StackPanel Visibility="{Binding Editor.IsStandardMode,
+                                                Converter={StaticResource BoolToVisibility}, Mode=OneWay}">
+                                        <TextBlock Text="{loc:Loc Editor_Shape}" Style="{StaticResource FieldLabel}"
+                                                   Margin="0,12,0,4"/>
+                                        <ComboBox ItemsSource="{Binding Editor.Shapes}"
+                                                  DisplayMemberPath="Label" SelectedValuePath="Value"
+                                                  SelectedValue="{Binding Editor.Profile.Shape, Mode=TwoWay}"/>
+
+                                        <TextBlock Text="{loc:Loc Editor_Color}" Style="{StaticResource FieldLabel}"
+                                                   Margin="0,12,0,4"/>
+                                        <ctl:ColorPickerButton SelectedColor="{Binding Editor.Profile.Color, Mode=TwoWay}"/>
+
+                                        <ctl:SliderField Label="{loc:Loc Editor_Opacity}" Range="{x:Static lim:CrosshairLimits.Opacity}"
+                                                         Margin="0,8,0,0"
+                                                         Value="{Binding Editor.Profile.Opacity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                        <ctl:SliderField Label="{loc:Loc Editor_Scale}" Range="{x:Static lim:CrosshairLimits.Scale}"
+                                                         Value="{Binding Editor.Profile.Scale, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                    </StackPanel>
+                                    <ctl:SliderField Label="{loc:Loc Editor_Rotation}" Range="{x:Static lim:CrosshairLimits.Rotation}"
+                                                     Value="{Binding Editor.Profile.Rotation, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+
+                                    <!-- ===== Tâm giữa → Nhánh trong → Nhánh ngoài: đúng thứ tự renderer vẽ ===== -->
+                                    <Expander Header="{loc:Loc Editor_CenterDot}" Style="{StaticResource SettingsExpander}"
+                                              Margin="0,16,0,0"
+                                              Tag="{Binding Editor.Profile.CenterDot.Enabled, Mode=OneWay}"
+                                              Visibility="{Binding Editor.IsStandardMode,
+                                                           Converter={StaticResource BoolToVisibility}, Mode=OneWay}">
+                                        <StackPanel>
+                                            <CheckBox Content="{loc:Loc Editor_Show}" Margin="0,6,0,4"
+                                                      IsChecked="{Binding Editor.Profile.CenterDot.Enabled, Mode=TwoWay}"/>
+                                            <ctl:SliderField Label="{loc:Loc Editor_Opacity}" Range="{x:Static lim:CrosshairLimits.Opacity}"
+                                                             Value="{Binding Editor.Profile.CenterDot.Opacity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                            <ctl:SliderField Label="{loc:Loc Editor_Size}" Range="{x:Static lim:CrosshairLimits.DotSize}"
+                                                             Value="{Binding Editor.Profile.CenterDot.Size, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                            <CheckBox Content="{loc:Loc Editor_UseProfileColor}" Margin="0,8,0,4"
+                                                      IsChecked="{Binding Editor.Profile.CenterDot.UseProfileColor, Mode=TwoWay}"/>
+                                            <ctl:ColorPickerButton
+                                                SelectedColor="{Binding Editor.Profile.CenterDot.Color, Mode=TwoWay}"/>
+                                        </StackPanel>
+                                    </Expander>
+
+                                    <StackPanel Visibility="{Binding Editor.ShowLineSettings,
+                                                Converter={StaticResource BoolToVisibility}, Mode=OneWay}">
+                                        <Expander Header="{loc:Loc Editor_InnerLines}" Style="{StaticResource SettingsExpander}"
+                                                  Tag="{Binding Editor.Profile.InnerLines.Enabled, Mode=OneWay}"
+                                                  Content="{Binding Editor.Profile.InnerLines, Mode=OneWay}"
+                                                  ContentTemplate="{StaticResource LineLayerEditor}"/>
+
+                                        <Expander Header="{loc:Loc Editor_OuterLines}" Style="{StaticResource SettingsExpander}"
+                                                  Tag="{Binding Editor.Profile.OuterLines.Enabled, Mode=OneWay}"
+                                                  Content="{Binding Editor.Profile.OuterLines, Mode=OneWay}"
+                                                  ContentTemplate="{StaticResource LineLayerEditor}"/>
+                                    </StackPanel>
+
+                                    <StackPanel Visibility="{Binding Editor.ShowRingSettings,
+                                                Converter={StaticResource BoolToVisibility}, Mode=OneWay}">
+                                        <TextBlock Text="{loc:Loc Editor_Ring}" Style="{StaticResource SectionHeader}"/>
+                                        <CheckBox Content="{loc:Loc Editor_ShowRing}" Margin="0,0,0,6"
+                                                  IsChecked="{Binding Editor.Profile.Ring.Enabled, Mode=TwoWay}"/>
+                                        <ctl:SliderField Label="{loc:Loc Editor_Radius}" Range="{x:Static lim:CrosshairLimits.RingRadius}"
+                                                         Value="{Binding Editor.Profile.Ring.Radius, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                        <ctl:SliderField Label="{loc:Loc Editor_Thickness}" Range="{x:Static lim:CrosshairLimits.RingThickness}"
+                                                         Value="{Binding Editor.Profile.Ring.Thickness, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                        <CheckBox Content="{loc:Loc Editor_Filled}" Margin="0,8,0,0"
+                                                  IsChecked="{Binding Editor.Profile.Ring.Filled, Mode=TwoWay}"/>
+                                    </StackPanel>
+
+                                    <StackPanel Visibility="{Binding Editor.ShowOutlineSettings,
+                                                Converter={StaticResource BoolToVisibility}, Mode=OneWay}">
+                                        <TextBlock Text="{loc:Loc Editor_Outline}" Style="{StaticResource SectionHeader}"/>
+                                        <CheckBox Content="{loc:Loc Editor_ShowOutline}" Margin="0,0,0,6"
+                                                  IsChecked="{Binding Editor.Profile.Outline.Enabled, Mode=TwoWay}"/>
+                                        <ctl:SliderField Label="{loc:Loc Editor_Thickness}" Range="{x:Static lim:CrosshairLimits.OutlineThickness}"
+                                                         Value="{Binding Editor.Profile.Outline.Thickness, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                        <ctl:SliderField Label="{loc:Loc Editor_Opacity}" Range="{x:Static lim:CrosshairLimits.Opacity}"
+                                                         Value="{Binding Editor.Profile.Outline.Opacity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                        <ctl:ColorPickerButton Margin="0,6,0,0"
+                                            SelectedColor="{Binding Editor.Profile.Outline.Color, Mode=TwoWay}"/>
+                                    </StackPanel>
+
+                                    <!-- ===== Chế độ ảnh: thay thế toàn bộ nhóm vẽ tay ===== -->
+                                    <Expander Header="{loc:Loc Editor_Image}" Style="{StaticResource SettingsExpander}"
+                                              Margin="0,16,0,0"
+                                              Tag="{Binding Editor.IsImageMode, Mode=OneWay}"
+                                              Visibility="{Binding Editor.ShowImageSettings,
+                                                           Converter={StaticResource BoolToVisibility}, Mode=OneWay}">
+                                        <StackPanel>
+                                            <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
+                                                       Margin="0,8,0,8" Text="{Binding Editor.ImagePathDisplay, Mode=OneWay}"/>
+                                            <UniformGrid Columns="2">
+                                                <Button Content="{loc:Loc Editor_BrowseImage}" Style="{StaticResource AccentButton}"
+                                                        Command="{Binding Editor.BrowseImageCommand}" Margin="0,0,3,0"/>
+                                                <Button Content="{loc:Loc Editor_ClearImage}"
+                                                        Command="{Binding Editor.ClearImageCommand}" Margin="3,0,0,0"/>
+                                            </UniformGrid>
+
+                                            <ctl:SliderField Label="{loc:Loc Editor_ImageScale}" Range="{x:Static lim:CrosshairLimits.ImageScale}"
+                                                             Margin="0,10,0,0"
+                                                             Value="{Binding Editor.Profile.Image.Scale, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                            <ctl:SliderField Label="{loc:Loc Editor_Opacity}" Range="{x:Static lim:CrosshairLimits.Opacity}"
+                                                             Value="{Binding Editor.Profile.Image.Opacity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                            <ctl:SliderField Label="{loc:Loc Editor_ImageOffsetX}" Range="{x:Static lim:CrosshairLimits.ImageOffset}"
+                                                             Value="{Binding Editor.Profile.Image.OffsetX, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                            <ctl:SliderField Label="{loc:Loc Editor_ImageOffsetY}" Range="{x:Static lim:CrosshairLimits.ImageOffset}"
+                                                             Value="{Binding Editor.Profile.Image.OffsetY, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+
+                                            <UniformGrid Columns="2" Margin="0,8,0,0">
+                                                <Button Content="{loc:Loc Editor_ResetImageOffset}"
+                                                        Command="{Binding Editor.ResetImageOffsetCommand}" Margin="0,0,3,0"/>
+                                                <Button Content="{loc:Loc Editor_ResetRotation}"
+                                                        Command="{Binding Editor.ResetRotationCommand}" Margin="3,0,0,0"/>
+                                            </UniformGrid>
+
+                                            <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
+                                                       Margin="0,10,0,0" Foreground="{StaticResource TextMuted}"
+                                                       Text="{loc:Loc Editor_ImageNote}"/>
+                                        </StackPanel>
+                                    </Expander>
+
+                                    <StackPanel Visibility="{Binding Editor.IsStandardMode,
+                                                Converter={StaticResource BoolToVisibility}, Mode=OneWay}">
+                                    <TextBlock Text="{loc:Loc Editor_Position}" Style="{StaticResource SectionHeader}"/>
+                                    <ctl:SliderField Label="{loc:Loc Editor_OffsetX}" Range="{x:Static lim:CrosshairLimits.Offset}"
+                                                     Value="{Binding Editor.Profile.OffsetX, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                    <ctl:SliderField Label="{loc:Loc Editor_OffsetY}" Range="{x:Static lim:CrosshairLimits.Offset}"
+                                                     Value="{Binding Editor.Profile.OffsetY, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                    <UniformGrid Columns="2" Margin="0,8,0,0">
+                                        <Button Content="{loc:Loc Editor_ResetOffset}"
+                                                Command="{Binding Editor.ResetOffsetCommand}" Margin="0,0,3,0"/>
+                                        <Button Content="{loc:Loc Editor_ResetRotation}"
+                                                Command="{Binding Editor.ResetRotationCommand}" Margin="3,0,0,0"/>
+                                    </UniformGrid>
+                                    </StackPanel>
+
+                                </StackPanel>
+                            </ScrollViewer>
+                        </Border>
+        </DataTemplate>
     </Window.Resources>
 
     <Grid Margin="18">
@@ -211,164 +384,14 @@
                         </DockPanel>
                     </Border>
 
-                    <Border Grid.Column="4" Style="{StaticResource Card}" Padding="6,0,6,0">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="10,0">
-                            <StackPanel Margin="0,4,8,16">
-
-                                <!-- Chế độ đứng TRÊN CÙNG: nó quyết định mọi thứ bên dưới hiện hay ẩn. -->
-                                <TextBlock Text="{loc:Loc Editor_Mode}" Style="{StaticResource SectionHeader}"
-                                           Margin="0,12,0,6"/>
-                                <ComboBox ItemsSource="{Binding Editor.Types}"
-                                          DisplayMemberPath="Label" SelectedValuePath="Value"
-                                          SelectedValue="{Binding Editor.Profile.Type, Mode=TwoWay}"/>
-
-                                <TextBlock Text="{loc:Loc Editor_General}" Style="{StaticResource SectionHeader}"
-                                           Margin="0,16,0,6"/>
-
-                                <TextBlock Text="{loc:Loc Editor_PresetName}" Style="{StaticResource FieldLabel}"
-                                           Margin="0,0,0,4"/>
-                                <TextBox Text="{Binding Editor.Profile.Name, Mode=TwoWay,
-                                                UpdateSourceTrigger=PropertyChanged}"/>
-
-                                <!-- Hình dạng, màu, độ mờ và tỉ lệ tổng thể chỉ có nghĩa với tâm ngắm vẽ tay;
-                                     chế độ ảnh có thanh độ mờ/kích thước riêng trong nhóm Hình ảnh. -->
-                                <StackPanel Visibility="{Binding Editor.IsStandardMode,
-                                            Converter={StaticResource BoolToVisibility}, Mode=OneWay}">
-                                    <TextBlock Text="{loc:Loc Editor_Shape}" Style="{StaticResource FieldLabel}"
-                                               Margin="0,12,0,4"/>
-                                    <ComboBox ItemsSource="{Binding Editor.Shapes}"
-                                              DisplayMemberPath="Label" SelectedValuePath="Value"
-                                              SelectedValue="{Binding Editor.Profile.Shape, Mode=TwoWay}"/>
-
-                                    <TextBlock Text="{loc:Loc Editor_Color}" Style="{StaticResource FieldLabel}"
-                                               Margin="0,12,0,4"/>
-                                    <ctl:ColorPickerButton SelectedColor="{Binding Editor.Profile.Color, Mode=TwoWay}"/>
-
-                                    <ctl:SliderField Label="{loc:Loc Editor_Opacity}" Range="{x:Static lim:CrosshairLimits.Opacity}"
-                                                     Margin="0,8,0,0"
-                                                     Value="{Binding Editor.Profile.Opacity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                                    <ctl:SliderField Label="{loc:Loc Editor_Scale}" Range="{x:Static lim:CrosshairLimits.Scale}"
-                                                     Value="{Binding Editor.Profile.Scale, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                                </StackPanel>
-                                <ctl:SliderField Label="{loc:Loc Editor_Rotation}" Range="{x:Static lim:CrosshairLimits.Rotation}"
-                                                 Value="{Binding Editor.Profile.Rotation, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-
-                                <!-- ===== Tâm giữa → Nhánh trong → Nhánh ngoài: đúng thứ tự renderer vẽ ===== -->
-                                <Expander Header="{loc:Loc Editor_CenterDot}" Style="{StaticResource SettingsExpander}"
-                                          Margin="0,16,0,0"
-                                          Tag="{Binding Editor.Profile.CenterDot.Enabled, Mode=OneWay}"
-                                          Visibility="{Binding Editor.IsStandardMode,
-                                                       Converter={StaticResource BoolToVisibility}, Mode=OneWay}">
-                                    <StackPanel>
-                                        <CheckBox Content="{loc:Loc Editor_Show}" Margin="0,6,0,4"
-                                                  IsChecked="{Binding Editor.Profile.CenterDot.Enabled, Mode=TwoWay}"/>
-                                        <ctl:SliderField Label="{loc:Loc Editor_Opacity}" Range="{x:Static lim:CrosshairLimits.Opacity}"
-                                                         Value="{Binding Editor.Profile.CenterDot.Opacity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                                        <ctl:SliderField Label="{loc:Loc Editor_Size}" Range="{x:Static lim:CrosshairLimits.DotSize}"
-                                                         Value="{Binding Editor.Profile.CenterDot.Size, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                                        <CheckBox Content="{loc:Loc Editor_UseProfileColor}" Margin="0,8,0,4"
-                                                  IsChecked="{Binding Editor.Profile.CenterDot.UseProfileColor, Mode=TwoWay}"/>
-                                        <ctl:ColorPickerButton
-                                            SelectedColor="{Binding Editor.Profile.CenterDot.Color, Mode=TwoWay}"/>
-                                    </StackPanel>
-                                </Expander>
-
-                                <StackPanel Visibility="{Binding Editor.ShowLineSettings,
-                                            Converter={StaticResource BoolToVisibility}, Mode=OneWay}">
-                                    <Expander Header="{loc:Loc Editor_InnerLines}" Style="{StaticResource SettingsExpander}"
-                                              Tag="{Binding Editor.Profile.InnerLines.Enabled, Mode=OneWay}"
-                                              Content="{Binding Editor.Profile.InnerLines, Mode=OneWay}"
-                                              ContentTemplate="{StaticResource LineLayerEditor}"/>
-
-                                    <Expander Header="{loc:Loc Editor_OuterLines}" Style="{StaticResource SettingsExpander}"
-                                              Tag="{Binding Editor.Profile.OuterLines.Enabled, Mode=OneWay}"
-                                              Content="{Binding Editor.Profile.OuterLines, Mode=OneWay}"
-                                              ContentTemplate="{StaticResource LineLayerEditor}"/>
-                                </StackPanel>
-
-                                <StackPanel Visibility="{Binding Editor.ShowRingSettings,
-                                            Converter={StaticResource BoolToVisibility}, Mode=OneWay}">
-                                    <TextBlock Text="{loc:Loc Editor_Ring}" Style="{StaticResource SectionHeader}"/>
-                                    <CheckBox Content="{loc:Loc Editor_ShowRing}" Margin="0,0,0,6"
-                                              IsChecked="{Binding Editor.Profile.Ring.Enabled, Mode=TwoWay}"/>
-                                    <ctl:SliderField Label="{loc:Loc Editor_Radius}" Range="{x:Static lim:CrosshairLimits.RingRadius}"
-                                                     Value="{Binding Editor.Profile.Ring.Radius, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                                    <ctl:SliderField Label="{loc:Loc Editor_Thickness}" Range="{x:Static lim:CrosshairLimits.RingThickness}"
-                                                     Value="{Binding Editor.Profile.Ring.Thickness, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                                    <CheckBox Content="{loc:Loc Editor_Filled}" Margin="0,8,0,0"
-                                              IsChecked="{Binding Editor.Profile.Ring.Filled, Mode=TwoWay}"/>
-                                </StackPanel>
-
-                                <StackPanel Visibility="{Binding Editor.ShowOutlineSettings,
-                                            Converter={StaticResource BoolToVisibility}, Mode=OneWay}">
-                                    <TextBlock Text="{loc:Loc Editor_Outline}" Style="{StaticResource SectionHeader}"/>
-                                    <CheckBox Content="{loc:Loc Editor_ShowOutline}" Margin="0,0,0,6"
-                                              IsChecked="{Binding Editor.Profile.Outline.Enabled, Mode=TwoWay}"/>
-                                    <ctl:SliderField Label="{loc:Loc Editor_Thickness}" Range="{x:Static lim:CrosshairLimits.OutlineThickness}"
-                                                     Value="{Binding Editor.Profile.Outline.Thickness, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                                    <ctl:SliderField Label="{loc:Loc Editor_Opacity}" Range="{x:Static lim:CrosshairLimits.Opacity}"
-                                                     Value="{Binding Editor.Profile.Outline.Opacity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                                    <ctl:ColorPickerButton Margin="0,6,0,0"
-                                        SelectedColor="{Binding Editor.Profile.Outline.Color, Mode=TwoWay}"/>
-                                </StackPanel>
-
-                                <!-- ===== Chế độ ảnh: thay thế toàn bộ nhóm vẽ tay ===== -->
-                                <Expander Header="{loc:Loc Editor_Image}" Style="{StaticResource SettingsExpander}"
-                                          Margin="0,16,0,0"
-                                          Tag="{Binding Editor.IsImageMode, Mode=OneWay}"
-                                          Visibility="{Binding Editor.ShowImageSettings,
-                                                       Converter={StaticResource BoolToVisibility}, Mode=OneWay}">
-                                    <StackPanel>
-                                        <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
-                                                   Margin="0,8,0,8" Text="{Binding Editor.ImagePathDisplay, Mode=OneWay}"/>
-                                        <UniformGrid Columns="2">
-                                            <Button Content="{loc:Loc Editor_BrowseImage}" Style="{StaticResource AccentButton}"
-                                                    Command="{Binding Editor.BrowseImageCommand}" Margin="0,0,3,0"/>
-                                            <Button Content="{loc:Loc Editor_ClearImage}"
-                                                    Command="{Binding Editor.ClearImageCommand}" Margin="3,0,0,0"/>
-                                        </UniformGrid>
-
-                                        <ctl:SliderField Label="{loc:Loc Editor_ImageScale}" Range="{x:Static lim:CrosshairLimits.ImageScale}"
-                                                         Margin="0,10,0,0"
-                                                         Value="{Binding Editor.Profile.Image.Scale, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                                        <ctl:SliderField Label="{loc:Loc Editor_Opacity}" Range="{x:Static lim:CrosshairLimits.Opacity}"
-                                                         Value="{Binding Editor.Profile.Image.Opacity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                                        <ctl:SliderField Label="{loc:Loc Editor_ImageOffsetX}" Range="{x:Static lim:CrosshairLimits.ImageOffset}"
-                                                         Value="{Binding Editor.Profile.Image.OffsetX, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                                        <ctl:SliderField Label="{loc:Loc Editor_ImageOffsetY}" Range="{x:Static lim:CrosshairLimits.ImageOffset}"
-                                                         Value="{Binding Editor.Profile.Image.OffsetY, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-
-                                        <UniformGrid Columns="2" Margin="0,8,0,0">
-                                            <Button Content="{loc:Loc Editor_ResetImageOffset}"
-                                                    Command="{Binding Editor.ResetImageOffsetCommand}" Margin="0,0,3,0"/>
-                                            <Button Content="{loc:Loc Editor_ResetRotation}"
-                                                    Command="{Binding Editor.ResetRotationCommand}" Margin="3,0,0,0"/>
-                                        </UniformGrid>
-
-                                        <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
-                                                   Margin="0,10,0,0" Foreground="{StaticResource TextMuted}"
-                                                   Text="{loc:Loc Editor_ImageNote}"/>
-                                    </StackPanel>
-                                </Expander>
-
-                                <StackPanel Visibility="{Binding Editor.IsStandardMode,
-                                            Converter={StaticResource BoolToVisibility}, Mode=OneWay}">
-                                <TextBlock Text="{loc:Loc Editor_Position}" Style="{StaticResource SectionHeader}"/>
-                                <ctl:SliderField Label="{loc:Loc Editor_OffsetX}" Range="{x:Static lim:CrosshairLimits.Offset}"
-                                                 Value="{Binding Editor.Profile.OffsetX, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                                <ctl:SliderField Label="{loc:Loc Editor_OffsetY}" Range="{x:Static lim:CrosshairLimits.Offset}"
-                                                 Value="{Binding Editor.Profile.OffsetY, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                                <UniformGrid Columns="2" Margin="0,8,0,0">
-                                    <Button Content="{loc:Loc Editor_ResetOffset}"
-                                            Command="{Binding Editor.ResetOffsetCommand}" Margin="0,0,3,0"/>
-                                    <Button Content="{loc:Loc Editor_ResetRotation}"
-                                            Command="{Binding Editor.ResetRotationCommand}" Margin="3,0,0,0"/>
-                                </UniformGrid>
-                                </StackPanel>
-
-                            </StackPanel>
-                        </ScrollViewer>
-                    </Border>
+                    <!--
+                        Cột trình chỉnh sửa nạp SAU khung hình đầu tiên (xem SettingsWindow.xaml.cs).
+                        Đo thực tế: riêng cột này tốn ~450 ms trong tổng ~1000 ms dựng cửa sổ, nên nạp
+                        ngay từ đầu là bắt người dùng nhìn màn hình trống thêm gần nửa giây. Nội dung
+                        nằm trong DataTemplate nên chỉ dựng khi ContentTemplate được gán.
+                    -->
+                    <ContentControl x:Name="EditorHost" Grid.Column="4" Content="{Binding}"
+                                    ContentTemplate="{StaticResource EditorPlaceholder}"/>
                 </Grid>
             </TabItem>
 
