@@ -19,8 +19,7 @@ Thiết kế và lý do đằng sau từng quyết định được ghi chú chi
 7. [Kiểm thử (Manual & Auto)](#7-kiểm-thử)
 8. [Ký số bản phát hành (Code Signing)](#8-ký-số-bản-phát-hành)
 9. [Đa ngôn ngữ](#9-ngôn-ngữ-giao-diện)
-10. [Tự động cập nhật](#10-tự-động-cập-nhật)
-11. [Thiết kế & Icon](#11-ngôn-ngữ-thiết-kế--icon)
+10. [Thiết kế & Icon](#11-ngôn-ngữ-thiết-kế--icon)
 
 ---
 
@@ -215,18 +214,7 @@ Hỗ trợ **Tiếng Việt** và **Tiếng Anh**. Mặc định lấy theo ngô
 3. Khai báo vào `LanguageCatalog.All`.
 4. Cập nhật bài test `LocalizationTests`.
 
-## 10. Tự động cập nhật
-Hệ thống cập nhật gọi API GitHub Releases (`/releases/latest`) chạy ẩn với timeout 8 giây. 
-Nếu có bản mới (so sánh `tag_name`), hộp thoại sẽ xuất hiện. Khi đồng ý, ứng dụng tải `.exe` về `%TEMP%`, dùng một script `.bat` để thay thế file và khởi động lại. Nếu lỗi mạng hoặc server, hệ thống âm thầm bỏ qua để không ảnh hưởng quá trình vào game.
-
-**Để trỏ tới kho phát hành của bạn:**
-Sửa hằng số trong `src\CrosshairOverlay\Services\Updates\UpdateService.cs`:
-```csharp
-private const string RepositoryPath = "your-account/CrosshairOverlay";
-```
-Bản phát hành phải đính kèm **file `.zip`** do `build\publish.ps1` tạo ra. Ứng dụng chọn asset `.zip`, ưu tiên tên có chữ `win-x64`; asset `.exe` bị bỏ qua có chủ đích — chép một file `.exe` đè lên bản dạng thư mục chỉ thay được file khởi chạy, còn mã ứng dụng (`CrossGOverlay.dll`) vẫn là bản cũ. Khi cập nhật, ứng dụng tải và giải nén gói **trước khi thoát** (gói hỏng thì báo lỗi ngay), rồi một script chờ app thoát và dùng `robocopy /E` chép đè thư mục cài đặt — không dùng `/MIR`, nên file người dùng để trong thư mục đó không bị xoá — rồi mở lại app. Khi chưa đổi hằng số này, tính năng cập nhật luôn trả về "không có bản mới" — đúng như thiết kế.
-
-## 11. Ngôn ngữ thiết kế & Icon
+## 10. Ngôn ngữ thiết kế & Icon
 Sử dụng bộ UI **MongoDB LeafyGreen (Dark mode)**:
 - Nền `#001E2B`, thẻ `#1C2D38`, viền `#3D4F58`.
 - Điểm nhấn xanh lá `#00A35C` / `#00ED64`.
