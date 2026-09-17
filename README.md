@@ -46,33 +46,46 @@ dotnet build Crosshair.sln -c Release
 ```
 Kết quả được xuất ra tại: `src\CrosshairOverlay\bin\x64\<Config>\net8.0-windows\win-x64\CrossGOverlay.exe`.
 
-### Đóng gói Portable (Một file .exe duy nhất)
-Để build thành một file duy nhất, chạy lệnh sau:
+### Đóng gói bản phát hành (thư mục + file .zip)
+```powershell
+.\build\publish.ps1
+```
+Script publish **sạch** (xoá `obj\Release`, `bin\Release` trước), rồi nén cả thư mục thành `artifacts\CrossGOverlay-<phiên bản>-win-x64.zip` — khoảng **63 MB**, bên trong là một thư mục cùng tên (~256 file, ~149 MB khi giải nén). Người dùng giải nén ra đâu cũng chạy được, máy **không** cần cài .NET.
+Muốn ký số trước khi nén thì thêm `-PfxPath ...` (hoặc `-SelfSigned` để thử quy trình).
+
+Chỉ cần thư mục (không nén) thì chạy thẳng:
 ```bash
 dotnet publish src/CrosshairOverlay/CrosshairOverlay.csproj -c Release
 ```
-Không cần thêm tham số phụ vì mọi thứ đã được khai báo sẵn trong file `CrosshairOverlay.csproj`:
+Kết quả nằm ở `src\CrosshairOverlay\bin\Release\net8.0-windows\win-x64\publish\`. Cấu hình trong `CrosshairOverlay.csproj`:
 ```xml
 <PropertyGroup>
   <RuntimeIdentifier>win-x64</RuntimeIdentifier>
   <!-- Gói luôn .NET Runtime vào trong: máy người dùng KHÔNG cần cài gì thêm -->
   <SelfContained>true</SelfContained>
-  <!-- Gộp tất cả thành một file .exe duy nhất -->
-  <PublishSingleFile>true</PublishSingleFile>
-  <!-- WPF kéo theo nhiều DLL native; thiếu cờ này chúng nằm rời cạnh file exe -->
-  <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
-  <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
-  <!-- Nhúng symbol vào exe, không sinh file .pdb rời -->
+  <!-- KHÔNG gộp thành một file .exe: gói một file tốn ~800 ms ở MỖI lần mở app -->
+  <PublishSingleFile>false</PublishSingleFile>
+  <PublishReadyToRun>true</PublishReadyToRun>
   <DebugType>embedded</DebugType>
 </PropertyGroup>
 ```
-* **Kết quả:** Một file duy nhất tại `src\CrosshairOverlay\bin\Release\net8.0-windows\win-x64\publish\CrossGOverlay.exe`.
-* **Dung lượng:** Khoảng **67 MB**, copy sang máy nào cũng chạy.
-* **Tuỳ chọn nhẹ hơn:** Nếu muốn file chỉ khoảng **2 MB** (yêu cầu máy đích cài sẵn .NET 8 Desktop Runtime), hãy thêm tham số `-p:SelfContained=false` vào lệnh publish.
+
+**Vì sao không dùng một file .exe** — đo trên cùng mã nguồn, dựng sạch từng biến thể, chạy xen kẽ nhiều vòng:
+
+| Kiểu đóng gói | .NET nạp xong | Cửa sổ có hình đầu tiên | Tải về |
+|---|---|---|---|
+| Một file .exe có nén (cách cũ) | ~960 ms | 1407–1921 ms | 69 MB |
+| **Thư mục (hiện tại)** | **~110–175 ms** | **~650–760 ms** | **63 MB (.zip)** |
+
+Chi phí nằm ở chính gói một file (nén hay không, để DLL native ra ngoài hay không đều như nhau).
+
+**Lưu ý khi đo tốc độ:** lần mở đầu tiên ngay sau khi publish chậm bất thường (5–11 giây) vì Windows Defender quét file mới; từ lần thứ hai trở đi mới là con số thật. Luôn publish sạch trước khi đo — publish tăng dần sau nhiều lần sửa-hoàn-tác nhanh từng đóng gói nhầm mã cũ mà không báo lỗi gì.
+
+Muốn gói nhẹ (~2 MB) và chấp nhận yêu cầu máy đích cài sẵn .NET 8 Desktop Runtime thì thêm `-p:SelfContained=false`.
 
 ## 3. Cách sử dụng & Phím tắt
 
-Chạy file `CrossGOverlay.exe`. Ở lần khởi động đầu tiên, ứng dụng sẽ:
+Chạy `CrossGOverlay.exe`. Ở lần khởi động đầu tiên, ứng dụng sẽ:
 1. Tạo thư mục `%APPDATA%\CrosshairOverlay\` và ghi 6 preset mẫu.
 2. Hiển thị overlay ngay tại tâm màn hình.
 3. Mở cửa sổ Settings và đặt một icon vào khay hệ thống (System Tray).
@@ -206,11 +219,12 @@ Hỗ trợ **Tiếng Việt** và **Tiếng Anh**. Mặc định lấy theo ngô
 Hệ thống cập nhật gọi API GitHub Releases (`/releases/latest`) chạy ẩn với timeout 8 giây. 
 Nếu có bản mới (so sánh `tag_name`), hộp thoại sẽ xuất hiện. Khi đồng ý, ứng dụng tải `.exe` về `%TEMP%`, dùng một script `.bat` để thay thế file và khởi động lại. Nếu lỗi mạng hoặc server, hệ thống âm thầm bỏ qua để không ảnh hưởng quá trình vào game.
 
-**Để trỏ tới repo của bạn:**
+**Để trỏ tới kho phát hành của bạn:**
 Sửa hằng số trong `src\CrosshairOverlay\Services\Updates\UpdateService.cs`:
 ```csharp
 private const string RepositoryPath = "your-account/CrosshairOverlay";
 ```
+Bản phát hành phải đính kèm **file `.zip`** do `build\publish.ps1` tạo ra. Ứng dụng chọn asset `.zip`, ưu tiên tên có chữ `win-x64`; asset `.exe` bị bỏ qua có chủ đích — chép một file `.exe` đè lên bản dạng thư mục chỉ thay được file khởi chạy, còn mã ứng dụng (`CrossGOverlay.dll`) vẫn là bản cũ. Khi cập nhật, ứng dụng tải và giải nén gói **trước khi thoát** (gói hỏng thì báo lỗi ngay), rồi một script chờ app thoát và dùng `robocopy /E` chép đè thư mục cài đặt — không dùng `/MIR`, nên file người dùng để trong thư mục đó không bị xoá — rồi mở lại app. Khi chưa đổi hằng số này, tính năng cập nhật luôn trả về "không có bản mới" — đúng như thiết kế.
 
 ## 11. Ngôn ngữ thiết kế & Icon
 Sử dụng bộ UI **MongoDB LeafyGreen (Dark mode)**:

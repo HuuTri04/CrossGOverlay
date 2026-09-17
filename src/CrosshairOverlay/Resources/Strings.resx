@@ -120,6 +120,7 @@ Mỗi khi {1} ở foreground, preset này sẽ tự được áp dụng. Xem ho�
   <data name="Editor_CenterDot"><value>Tâm giữa</value></data>
   <data name="Editor_InnerLines"><value>Nhánh trong</value></data>
   <data name="Editor_OuterLines"><value>Nhánh ngoài</value></data>
+  <data name="Splash_Starting"><value>Đang khởi động...</value></data>
   <data name="Editor_Loading"><value>Đang tải…</value></data>
   <data name="Editor_Show"><value>Hiển thị</value></data>
   <data name="Editor_Offset"><value>Khoảng cách</value></data>
@@ -334,6 +335,7 @@ Mỗi khi {1} ở foreground, preset này sẽ tự được áp dụng. Xem ho�
   <data name="Exit_ConfirmBody"><value>Bạn có chắc chắn muốn thoát hoàn toàn ứng dụng không? Overlay sẽ tắt và các phím tắt sẽ ngừng hoạt động.</value></data>
 
   <!-- ===== Cập nhật ===== -->
+  <data name="Update_ErrPackage"><value>Gói cập nhật tải về không chứa {0}. Hãy tải bản mới thủ công từ trang phát hành.</value></data>
   <data name="Update_Title"><value>Đã có phiên bản mới</value></data>
   <data name="Update_Body"><value>Phiên bản {0} đã phát hành, bạn đang dùng {1}.
 

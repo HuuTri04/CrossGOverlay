@@ -36,23 +36,28 @@
   </PropertyGroup>
 
   <!--
-    Cấu hình publish: MỘT file .exe duy nhất, chạy được trên máy CHƯA cài .NET Runtime.
+    Cấu hình publish: MỘT THƯ MỤC chạy được trên máy CHƯA cài .NET Runtime. Phát hành bằng cách nén
+    cả thư mục thành .zip (build\publish.ps1); tính năng tự cập nhật cũng tải đúng file .zip đó.
     Nhờ khai báo ở đây, `dotnet publish -c Release` không cần thêm tham số nào.
   -->
   <PropertyGroup>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>true</SelfContained>
-    <PublishSingleFile>true</PublishSingleFile>
-
-    <!-- WPF kéo theo nhiều DLL native; không bật cờ này thì chúng nằm rời cạnh file exe. -->
-    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
 
     <!--
-      Nén bundle. Đây là đòn bẩy lớn nhất về dung lượng: 141 MB xuống 64 MB (đo trên máy build).
-      Giá phải trả là lần chạy ĐẦU TIÊN phải giải nén ra thư mục tạm; các lần sau dùng lại
-      bản đã giải nén nên không mất chi phí đó nữa.
+      KHÔNG gộp thành một file .exe. Đo trên bản publish, cùng mã nguồn, dựng sạch từng biến thể,
+      chạy xen kẽ nhiều vòng (mốc "khung hình đầu tiên" của cửa sổ, tính từ lúc tiến trình khởi động):
+
+        một file, có nén (cấu hình cũ) : 1407–1921 ms — .NET nạp xong sau ~960 ms   — 69 MB, 1 file
+        một file, không nén             : 1613–2052 ms — ~1100 ms                     — 159 MB, 1 file
+        một file + DLL native để rời    : 1417–1824 ms — ~950 ms                      — 73 MB, 6 file
+        thư mục                          :  642–1158 ms (phần lớn ~650) — ~175 ms      — 149 MB, 255 file
+
+      Gói một file tốn ~800 ms ở MỖI lần mở, trước khi dòng mã đầu tiên của ứng dụng chạy — chi phí
+      nằm ở chính gói bundle, không phải ở nén hay ở DLL native. Với một overlay chơi game, mở nhanh
+      gấp đôi đáng giá hơn việc gọn trong một file.
     -->
-    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <PublishSingleFile>false</PublishSingleFile>
 
     <!--
       Biên dịch sẵn sang mã máy (ReadyToRun) để không phải JIT lúc khởi động.
@@ -60,7 +65,10 @@
         không R2R : 1992 ms, file 64.2 MB
         có R2R    : 1873 ms, file 68.8 MB
       Tức nhanh hơn khoảng 6% đổi lấy 4.6 MB. Khiêm tốn — phần lớn thời gian khởi động là
-      giải nén bundle và dựng cây WPF chứ không phải JIT — nhưng vẫn là cải thiện thật.
+      nạp bundle và dựng cây WPF chứ không phải JIT — nhưng vẫn là cải thiện thật.
+
+      Đã thử thêm PublishReadyToRunComposite (biên dịch chung .NET + ứng dụng thành một khối):
+      khung hình đầu 640–1121 ms so với 642–1158 ms bản thường — không nhanh hơn, nặng thêm 85 MB.
     -->
     <PublishReadyToRun>true</PublishReadyToRun>
 
@@ -91,8 +99,8 @@
   <ItemGroup>
     <!--
       Build action Resource nhúng thẳng vào assembly, nên truy cập được qua
-      pack://application:,,,/images/... và KHÔNG mất khi publish một file.
-      Dùng Content thì file nằm rời cạnh .exe và bản portable sẽ thiếu icon.
+      pack://application:,,,/images/... bất kể người dùng chép thư mục đi đâu.
+      Dùng Content thì file nằm rời cạnh .exe và chỉ cần sót một file là thiếu icon.
     -->
     <Resource Include="images\app.ico" />
     <Resource Include="images\BrandingLogo.ico" />

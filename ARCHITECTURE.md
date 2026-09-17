@@ -218,7 +218,7 @@ Bind trực tiếp kèm định dạng số sẽ viết đè lên thứ người
 Tiến trình không thể ghi đè lên file `.exe` đang chạy của chính nó. Script chờ ứng dụng thoát hẳn, thử thay file tối đa 10 lần (phần mềm diệt virus có thể còn giữ file), mở lại ứng dụng rồi tự xoá bằng thủ thuật `(goto) 2>nul & del "%~f0"` — cmd đọc file theo từng dòng nên dòng đó xoá được chính nó. Toàn bộ luồng kiểm tra chạy trên thread pool với timeout 8 giây: mất mạng phải dẫn tới "không có bản mới", không bao giờ tới treo giao diện.
 
 **Icon nhúng bằng build action `Resource`, không phải `Content`.**
-`Content` để file nằm rời cạnh `.exe`, nên bản publish một file sẽ thiếu icon. `Resource` nhúng thẳng vào assembly, pack URI hoạt động cả trong bundle. Và file `.ico` phải là ICO container thật — PNG đổi đuôi làm `<ApplicationIcon>` hỏng build với `CS7065` và `System.Drawing.Icon` cũng không đọc được; `build\make-icon.ps1` dựng ICO đa kích thước đúng chuẩn từ PNG.
+`Content` để file nằm rời cạnh `.exe`, nên chỉ cần người dùng chép sót một file là thiếu icon. `Resource` nhúng thẳng vào assembly, pack URI luôn hoạt động bất kể thư mục cài đặt. Và file `.ico` phải là ICO container thật — PNG đổi đuôi làm `<ApplicationIcon>` hỏng build với `CS7065` và `System.Drawing.Icon` cũng không đọc được; `build\make-icon.ps1` dựng ICO đa kích thước đúng chuẩn từ PNG.
 
 **Tên assembly là `CrossGOverlay`, namespace giữ `CrosshairOverlay`.**
 Đổi namespace sẽ đụng vào mọi file mà không đem lại lợi ích nào. Quan trọng hơn: tên manifest của resource ngôn ngữ suy ra từ `RootNamespace` chứ không phải `AssemblyName`, nên `ResourceManager("CrosshairOverlay.Resources.Strings")` vẫn đúng. Thư mục dữ liệu người dùng cũng giữ nguyên, để bản cập nhật không làm mất preset đã lưu.

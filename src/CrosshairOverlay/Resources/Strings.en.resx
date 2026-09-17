@@ -116,6 +116,7 @@ Whenever {1} is in the foreground, this preset is applied automatically. See or 
   <data name="Editor_CenterDot"><value>Centre dot</value></data>
   <data name="Editor_InnerLines"><value>Inner lines</value></data>
   <data name="Editor_OuterLines"><value>Outer lines</value></data>
+  <data name="Splash_Starting"><value>Starting...</value></data>
   <data name="Editor_Loading"><value>Loading…</value></data>
   <data name="Editor_Show"><value>Show</value></data>
   <data name="Editor_Offset"><value>Offset</value></data>
@@ -322,6 +323,7 @@ Whenever {1} is in the foreground, this preset is applied automatically. See or 
   <data name="Exit_ConfirmTitle"><value>Quit the application</value></data>
   <data name="Exit_ConfirmBody"><value>Are you sure you want to quit the application completely? The overlay will disappear and the hotkeys will stop working.</value></data>
 
+  <data name="Update_ErrPackage"><value>The downloaded update package does not contain {0}. Please download the new version manually from the release page.</value></data>
   <data name="Update_Title"><value>A new version is available</value></data>
   <data name="Update_Body"><value>Version {0} has been released; you are running {1}.
 

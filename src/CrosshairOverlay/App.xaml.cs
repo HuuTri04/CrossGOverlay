@@ -9,6 +9,7 @@ using CrosshairOverlay.Services.Input;
 using CrosshairOverlay.Services.Logging;
 using CrosshairOverlay.Services.Storage;
 using CrosshairOverlay.Services.Updates;
+using CrosshairOverlay.Views;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -28,6 +29,26 @@ public partial class App : Application
 
     /// <summary>Từ hàm dựng tới OnStartup: đọc App.xaml (gồm các ResourceDictionary gộp) và khởi động vòng lặp.</summary>
     private double _appXamlMs;
+
+    /// <summary>Màn hình chờ, chỉ tồn tại trong lúc khởi động ở chế độ mở cửa sổ.</summary>
+    private SplashWindow? _splash;
+
+    private void OnSplashFirstFrame(object? sender, EventArgs e)
+    {
+        if (sender is SplashWindow splash) splash.FirstFrameRendered -= OnSplashFirstFrame;
+
+        try
+        {
+            using var process = global::System.Diagnostics.Process.GetCurrentProcess();
+            _log?.LogInformation(
+                "Màn hình chờ có khung hình đầu sau {Elapsed:0} ms kể từ khi tiến trình khởi động.",
+                (DateTime.Now - process.StartTime).TotalMilliseconds);
+        }
+        catch (Exception)
+        {
+            // Chỉ là số đo.
+        }
+    }
 
     /// <summary>
     /// Bật lên ngay khi quy trình thoát bắt đầu.
@@ -139,19 +160,40 @@ public partial class App : Application
             // Chế độ render cũng phải có trước cửa sổ đầu tiên.
             Services.Overlay.OverlayBehaviorController.ApplyRenderMode(settings.Current.UseHardwareAcceleration);
 
-            var library = _provider.GetRequiredService<IPresetLibrary>();
-            await library.InitializeAsync(settings.Current.ActivePresetId).ConfigureAwait(true);
-            boot.Mark("preset");
-
             // GIAO DIỆN TRƯỚC, phần còn lại SAU. Đo trên bản publish: tạo HWND của cửa sổ WPF ĐẦU TIÊN
             // (khởi tạo Direct3D/DWM) mất 105–580 ms, cộng khay và phím tắt thêm ~50 ms. Trước đây toàn
             // bộ chạy xong rồi mới dựng cửa sổ Settings, nên người dùng nhìn màn hình trống suốt khoảng
             // đó. Giờ cửa sổ hiện trước; overlay, khay và phím tắt khởi động ngay sau khung hình đầu.
             var showWindow = !settings.Current.StartMinimizedToTray;
+
+            // Màn hình chờ chỉ khi sắp mở cửa sổ. Khởi động vào khay (thường là lúc Windows vừa đăng nhập)
+            // mà bật lên một màn hình chờ rồi tắt thì chỉ là làm phiền. Hiện SAU khi đọc cài đặt (vì phải
+            // biết chế độ khởi động và ngôn ngữ) và SAU khi giành quyền chạy duy nhất (instance thứ hai
+            // chỉ đánh thức instance đang chạy rồi thoát, không được chớp màn hình chờ).
+            if (showWindow)
+            {
+                _splash = new SplashWindow();
+                _splash.FirstFrameRendered += OnSplashFirstFrame;
+                _splash.Show();
+                boot.Mark("màn hình chờ");
+
+                // Nhả luồng để màn hình chờ kịp lên hình trước khi phần khởi động nặng chiếm luồng.
+                await global::System.Windows.Threading.Dispatcher.Yield(global::System.Windows.Threading.DispatcherPriority.Background);
+                boot.Mark("chờ màn hình chờ vẽ");
+            }
+
+            var library = _provider.GetRequiredService<IPresetLibrary>();
+            await library.InitializeAsync(settings.Current.ActivePresetId).ConfigureAwait(true);
+            boot.Mark("preset");
+
             if (showWindow)
             {
                 _provider.GetRequiredService<IDialogService>().ShowSettingsWindow();
                 boot.Mark("cửa sổ Settings");
+
+                // Màn hình chờ đóng SAU khung hình đầu của cửa sổ Settings — không có khoảnh khắc trống.
+                _splash?.CloseAfterFirstFrameOf(Windows.OfType<SettingsWindow>().FirstOrDefault());
+                _splash = null;
 
                 // Nhả luồng giao diện: ưu tiên Background đứng sau Render, nên khung hình đầu của cửa sổ
                 // được vẽ lên màn hình trước khi phần khởi động còn lại chiếm luồng.
@@ -202,6 +244,11 @@ public partial class App : Application
         catch (Exception ex)
         {
             _log?.LogCritical(ex, "Khởi động thất bại.");
+
+            // Không để màn hình chờ treo trên màn hình phía sau thông báo lỗi.
+            _splash?.CloseQuietly();
+            _splash = null;
+
             ReportFatal(ex, Tr.Get("Error_StartupFailed"));
             IsShuttingDown = true;
             Shutdown(1);
