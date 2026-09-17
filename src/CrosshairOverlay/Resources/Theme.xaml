@@ -243,100 +243,10 @@
     </Style>
 
     <!--
-        ================= CheckBox =================
-        Style dùng chung cho MỌI CheckBox của ứng dụng (không đặt x:Key nên áp dụng tự động).
-        Ô vuông 18x18 bo góc 4, dấu tick vẽ bằng <Path> vector — không dùng ký tự ✓ của font, vì
-        glyph đổi hình theo font hệ thống và không canh giữa được chính xác ở mọi DPI.
-        Không có animation hay Effect: đổi trạng thái chỉ bằng setter, không tạo clock nào.
-    -->
-    <Style TargetType="CheckBox">
-        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
-        <Setter Property="FontFamily" Value="{StaticResource UiFont}"/>
-        <!-- 13 = đúng cỡ chữ các ô này đang hiện, vốn do style TextBlock chung áp vào nhãn. -->
-        <Setter Property="FontSize" Value="13"/>
-        <Setter Property="Cursor" Value="Hand"/>
-        <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="CheckBox">
-                    <!-- Nền trong suốt: cả hàng (ô vuông + chữ) đều là vùng bấm và vùng rê chuột. -->
-                    <StackPanel Orientation="Horizontal" Background="Transparent" SnapsToDevicePixels="True">
-                        <Border x:Name="Box" Width="18" Height="18" CornerRadius="4"
-                                Background="{StaticResource WindowBg}"
-                                BorderBrush="{StaticResource LG.Gray.Dark1Brush}" BorderThickness="1.5"
-                                VerticalAlignment="Center" SnapsToDevicePixels="True">
-                            <!--
-                                Toạ độ tuyệt đối (Stretch mặc định là None) và canh giữa trong ô: nét tick
-                                không bị co giãn nên luôn sắc, dày đúng 2px ở mọi trạng thái.
-                            -->
-                            <Path x:Name="Tick" Visibility="Collapsed"
-                                  Data="M 0,3.6 L 3.5,7.2 L 9.6,0.6"
-                                  HorizontalAlignment="Center" VerticalAlignment="Center"
-                                  Stroke="{StaticResource OnAccent}" StrokeThickness="2"
-                                  StrokeEndLineCap="Round" StrokeStartLineCap="Round"
-                                  StrokeLineJoin="Round"/>
-                        </Border>
-                        <ContentPresenter x:Name="Label" Margin="8,0,0,0" VerticalAlignment="Center"
-                                          RecognizesAccessKey="True">
-                            <!--
-                                BẮT BUỘC. Content là chuỗi nên WPF tự dựng một TextBlock, và style TextBlock
-                                chung của theme (màu TextPrimary, cỡ 13) đặt thẳng lên nó — ghi đè màu và cỡ
-                                chữ kế thừa từ CheckBox. Thiếu đoạn này thì chữ luôn trắng cỡ 13, không đổi
-                                theo trạng thái. Lấy lại đúng hai giá trị đó từ CheckBox.
-                            -->
-                            <ContentPresenter.Resources>
-                                <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-                                    <Setter Property="Foreground"
-                                            Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=CheckBox}}"/>
-                                    <Setter Property="FontSize"
-                                            Value="{Binding FontSize, RelativeSource={RelativeSource AncestorType=CheckBox}}"/>
-                                </Style>
-                            </ContentPresenter.Resources>
-                        </ContentPresenter>
-                    </StackPanel>
-                    <ControlTemplate.Triggers>
-                        <!-- Ô không có chữ (vd trong bảng phím tắt): bỏ luôn khoảng cách 8px. -->
-                        <Trigger Property="Content" Value="{x:Null}">
-                            <Setter TargetName="Label" Property="Visibility" Value="Collapsed"/>
-                        </Trigger>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource TextDim}"/>
-                        </Trigger>
-                        <!-- Bàn phím (Tab tới rồi Space): phải thấy rõ ô nào đang được chọn. -->
-                        <Trigger Property="IsKeyboardFocused" Value="True">
-                            <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource AccentBright}"/>
-                        </Trigger>
-                        <!--
-                            Đứng SAU hai trigger trên nên thắng khi cùng đúng: ô đã tick vẫn giữ nền xanh
-                            lúc rê chuột, chỉ viền sáng thêm.
-                        -->
-                        <Trigger Property="IsChecked" Value="True">
-                            <Setter TargetName="Box" Property="Background" Value="{StaticResource AccentBright}"/>
-                            <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource AccentBright}"/>
-                            <Setter TargetName="Tick" Property="Visibility" Value="Visible"/>
-                        </Trigger>
-                        <MultiTrigger>
-                            <MultiTrigger.Conditions>
-                                <Condition Property="IsChecked" Value="True"/>
-                                <Condition Property="IsMouseOver" Value="True"/>
-                            </MultiTrigger.Conditions>
-                            <!-- Giữ nguyên nền xanh, chỉ viền sáng lên: rê chuột không làm ô nhấp nháy đổi màu. -->
-                            <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource LG.Green.Light2Brush}"/>
-                        </MultiTrigger>
-                        <Trigger Property="IsEnabled" Value="False">
-                            <Setter Property="Opacity" Value="0.45"/>
-                            <Setter Property="Cursor" Value="Arrow"/>
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
-
-    <!--
-        Nút gạt (toggle switch) kiểu LeafyGreen, dùng cho các ô bật/tắt: <CheckBox Style="{StaticResource ToggleSwitch}"/>.
-        Vẫn là CheckBox bên dưới nên bàn phím (Space), binding IsChecked và trình đọc màn hình giữ nguyên.
+        ================= CheckBox = nút gạt =================
+        Nút gạt (toggle switch) kiểu LeafyGreen. MỌI CheckBox của ứng dụng đều là nút gạt (style mặc định ngay bên
+        dưới dựa trên style này), để cả app chỉ có một kiểu điều khiển bật/tắt. Vẫn là CheckBox bên dưới nên bàn
+        phím (Space), binding IsChecked và trình đọc màn hình giữ nguyên.
         Không có animation hay Effect: đổi trạng thái bằng setter, không tạo clock nào.
     -->
     <Style x:Key="ToggleSwitch" TargetType="CheckBox">
@@ -385,6 +295,9 @@
             </Setter.Value>
         </Setter>
     </Style>
+
+    <!-- Style mặc định (không x:Key): CheckBox nào không đặt Style cũng thành nút gạt. -->
+    <Style TargetType="CheckBox" BasedOn="{StaticResource ToggleSwitch}"/>
 
     <!-- ================= Slider ================= -->
     <Style x:Key="SliderRepeat" TargetType="RepeatButton">
@@ -961,6 +874,18 @@
         </Setter>
     </Style>
 
+    <!--
+        Nhóm điều khiển phụ thuộc một công tắc (vd "Màu khi bắn"): mờ đi khi công tắc tắt. UserControl như
+        ColorPickerButton không tự đổi hình khi IsEnabled=False, nên làm mờ cả nhóm ở đây.
+    -->
+    <Style x:Key="DependentGroup" TargetType="StackPanel">
+        <Style.Triggers>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Opacity" Value="0.4"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
     <!-- ================= Chú thích (hint) & ToolTip ================= -->
     <!--
         Dòng chú thích nhỏ: chữ xám phụ, tự xuống dòng, không kèm icon. Dùng như
@@ -1046,6 +971,157 @@
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="{StaticResource RadiusCard}"/>
         <Setter Property="Padding" Value="14"/>
+    </Style>
+
+    <!-- ================= Thư viện mẫu ================= -->
+    <!-- Nền cửa sổ thư viện: xanh đen đậm hơn khung tab một bậc, để lưới thẻ nổi lên. -->
+    <SolidColorBrush x:Key="LibraryWindowBg" Color="#FF0A1922"/>
+
+    <!--
+        Ô tìm kiếm: kính lúp bên trái, chữ gợi ý (lấy từ Tag) hiện khi ô trống. Chữ gợi ý không nhận chuột nên bấm
+        vào đâu trong ô cũng đặt được con trỏ.
+    -->
+    <Style x:Key="SearchBox" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+        <!--
+            Padding chỉ là khoảng đệm nhỏ quanh chữ: TextBox tự cộng Padding vào vùng chữ bên trong PART_ContentHost, nên
+            chỗ chừa cho kính lúp phải là Margin cố định của vùng chữ, không phải Padding (cộng hai lần thì chữ gõ vào lệch
+            hẳn sang phải so với chữ gợi ý).
+        -->
+        <Setter Property="Padding" Value="2,8"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <Border x:Name="Root" Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1"
+                            CornerRadius="{StaticResource RadiusInput}">
+                        <Grid>
+                            <Path Width="14" Height="14" Margin="12,0,0,0" HorizontalAlignment="Left"
+                                  VerticalAlignment="Center" Stretch="Uniform" IsHitTestVisible="False"
+                                  Stroke="{StaticResource TextDim}" StrokeThickness="1.6"
+                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                  Data="M 6,0 A 6,6 0 1 1 5.99,0 Z M 10.3,10.3 L 15,15"/>
+                            <TextBlock x:Name="Placeholder" Text="{TemplateBinding Tag}"
+                                       Margin="36,0,12,0" VerticalAlignment="Center"
+                                       Foreground="{StaticResource TextMuted}" FontSize="{TemplateBinding FontSize}"
+                                       IsHitTestVisible="False" Visibility="Collapsed"
+                                       TextTrimming="CharacterEllipsis"/>
+                            <ScrollViewer x:Name="PART_ContentHost" Margin="32,0,10,0"
+                                          VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="Text" Value="">
+                            <Setter TargetName="Placeholder" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                            <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource AccentBright}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Chip lọc danh mục: RadioButton dạng viên thuốc; đang chọn thì nền xanh nhạt, viền xanh sáng. -->
+    <Style x:Key="FilterChip" TargetType="RadioButton">
+        <Setter Property="Foreground" Value="{StaticResource TextDim}"/>
+        <Setter Property="FontFamily" Value="{StaticResource UiFont}"/>
+        <Setter Property="FontSize" Value="12.5"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Margin" Value="0,0,8,0"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Border x:Name="Root" CornerRadius="14" Padding="12,5" Background="Transparent"
+                            BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1">
+                        <ContentPresenter VerticalAlignment="Center">
+                            <ContentPresenter.Resources>
+                                <!-- Như ở Button: style TextBlock chung không được ghi đè màu chữ đổi theo trạng thái. -->
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                    <Setter Property="Foreground"
+                                            Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"/>
+                                    <Setter Property="FontSize"
+                                            Value="{Binding FontSize, RelativeSource={RelativeSource AncestorType=RadioButton}}"/>
+                                </Style>
+                            </ContentPresenter.Resources>
+                        </ContentPresenter>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource AccentBright}"/>
+                            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource AccentBright}"/>
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Root" Property="Background" Value="#2600ED64"/>
+                            <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource AccentBright}"/>
+                            <Setter Property="Foreground" Value="{StaticResource AccentBright}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Nút X của cửa sổ không viền: trong suốt, rê chuột thì nền đỏ như nút đóng của Windows. -->
+    <Style x:Key="ChromeCloseButton" TargetType="Button">
+        <Setter Property="Width" Value="46"/>
+        <Setter Property="Height" Value="34"/>
+        <Setter Property="Foreground" Value="{StaticResource TextDim}"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="IsTabStop" Value="False"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Root" Background="Transparent" CornerRadius="0,6,0,0">
+                        <Path x:Name="Glyph" Width="10" Height="10" Stretch="Uniform"
+                              Stroke="{TemplateBinding Foreground}" StrokeThickness="1.3"
+                              Data="M 0,0 L 10,10 M 10,0 L 0,10"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Root" Property="Background" Value="#FFC42B1C"/>
+                            <Setter TargetName="Glyph" Property="Stroke" Value="White"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Root" Property="Background" Value="#FF9E2317"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Thẻ một mẫu trong lưới: 160 x 170, bo 6, nền xám đen. -->
+    <Style x:Key="CatalogCard" TargetType="Border">
+        <Setter Property="Width" Value="160"/>
+        <Setter Property="Height" Value="170"/>
+        <Setter Property="Background" Value="{StaticResource CardBg}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusCard}"/>
+    </Style>
+
+    <!-- Nút "Dùng mẫu" trong thẻ: nút nhấn xanh, cỡ nhỏ. -->
+    <Style x:Key="SmallAccentButton" TargetType="Button" BasedOn="{StaticResource AccentButton}">
+        <Setter Property="Padding" Value="10,4"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+    </Style>
+
+    <!-- Thông báo nhỏ ở đáy cửa sổ ("Đã thêm … vào Preset của bạn"). -->
+    <Style x:Key="Toast" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource CardBg}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource AccentBright}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusCard}"/>
+        <Setter Property="Padding" Value="16,10"/>
+        <Setter Property="IsHitTestVisible" Value="False"/>
     </Style>
 
 </ResourceDictionary>

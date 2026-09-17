@@ -50,6 +50,15 @@ public sealed class OverlayController : IOverlayController
     private MonitorSelectionMode _selectionMode = MonitorSelectionMode.FollowForegroundWindow;
     private string? _targetDeviceName;
 
+    private global::System.Windows.Media.Color? _colorOverride;
+
+    /// <summary>Dịch chống lưu ảnh, physical pixel.</summary>
+    private int _shiftX;
+    private int _shiftY;
+
+    /// <summary>Kích thước hình lần dựng gần nhất (DIP) — để đặt lại vị trí mà không phải dựng lại.</summary>
+    private Size _lastContentSize;
+
     private bool _visible;
     private bool _suppressed;
     private bool _placing;
@@ -178,6 +187,38 @@ public sealed class OverlayController : IOverlayController
             "Giới hạn khung hình overlay: {Limit}.", framesPerSecond > 0 ? $"{framesPerSecond} FPS" : "không giới hạn");
     }
 
+    public void SetColorOverride(global::System.Windows.Media.Color? color)
+    {
+        ThrowIfDisposed();
+        if (Nullable.Equals(_colorOverride, color)) return;
+
+        _colorOverride = color;
+
+        // Ảnh không có "màu" để đổi; dựng lại chỉ khởi động lại GIF mỗi lần bấm chuột.
+        if (_profile is null || _profile.Type == CrosshairType.Image) return;
+
+        Invalidate();
+
+        // Bấm/nhả chuột là sự kiện rời rạc, người chơi phải thấy màu đổi ngay khung hình kế tiếp chứ
+        // không đợi nhịp của bộ chặn (vốn dành cho kéo thanh trượt liên tục).
+        _rebuildThrottle.Flush();
+    }
+
+    public void SetPixelShift(int dx, int dy)
+    {
+        ThrowIfDisposed();
+        if (_shiftX == dx && _shiftY == dy) return;
+
+        _shiftX = dx;
+        _shiftY = dy;
+
+        // Chưa từng dựng hình (hoặc đang ẩn): lần dựng tới tự cộng độ dịch mới vào.
+        if (_visible && _monitor is { } monitor && _lastContentSize.Width > 0)
+            ApplyPlacement(monitor, _lastContentSize);
+
+        _logger.LogDebug("Dịch overlay chống lưu ảnh: ({X}, {Y}) px.", dx, dy);
+    }
+
     /// <summary>1000 ms / FPS (60 FPS ≈ 16,7 ms); không giới hạn là 0.</summary>
     internal static TimeSpan FrameInterval(int framesPerSecond) =>
         framesPerSecond > 0 ? TimeSpan.FromMilliseconds(1000d / framesPerSecond) : TimeSpan.Zero;
@@ -236,13 +277,15 @@ public sealed class OverlayController : IOverlayController
                 SnapToPixels: Math.Abs(_profile.Rotation) < 0.01,
                 MaxExtent: Math.Max(
                     monitor.Bounds.Width / monitor.DpiScaleX,
-                    monitor.Bounds.Height / monitor.DpiScaleY));
+                    monitor.Bounds.Height / monitor.DpiScaleY),
+                ColorOverride: _colorOverride);
 
             var contentSize = _renderer.Measure(_profile, options);
             var drawing = _renderer.Build(_profile, options);
 
             _window.Host.SetAliasing(_renderer.PrefersAliasedEdges(_profile));
             _window.Host.SetDrawing(drawing);
+            _lastContentSize = contentSize;
             ApplyPlacement(monitor, contentSize);
         }
         catch (Exception ex)
@@ -291,8 +334,9 @@ public sealed class OverlayController : IOverlayController
         var offsetX = (_profile?.EffectiveOffsetX ?? 0d) * monitor.DpiScaleX;
         var offsetY = (_profile?.EffectiveOffsetY ?? 0d) * monitor.DpiScaleY;
 
-        var x = (int)Math.Round(center.X - (width / 2d) + offsetX);
-        var y = (int)Math.Round(center.Y - (height / 2d) + offsetY);
+        // Độ dịch chống lưu ảnh cộng SAU khi làm tròn: đúng 1 pixel vật lý, không bị làm tròn mất.
+        var x = (int)Math.Round(center.X - (width / 2d) + offsetX) + _shiftX;
+        var y = (int)Math.Round(center.Y - (height / 2d) + offsetY) + _shiftY;
 
         _placing = true;
         try

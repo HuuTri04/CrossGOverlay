@@ -107,6 +107,19 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!--
+      Thư viện mẫu tâm ngắm (500+ mẫu, ~150 KB), sinh bởi tools/preset-catalog/scrape_and_convert.py.
+      Content + PreserveNewest (Copy if newer): nằm rời cạnh .exe trong Data\ và theo vào bản publish. KHÔNG nhúng
+      làm Resource: file chỉ được đọc khi người dùng mở cửa sổ Thư viện, không có lý do gì để nó nằm trong
+      assembly nạp lúc khởi động.
+    -->
+    <Content Include="Data\builtin_presets.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- MVVM: ObservableObject / [ObservableProperty] / [RelayCommand] source generators -->
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
 

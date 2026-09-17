@@ -71,7 +71,13 @@ internal static class ServiceRegistration
         // Vòng phụ thuộc có thật: SettingsViewModel cần IDialogService, mà DialogService lại
         // phải dựng được cửa sổ chứa ViewModel đó. Closure giải vòng vì nó chỉ resolve
         // ViewModel tại thời điểm người dùng mở cửa sổ, khi singleton đã tồn tại.
-        services.AddSingleton<IDialogService>(provider => new DialogService(() => CreateSettingsWindow(provider)));
+        services.AddSingleton<IDialogService>(provider => new DialogService(
+            () => CreateSettingsWindow(provider),
+            () => new PresetLibraryWindow(provider.GetRequiredService<PresetLibraryViewModel>())));
+
+        // Thư viện mẫu: singleton để file chỉ đọc một lần mỗi phiên; ViewModel mới cho mỗi lần mở cửa sổ.
+        services.AddSingleton<IPresetCatalogService, PresetCatalogService>();
+        services.AddTransient<PresetLibraryViewModel>();
 
         // Transient: mỗi lần mở cửa sổ Settings là một ViewModel mới, vì cửa sổ cũ đã bị đóng
         // và các đăng ký sự kiện của nó không còn giá trị.

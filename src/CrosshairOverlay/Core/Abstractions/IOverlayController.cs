@@ -58,6 +58,21 @@ public interface IOverlayController : IDisposable
     /// <param name="framesPerSecond">60, 120, 144…; 0 hoặc âm là không giới hạn.</param>
     void SetFrameRateLimit(int framesPerSecond);
 
+    /// <summary>
+    /// Vẽ tâm ngắm bằng màu khác màu của preset (vd trong lúc giữ chuột trái); null là trả về màu preset.
+    /// </summary>
+    /// <remarks>
+    /// Chỉ là màu khi vẽ: preset KHÔNG bị sửa, nên không có lượt tự lưu nào mỗi phát bắn và app có sập
+    /// giữa lúc đang giữ chuột thì preset vẫn còn nguyên màu gốc. Tâm ngắm dạng ảnh không đổi.
+    /// </remarks>
+    void SetColorOverride(System.Windows.Media.Color? color);
+
+    /// <summary>
+    /// Dịch cả cửa sổ overlay thêm (dx, dy) PHYSICAL pixel so với vị trí chuẩn — chống lưu ảnh OLED.
+    /// (0, 0) là về đúng tâm. Chỉ đặt lại vị trí cửa sổ, không dựng lại hình.
+    /// </summary>
+    void SetPixelShift(int dx, int dy);
+
     event EventHandler<OverlayVisibilityChangedEventArgs>? VisibilityChanged;
 }
 

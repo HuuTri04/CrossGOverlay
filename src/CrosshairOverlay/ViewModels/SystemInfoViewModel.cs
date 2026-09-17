@@ -1,6 +1,5 @@
 ﻿using System.ComponentModel;
 using System.Globalization;
-using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CrosshairOverlay.Core.Abstractions;
 using CrosshairOverlay.Localization;
@@ -11,43 +10,24 @@ namespace CrosshairOverlay.ViewModels;
 /// <remarks>
 /// Hiện "Đang đọc…" ngay lập tức, rồi điền kết quả khi dịch vụ đọc xong trên luồng nền — cửa sổ mở
 /// không phải chờ. Giữ số liệu thô và định dạng lại khi đổi ngôn ngữ. Màn hình đọc lại mỗi khi cấu hình
-/// hiển thị đổi; thời gian hoạt động tự nhảy mỗi phút.
+/// hiển thị đổi. Không có timer nào: mọi cập nhật đều do sự kiện.
 /// </remarks>
 public sealed partial class SystemInfoViewModel : ObservableObject, IDisposable
 {
-    private static readonly TimeSpan OneMinute = TimeSpan.FromMinutes(1);
-
     private readonly IMonitorService _monitors;
     private readonly IDisplayModeReader _displayModes;
-    private readonly Func<TimeSpan> _uptime;
-    private readonly DispatcherTimer _uptimeTimer;
 
     private HardwareInfo? _info;
     private bool _disposed;
 
     public SystemInfoViewModel(IHardwareInfoService hardware, IMonitorService monitors, IDisplayModeReader displayModes)
-        : this(hardware, monitors, displayModes, () => TimeSpan.FromMilliseconds(Environment.TickCount64))
-    {
-    }
-
-    /// <param name="uptime">Thời gian từ lúc Windows khởi động; test truyền giá trị cố định.</param>
-    internal SystemInfoViewModel(
-        IHardwareInfoService hardware, IMonitorService monitors, IDisplayModeReader displayModes, Func<TimeSpan> uptime)
     {
         ArgumentNullException.ThrowIfNull(hardware);
         _monitors = monitors;
         _displayModes = displayModes;
-        _uptime = uptime;
 
         TranslationSource.Instance.PropertyChanged += OnLanguageChanged;
         _monitors.DisplayConfigurationChanged += OnDisplayConfigurationChanged;
-
-        // Nhịp đầu tiên canh đúng lúc phút đổi, các nhịp sau cách nhau đúng một phút: con số trên màn
-        // hình đổi cùng lúc với đồng hồ, không trễ tới gần một phút. Nhịp một phút một lần, ưu tiên
-        // Background — không đáng kể cả khi cửa sổ Settings đang ẩn xuống khay.
-        _uptimeTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = UntilNextMinute(_uptime()) };
-        _uptimeTimer.Tick += OnUptimeTick;
-        _uptimeTimer.Start();
 
         _ = LoadAsync(hardware);
     }
@@ -104,31 +84,6 @@ public sealed partial class SystemInfoViewModel : ObservableObject, IDisposable
         }
     }
 
-    /// <summary>Thời gian từ lúc Windows khởi động: "0 ngày, 14 giờ 25 phút".</summary>
-    public string UptimeInfo => FormatUptime(_uptime());
-
-    internal static string FormatUptime(TimeSpan uptime)
-    {
-        if (uptime < TimeSpan.Zero) uptime = TimeSpan.Zero;
-        return Tr.Format("Hw_UptimeValue", (int)uptime.TotalDays, uptime.Hours, uptime.Minutes);
-    }
-
-    /// <summary>Khoảng tới lúc số phút kế tiếp đổi (tối thiểu 1 giây để không nhịp dồn).</summary>
-    internal static TimeSpan UntilNextMinute(TimeSpan uptime)
-    {
-        var intoMinute = TimeSpan.FromTicks(uptime.Ticks % OneMinute.Ticks);
-        var remaining = OneMinute - intoMinute;
-        return remaining < TimeSpan.FromSeconds(1) ? remaining + OneMinute : remaining;
-    }
-
-    private void OnUptimeTick(object? sender, EventArgs e)
-    {
-        if (_disposed) return;
-
-        _uptimeTimer.Interval = UntilNextMinute(_uptime());
-        OnPropertyChanged(nameof(UptimeInfo));
-    }
-
     private void OnDisplayConfigurationChanged(object? sender, EventArgs e) => OnPropertyChanged(nameof(DisplayInfo));
 
     private async Task LoadAsync(IHardwareInfoService hardware)
@@ -170,7 +125,6 @@ public sealed partial class SystemInfoViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(GpuName));
         OnPropertyChanged(nameof(RamInfo));
         OnPropertyChanged(nameof(DisplayInfo));
-        OnPropertyChanged(nameof(UptimeInfo));
     }
 
     private void OnLanguageChanged(object? sender, PropertyChangedEventArgs e) => RaiseAll();
@@ -180,8 +134,6 @@ public sealed partial class SystemInfoViewModel : ObservableObject, IDisposable
         if (_disposed) return;
         _disposed = true;
 
-        _uptimeTimer.Stop();
-        _uptimeTimer.Tick -= OnUptimeTick;
         TranslationSource.Instance.PropertyChanged -= OnLanguageChanged;
         _monitors.DisplayConfigurationChanged -= OnDisplayConfigurationChanged;
     }

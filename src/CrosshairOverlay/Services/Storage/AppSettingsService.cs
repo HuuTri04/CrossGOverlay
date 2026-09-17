@@ -132,6 +132,9 @@ public sealed class AppSettingsService : IAppSettingsService
     /// </summary>
     private AppSettings Normalize(AppSettings settings)
     {
+        // "PresetOrder": null trong file sửa tay.
+        settings.PresetOrder ??= [];
+
         if (settings.Hotkeys.Count == 0)
         {
             foreach (var hotkey in HotkeyBinding.CreateDefaults())

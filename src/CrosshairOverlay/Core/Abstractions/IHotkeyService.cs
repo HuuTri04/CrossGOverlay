@@ -37,6 +37,14 @@ public interface IHotkeyService : IDisposable
 
     /// <summary>Nút phải vừa được bấm (true) hoặc nhả (false). Phát trên UI thread.</summary>
     event EventHandler<bool>? RightButtonChanged;
+
+    /// <summary>
+    /// Theo dõi giữ/nhả nút TRÁI (đổi màu tâm ngắm khi bắn). Cùng kênh Raw Input chỉ đọc với nút phải.
+    /// </summary>
+    bool TrackLeftButton { get; set; }
+
+    /// <summary>Nút trái vừa được bấm (true) hoặc nhả (false). Phát trên UI thread.</summary>
+    event EventHandler<bool>? LeftButtonChanged;
 }
 
 /// <param name="Registered">Các binding đăng ký thành công.</param>

@@ -73,6 +73,21 @@ public partial class SettingsWindow : Window
             System.Windows.Threading.DispatcherPriority.Loaded);
     }
 
+    /// <summary>
+    /// Cuộn tới preset vừa được chọn — kể cả khi chọn từ nơi khác (thêm từ Thư viện mẫu, tạo mới, phím tắt). Danh sách
+    /// nằm trong một ScrollViewer bao ngoài nên ListBox.ScrollIntoView không có tác dụng; BringIntoView của chính mục
+    /// thì đi ngược lên ScrollViewer đó.
+    /// </summary>
+    private void OnPresetSelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.ListBox { SelectedItem: { } item } list) return;
+
+        // Mục vừa thêm chưa có container cho tới lượt layout kế tiếp.
+        Dispatcher.InvokeAsync(
+            () => (list.ItemContainerGenerator.ContainerFromItem(item) as FrameworkElement)?.BringIntoView(),
+            System.Windows.Threading.DispatcherPriority.Loaded);
+    }
+
     private void LogFirstFrame()
     {
         try

@@ -51,7 +51,8 @@
                                  Value="{Binding Offset, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                 <CheckBox Content="{loc:Loc Editor_RoundedCaps}" Margin="0,8,0,4"
                           IsChecked="{Binding RoundedCaps, Mode=TwoWay}"/>
-                <UniformGrid Columns="4" Margin="0,2,0,0">
+                <!-- 2 cột: bốn nút gạt trên một hàng không đủ chỗ trong cột chỉnh sửa. -->
+                <UniformGrid Columns="2" Margin="0,2,0,0">
                     <CheckBox Content="{loc:Loc Editor_Top}" Margin="0,4"
                               IsChecked="{Binding ShowTop, Mode=TwoWay}"/>
                     <CheckBox Content="{loc:Loc Editor_Bottom}" Margin="0,4"
@@ -273,7 +274,9 @@
             </StackPanel>
 
             <StackPanel HorizontalAlignment="Right" VerticalAlignment="Center" MaxWidth="480">
-                <CheckBox Content="{loc:Loc Shell_EnableOverlay}" HorizontalAlignment="Right"
+                <!-- Nút gạt chung với các tab (Theme: ToggleSwitch), chữ bên phải nút gạt như mọi nơi khác. -->
+                <CheckBox Style="{StaticResource ToggleSwitch}" FontSize="13"
+                          Content="{loc:Loc Shell_EnableOverlay}" HorizontalAlignment="Right"
                           IsChecked="{Binding OverlayEnabled, Mode=TwoWay}"/>
                 <!--
                     Nói rõ overlay SẼ hiện ở đâu theo chế độ đang chọn: người dùng hay tưởng app
@@ -305,10 +308,24 @@
                             <TextBlock DockPanel.Dock="Top" Text="{loc:Loc Preset_Header}"
                                        Style="{StaticResource SectionHeader}" Margin="2,0,0,8"/>
 
-                            <!-- Hành động chính của cột: nút lớn, trên cùng, kéo hết chiều ngang. -->
-                            <Button DockPanel.Dock="Top" Content="{loc:Loc Preset_New}"
-                                    Command="{Binding NewPresetCommand}"
-                                    Style="{StaticResource PrimaryWideButton}" Margin="0,0,0,10"/>
+                            <!--
+                                Hành động chính của cột: "Tạo mới" (nút nhấn xanh) và "Thư viện mẫu" (nút phụ viền) đứng
+                                cạnh nhau, cùng chiều cao, trên cùng.
+                            -->
+                            <Grid DockPanel.Dock="Top" Margin="0,0,0,10">
+                                <!-- "Thư viện mẫu" dài hơn "Tạo mới": chia 4:5 và lề trong hẹp để chữ không bị cắt trong cột 300. -->
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="4*"/>
+                                    <ColumnDefinition Width="8"/>
+                                    <ColumnDefinition Width="5*"/>
+                                </Grid.ColumnDefinitions>
+                                <Button Grid.Column="0" Content="{loc:Loc Preset_New}" Padding="8,7"
+                                        Command="{Binding NewPresetCommand}"
+                                        Style="{StaticResource PrimaryWideButton}"/>
+                                <Button Grid.Column="2" Content="{loc:Loc Library_Open}" MinHeight="40" Padding="8,7"
+                                        ToolTip="{loc:Loc Library_OpenTip}"
+                                        Command="{Binding OpenPresetLibraryCommand}"/>
+                            </Grid>
 
                             <!--
                                 Cụm dưới cùng, từ trên xuống: kiểm tra → chia sẻ (mã văn bản) → quản lý.
@@ -333,14 +350,21 @@
                                 </UniformGrid>
                             </StackPanel>
 
+                            <ContentControl DockPanel.Dock="Bottom" Style="{StaticResource Hint}" Margin="2,8,0,0"
+                                            Content="{loc:Loc Preset_DragToReorder}"/>
+
                             <ScrollViewer VerticalScrollBarVisibility="Auto">
                                 <!--
                                     Phím Delete gọi ĐÚNG lệnh của nút "Xoá", nên vẫn qua hộp thoại
                                     xác nhận — không có đường xoá tắt nào bỏ qua bước hỏi lại.
+                                    Kéo thả để đổi thứ tự (DragReorder): thứ tự lưu vào settings.json và là
+                                    thứ tự của phím tắt Preset kế tiếp / trước đó.
                                 -->
                                 <ListBox ItemsSource="{Binding Presets}"
                                          SelectedItem="{Binding SelectedPreset, Mode=TwoWay}"
-                                         DisplayMemberPath="Name">
+                                         DisplayMemberPath="Name"
+                                         SelectionChanged="OnPresetSelectionChanged"
+                                         ctl:DragReorder.MoveCommand="{Binding MovePresetToCommand}">
                                     <ListBox.InputBindings>
                                         <KeyBinding Key="Delete" Command="{Binding DeletePresetCommand}"/>
                                     </ListBox.InputBindings>
@@ -472,6 +496,23 @@
                                           SelectedValue="{Binding General.ProcessPriority, Mode=TwoWay}"/>
                             </StackPanel>
                         </Border>
+
+                        <!--
+                            BẢO VỆ MÀN HÌNH. Dịch cả cửa sổ overlay đúng 1 pixel vật lý mỗi 2 phút (lên → phải →
+                            xuống → trái), tắt là về tâm ngay. Xem OverlayBehaviorController.
+                        -->
+                        <Border Style="{StaticResource Card}" Margin="0,14,0,0">
+                            <StackPanel>
+                                <TextBlock Text="{loc:Loc Oled_Header}" Style="{StaticResource SectionHeader}"
+                                           Margin="0,0,0,8"/>
+
+                                <CheckBox Style="{StaticResource ToggleSwitch}" Margin="0,2,0,4"
+                                          Content="{loc:Loc Oled_PixelShift}"
+                                          IsChecked="{Binding General.EnableOledPixelShift, Mode=TwoWay}"/>
+                                <ContentControl Style="{StaticResource Hint}" Margin="0,2,0,0"
+                                                Content="{loc:Loc Oled_PixelShiftHint}"/>
+                            </StackPanel>
+                        </Border>
                         </StackPanel>
 
                         <!-- ======== Cột phải: ỨNG DỤNG (gồm cập nhật) + DỮ LIỆU & BẢO TRÌ -->
@@ -490,7 +531,7 @@
                                     <CheckBox Content="{loc:Loc General_StartWithWindows}" Margin="0,14,0,4"
                                               IsChecked="{Binding General.StartWithWindows, Mode=TwoWay}"/>
                                     <TextBlock Text="{Binding General.StartupHint, Mode=OneWay}" Style="{StaticResource FieldLabel}"
-                                               TextWrapping="Wrap" Margin="25,0,0,4"/>
+                                               TextWrapping="Wrap" Margin="46,0,0,4"/>
                                     <CheckBox Content="{loc:Loc General_StartMinimized}" Margin="0,6"
                                               IsChecked="{Binding General.Settings.StartMinimizedToTray, Mode=TwoWay}"
                                               Command="{Binding General.PersistSettingsCommand}"/>
@@ -570,38 +611,32 @@
             </TabItem>
 
             <!-- ============================================ TAB PHÍM TẮT -->
-            <!-- 65% phím tắt, 35% thông tin hệ thống. -->
+            <!--
+                Lưới 2x2: hàng trên là PHÍM TẮT | THÔNG TIN HỆ THỐNG (hai thẻ cao bằng nhau), hàng dưới là HÀNH VI
+                NÂNG CAO trải hết chiều ngang. Ở kích thước mặc định vừa khít, không có thanh cuộn. ScrollViewer
+                chỉ là lưới an toàn khi người dùng thu cửa sổ thấp hơn nội dung (thanh cuộn chỉ hiện lúc đó).
+            -->
             <TabItem Header="{loc:Loc Tab_Hotkeys}">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="6.5*"/>
-                        <ColumnDefinition Width="14"/>
-                        <ColumnDefinition Width="3.5*"/>
-                    </Grid.ColumnDefinitions>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <!-- MinHeight = vùng nhìn thấy: đủ chỗ thì hàng trên lấp phần dư, thiếu chỗ thì cuộn. -->
+                    <Grid MinHeight="{Binding ViewportHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}, Mode=OneWay}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="14"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
 
-                    <!--
-                        ======== Cột trái, 2 hàng: PHÍM TẮT (cao vừa đủ nội dung) và HÀNH VI NÂNG CAO (lấp phần
-                        còn lại). Cả cột nằm trong ScrollViewer để cửa sổ thấp vẫn cuộn tới được mọi thứ.
-                    -->
-                    <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
-                        <!--
-                            MinHeight = chiều cao vùng nhìn thấy: trong ScrollViewer hàng "*" không có gì để
-                            chia, nên ép Grid ít nhất cao bằng khung — đủ chỗ thì thẻ dưới lấp phần còn lại,
-                            thiếu chỗ thì cuộn.
-                        -->
-                        <Grid MinHeight="{Binding ViewportHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}, Mode=OneWay}">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions>
-
-                            <Border Grid.Row="0" Style="{StaticResource Card}">
+                            <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource Card}">
                                 <StackPanel>
                                     <TextBlock Text="{loc:Loc Hotkeys_Header}" Style="{StaticResource SectionHeader}"
                                                Margin="0,0,0,8"/>
                                     <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
                                                Margin="0,0,0,6" Text="{loc:Loc Hotkeys_Intro}"/>
-                                    <ContentControl Style="{StaticResource Hint}" Margin="0,0,0,12"
+                                    <ContentControl Style="{StaticResource Hint}" Margin="0,0,0,8"
                                                     Content="{loc:Loc Hotkeys_ComboHint}"/>
 
                                     <!--
@@ -612,7 +647,8 @@
                                     <ItemsControl ItemsSource="{Binding Hotkeys.Rows}" Grid.IsSharedSizeScope="True">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
-                                                <Grid Margin="0,4">
+                                                <!-- 3 DIP trên/dưới: đủ tách dòng, và là phần để cả tab vừa khít không cần cuộn. -->
+                                                <Grid Margin="0,3">
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="Auto" SharedSizeGroup="HotkeyLabel" MinWidth="160"/>
                                                         <ColumnDefinition Width="*"/>
@@ -661,7 +697,7 @@
                                     </ItemsControl>
 
                                     <!-- Sát ngay dưới dòng phím tắt cuối cùng. -->
-                                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
                                         <Button Content="{loc:Loc Hotkeys_Apply}" Style="{StaticResource AccentButton}"
                                                 Command="{Binding Hotkeys.ApplyHotkeysCommand}" Margin="0,0,10,0"/>
                                         <Button Content="{loc:Loc Hotkeys_Reset}"
@@ -682,28 +718,67 @@
                                 </StackPanel>
                             </Border>
 
-                            <!-- HÀNH VI NÂNG CAO: ẩn tạm thời, chồng lên quy tắc hiện/ẩn của game profile. -->
-                            <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,14,0,0">
+                            <!--
+                                HÀNH VI NÂNG CAO, trải ngang hai cột: bên trái hai quy tắc ẩn tạm thời (chồng lên
+                                quy tắc hiện/ẩn của game profile), bên phải đổi màu khi bắn và màu của nó.
+                            -->
+                            <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Style="{StaticResource Card}"
+                                    Margin="0,12,0,0">
                                 <StackPanel>
                                     <TextBlock Text="{loc:Loc Adv_Header}" Style="{StaticResource SectionHeader}"
-                                               Margin="0,0,0,10"/>
+                                               Margin="0,0,0,8"/>
 
-                                    <CheckBox Style="{StaticResource ToggleSwitch}" Margin="0,2,0,4"
-                                              Content="{loc:Loc Adv_HideOnRightClick}"
-                                              ToolTip="{loc:Loc Adv_HideOnRightClickTip}"
-                                              IsChecked="{Binding Hotkeys.HideOnRightClick, Mode=TwoWay}"/>
+                                    <!-- Cùng cột 14 DIP ở giữa như hàng trên: cột phải thẳng mép với thẻ Thông tin hệ thống. -->
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="30"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <!--
+                                            Mỗi cột một StackPanel căn trên: nút gạt đầu của hai cột luôn cùng hàng, không
+                                            phụ thuộc chiều cao ô màu ở cột phải.
+                                        -->
+                                        <StackPanel Grid.Column="0" HorizontalAlignment="Left" VerticalAlignment="Top">
+                                            <CheckBox Style="{StaticResource ToggleSwitch}" HorizontalAlignment="Left"
+                                                      Margin="0,2,0,0"
+                                                      Content="{loc:Loc Adv_HideOnRightClick}"
+                                                      ToolTip="{loc:Loc Adv_HideOnRightClickTip}"
+                                                      IsChecked="{Binding Hotkeys.HideOnRightClick, Mode=TwoWay}"/>
 
-                                    <CheckBox Style="{StaticResource ToggleSwitch}" Margin="0,10,0,2"
-                                              Content="{loc:Loc Adv_OnlyWhenCursorHidden}"
-                                              ToolTip="{loc:Loc Adv_OnlyWhenCursorHiddenTip}"
-                                              IsChecked="{Binding Hotkeys.ShowOnlyWhenCursorHidden, Mode=TwoWay}"/>
+                                            <CheckBox Style="{StaticResource ToggleSwitch}" HorizontalAlignment="Left"
+                                                      Margin="0,8,0,0"
+                                                      Content="{loc:Loc Adv_OnlyWhenCursorHidden}"
+                                                      ToolTip="{loc:Loc Adv_OnlyWhenCursorHiddenTip}"
+                                                      IsChecked="{Binding Hotkeys.ShowOnlyWhenCursorHidden, Mode=TwoWay}"/>
+                                        </StackPanel>
+
+                                        <!--
+                                            Màu khi bắn: chỉ đổi màu lúc vẽ, không sửa preset (xem IOverlayController).
+                                            Một khối căn trái: nút gạt, bên dưới là nhãn + ô màu thẳng mép trái với nút gạt.
+                                        -->
+                                        <StackPanel Grid.Column="2" HorizontalAlignment="Left" VerticalAlignment="Top">
+                                            <CheckBox x:Name="FiringColorToggle" Style="{StaticResource ToggleSwitch}"
+                                                      Margin="0,2,0,0" HorizontalAlignment="Left"
+                                                      Content="{loc:Loc Adv_ChangeColorWhileFiring}"
+                                                      ToolTip="{loc:Loc Adv_ChangeColorWhileFiringTip}"
+                                                      IsChecked="{Binding Hotkeys.ChangeColorWhileFiring, Mode=TwoWay}"/>
+
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,8,0,0"
+                                                        Style="{StaticResource DependentGroup}"
+                                                        IsEnabled="{Binding IsChecked, ElementName=FiringColorToggle}">
+                                                <TextBlock Text="{loc:Loc Adv_FiringColor}" Style="{StaticResource FieldLabel}"
+                                                           VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                                <ctl:ColorPickerButton VerticalAlignment="Center"
+                                                    SelectedColor="{Binding Hotkeys.FiringColor, Mode=TwoWay}"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Grid>
                                 </StackPanel>
                             </Border>
-                        </Grid>
-                    </ScrollViewer>
 
-                    <!-- ======== Cột phải: THÔNG TIN HỆ THỐNG (đọc trên luồng nền, xem SystemInfoViewModel) -->
-                    <Border Grid.Column="2" Style="{StaticResource Card}" VerticalAlignment="Top">
+                    <!-- ======== THÔNG TIN HỆ THỐNG (đọc trên luồng nền, xem SystemInfoViewModel) -->
+                    <Border Grid.Row="0" Grid.Column="2" Style="{StaticResource Card}">
                         <StackPanel>
                             <TextBlock Text="{loc:Loc Hw_Title}" Style="{StaticResource SectionHeader}"
                                        Margin="0,0,0,10"/>
@@ -744,22 +819,17 @@
                                         <TextBlock Text="{Binding SystemInfo.RamInfo, Mode=OneWay}" Style="{StaticResource HwValue}"/>
                                     </StackPanel>
                                 </Border>
-                                <Border Style="{StaticResource InnerCard}" Padding="12,10" Margin="0,0,0,8">
+                                <Border Style="{StaticResource InnerCard}" Padding="12,10">
                                     <StackPanel>
                                         <TextBlock Text="{loc:Loc Hw_Display}" Style="{StaticResource HwLabel}"/>
                                         <TextBlock Text="{Binding SystemInfo.DisplayInfo, Mode=OneWay}" Style="{StaticResource HwValue}"/>
                                     </StackPanel>
                                 </Border>
-                                <Border Style="{StaticResource InnerCard}" Padding="12,10">
-                                    <StackPanel>
-                                        <TextBlock Text="{loc:Loc Hw_Uptime}" Style="{StaticResource HwLabel}"/>
-                                        <TextBlock Text="{Binding SystemInfo.UptimeInfo, Mode=OneWay}" Style="{StaticResource HwValue}"/>
-                                    </StackPanel>
-                                </Border>
                             </StackPanel>
                         </StackPanel>
                     </Border>
-                </Grid>
+                    </Grid>
+                </ScrollViewer>
             </TabItem>
 
             <!-- ============================================ TAB GAME -->
@@ -801,9 +871,13 @@
 
                             <Border Style="{StaticResource Card}">
                                 <StackPanel>
-                                    <CheckBox Content="{loc:Loc Games_AutoSwitch}"
+                                    <CheckBox Style="{StaticResource ToggleSwitch}" HorizontalAlignment="Left"
+                                              Margin="0,0,0,8"
+                                              Content="{loc:Loc Games_AutoSwitch}"
                                               IsChecked="{Binding Games.AutoSwitchEnabled, Mode=TwoWay}"/>
-                                    <CheckBox Content="{loc:Loc Games_OnlyMatched}" Margin="0,10,0,0"
+                                    <CheckBox Style="{StaticResource ToggleSwitch}" HorizontalAlignment="Left"
+                                              Margin="0,8,0,0"
+                                              Content="{loc:Loc Games_OnlyMatched}"
                                               IsChecked="{Binding Games.ShowOnlyInMatchedGames, Mode=TwoWay}"/>
                                     <TextBlock Text="{Binding Games.Hint, Mode=OneWay}" Style="{StaticResource FieldLabel}"
                                                TextWrapping="Wrap" Margin="0,12,0,0"/>
@@ -975,7 +1049,8 @@
                                               DisplayMemberPath="Name" SelectedValuePath="Id"
                                               SelectedValue="{Binding PresetId, Mode=TwoWay}"/>
 
-                                    <CheckBox Content="{loc:Loc Games_EnableProfile}" Margin="0,14,0,0"
+                                    <CheckBox Style="{StaticResource ToggleSwitch}" HorizontalAlignment="Left"
+                                              Content="{loc:Loc Games_EnableProfile}" Margin="0,14,0,0"
                                               IsChecked="{Binding Enabled, Mode=TwoWay}"/>
                                 </StackPanel>
                             </Border>

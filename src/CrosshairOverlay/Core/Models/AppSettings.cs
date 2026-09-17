@@ -1,4 +1,5 @@
 ﻿using System.Collections.ObjectModel;
+using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace CrosshairOverlay.Core.Models;
@@ -76,6 +77,15 @@ public sealed partial class AppSettings : ObservableObject
     /// <summary>Chỉ hiện tâm ngắm khi con trỏ chuột của Windows đang bị ẩn (đang trong trận).</summary>
     [ObservableProperty] private bool _showOnlyWhenCursorHidden;
 
+    /// <summary>Đổi màu tâm ngắm trong lúc giữ chuột trái (đang bắn).</summary>
+    [ObservableProperty] private bool _changeColorWhileFiring;
+
+    /// <summary>Màu tâm ngắm trong lúc giữ chuột trái. Chỉ là màu khi vẽ — KHÔNG ghi vào preset.</summary>
+    [ObservableProperty] private Color _firingColor = Color.FromRgb(0xFF, 0x00, 0x00);
+
+    /// <summary>Chống lưu ảnh OLED: dịch overlay 1 pixel theo chu kỳ vài phút.</summary>
+    [ObservableProperty] private bool _enableOledPixelShift;
+
     /// <summary>Khung preview vẽ nền ca-rô để thấy rõ phần trong suốt của crosshair.</summary>
     /// <remarks>File settings.json cũ không có khoá này sẽ giữ mặc định BẬT.</remarks>
     [ObservableProperty] private bool _previewShowCheckerboard = true;
@@ -86,6 +96,16 @@ public sealed partial class AppSettings : ObservableObject
     public ObservableCollection<HotkeyBinding> Hotkeys { get; set; } = [];
 
     public ObservableCollection<GameProfile> GameProfiles { get; set; } = [];
+
+    /// <summary>
+    /// Thứ tự preset người dùng tự sắp (kéo thả), theo Id. Preset không có trong danh sách (file mới thả vào
+    /// thư mục, bản cũ chưa có khoá này) xếp sau, theo tên.
+    /// </summary>
+    /// <remarks>
+    /// Luôn GÁN danh sách mới, không sửa tại chỗ: cài đặt được ghi xuống đĩa trên luồng nền, sửa danh sách
+    /// đúng lúc nó đang được đọc để ghi sẽ ném "Collection was modified".
+    /// </remarks>
+    public List<Guid> PresetOrder { get; set; } = [];
 
     public static AppSettings CreateDefault()
     {

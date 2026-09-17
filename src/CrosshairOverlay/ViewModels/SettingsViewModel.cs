@@ -86,6 +86,27 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
 
     public ReadOnlyObservableCollection<CrosshairProfile> Presets => _library.Presets;
 
+    /// <summary>
+    /// Kéo thả trong danh sách preset: đưa <paramref name="preset"/> tới vị trí <paramref name="newIndex"/> và
+    /// giữ nó là mục đang chọn.
+    /// </summary>
+    public bool MovePreset(CrosshairProfile preset, int newIndex)
+    {
+        if (!_library.Move(preset, newIndex)) return false;
+
+        // Move của ObservableCollection giữ lựa chọn, nhưng nếu người dùng kéo một mục CHƯA chọn thì chọn
+        // luôn nó — mục vừa thả là mục họ đang để ý.
+        SelectedPreset = preset;
+        return true;
+    }
+
+    /// <summary>Lệnh cho <see cref="Controls.DragReorder"/> trên danh sách preset.</summary>
+    [RelayCommand]
+    private void MovePresetTo(Controls.ReorderRequest? request)
+    {
+        if (request is { Item: CrosshairProfile preset }) MovePreset(preset, request.NewIndex);
+    }
+
     [ObservableProperty] private CrosshairProfile? _selectedPreset;
 
     [ObservableProperty] private bool _overlayEnabled;
@@ -253,6 +274,10 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
             return false;
         }
     }
+
+    /// <summary>Mở "Thư viện mẫu". Mẫu được thêm qua thư viện preset nên danh sách bên này tự cập nhật và chọn theo.</summary>
+    [RelayCommand]
+    private void OpenPresetLibrary() => _dialogs.ShowPresetLibrary();
 
     /// <summary>
     /// Mở hộp thoại "Xuất mã tâm ngắm": dịch preset đang chọn ra mã Valorant, CS2 và mã nội bộ.

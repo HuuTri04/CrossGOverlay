@@ -10,10 +10,15 @@ namespace CrosshairOverlay.Core.Models;
 /// <see cref="CrosshairProfile.Rotation"/> khác 0 vì snapping sẽ làm méo hình xoay.
 /// </param>
 /// <param name="MaxExtent">Giới hạn nửa-cạnh vùng vẽ (DIP), chống preset lỗi tạo hình khổng lồ.</param>
+/// <param name="ColorOverride">
+/// Vẽ bằng màu này thay cho màu của preset (vd màu khi bắn). Chỉ ảnh hưởng hình vẽ lần này, không đụng
+/// tới preset. Viền giữ màu riêng để tâm vẫn nổi trên nền; tâm ngắm ảnh không có màu nên không đổi.
+/// </param>
 public readonly record struct CrosshairRenderOptions(
     double DpiScale = 1d,
     bool SnapToPixels = true,
-    double MaxExtent = 2000d)
+    double MaxExtent = 2000d,
+    System.Windows.Media.Color? ColorOverride = null)
 {
     public static CrosshairRenderOptions Default { get; } = new();
 }

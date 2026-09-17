@@ -38,11 +38,14 @@ public sealed class PresetLibrary : IPresetLibrary
 
     public event EventHandler? ActiveChanged;
 
-    public async Task InitializeAsync(Guid preferredActiveId, CancellationToken cancellationToken = default)
+    public event EventHandler? OrderChanged;
+
+    public async Task InitializeAsync(
+        Guid preferredActiveId, IReadOnlyList<Guid>? order = null, CancellationToken cancellationToken = default)
     {
         var loaded = await _repository.GetAllAsync(cancellationToken).ConfigureAwait(true);
 
-        foreach (var preset in loaded)
+        foreach (var preset in ApplyOrder(loaded, order))
         {
             Track(preset);
             _presets.Add(preset);
@@ -61,6 +64,40 @@ public sealed class PresetLibrary : IPresetLibrary
 
         _active = profile;
         ActiveChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// Xếp preset theo thứ tự đã lưu; preset không có trong đó giữ thứ tự sẵn có (theo tên, từ repository)
+    /// và đứng sau. Id lạ trong thứ tự (preset đã bị xoá tay) bị bỏ qua.
+    /// </summary>
+    internal static IReadOnlyList<CrosshairProfile> ApplyOrder(
+        IReadOnlyList<CrosshairProfile> presets, IReadOnlyList<Guid>? order)
+    {
+        if (order is null || order.Count == 0) return presets;
+
+        var rank = new Dictionary<Guid, int>(order.Count);
+        for (var i = 0; i < order.Count; i++) rank.TryAdd(order[i], i);
+
+        var ordered = new List<CrosshairProfile>(presets.Count);
+        ordered.AddRange(presets.Where(p => rank.ContainsKey(p.Id)).OrderBy(p => rank[p.Id]));
+        ordered.AddRange(presets.Where(p => !rank.ContainsKey(p.Id)));   // OrderBy/Where giữ thứ tự gốc
+        return ordered;
+    }
+
+    public bool Move(CrosshairProfile profile, int newIndex)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+
+        var oldIndex = _presets.IndexOf(profile);
+        if (oldIndex < 0 || newIndex < 0 || newIndex >= _presets.Count || oldIndex == newIndex) return false;
+
+        // ObservableCollection.Move phát đúng một thông báo Move: ListBox giữ nguyên mục đang chọn, không
+        // xoá-rồi-thêm làm SelectedItem nhảy về null.
+        _presets.Move(oldIndex, newIndex);
+        _logger.LogInformation("Đổi thứ tự preset '{Name}': {Old} → {New}.", profile.Name, oldIndex, newIndex);
+
+        OrderChanged?.Invoke(this, EventArgs.Empty);
+        return true;
     }
 
     public void StepActive(int direction)
@@ -84,6 +121,7 @@ public sealed class PresetLibrary : IPresetLibrary
 
         Track(preset);
         _presets.Add(preset);
+        OrderChanged?.Invoke(this, EventArgs.Empty);
         SetActive(preset);
 
         return preset;
@@ -99,6 +137,7 @@ public sealed class PresetLibrary : IPresetLibrary
 
         Track(profile);
         _presets.Add(profile);
+        OrderChanged?.Invoke(this, EventArgs.Empty);
         SetActive(profile);
 
         return profile;
@@ -116,6 +155,7 @@ public sealed class PresetLibrary : IPresetLibrary
 
         Track(copy);
         _presets.Insert(Math.Min(_presets.IndexOf(source) + 1, _presets.Count), copy);
+        OrderChanged?.Invoke(this, EventArgs.Empty);
         SetActive(copy);
 
         return copy;
@@ -142,6 +182,8 @@ public sealed class PresetLibrary : IPresetLibrary
             Track(fallback);
             _presets.Add(fallback);
         }
+
+        OrderChanged?.Invoke(this, EventArgs.Empty);
 
         if (ReferenceEquals(_active, profile))
         {

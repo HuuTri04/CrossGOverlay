@@ -418,8 +418,6 @@ The app will restart to apply the change.</value></data>
   <data name="Hw_DisplayValue"><value>{0}x{1} @ {2}Hz</value></data>
   <data name="Hw_DisplayNoRefresh"><value>{0}x{1}</value></data>
   <data name="Hw_DisplayOthers"><value> (+{0} more)</value></data>
-  <data name="Hw_Uptime"><value>System uptime</value></data>
-  <data name="Hw_UptimeValue"><value>{0} d, {1} h {2} min</value></data>
 
   <data name="Games_RunningHeader"><value>RUNNING APPLICATIONS</value></data>
   <data name="Games_RunningHint"><value>Only processes with a visible window are listed. Pick one, then press "Use this one".</value></data>
@@ -429,4 +427,29 @@ The app will restart to apply the change.</value></data>
   <data name="Games_Save"><value>Save profile</value></data>
   <data name="Games_CancelNew"><value>Cancel</value></data>
   <data name="Games_NeedPattern"><value>Enter a match value, or pick a running application.</value></data>
+  <data name="Adv_ChangeColorWhileFiring"><value>Change crosshair color while firing (hold left mouse button)</value></data>
+  <data name="Adv_ChangeColorWhileFiringTip"><value>While the left mouse button is held, the crosshair switches to the color below and returns to its own color on release. Only reads the button state; nothing is sent to the game.</value></data>
+  <data name="Adv_FiringColor"><value>Firing color</value></data>
+  <data name="Oled_Header"><value>SCREEN PROTECTION</value></data>
+  <data name="Oled_PixelShift"><value>Prevent OLED image retention (Pixel Shift)</value></data>
+  <data name="Oled_PixelShiftHint"><value>Moves the crosshair by 1-2 pixels every few minutes to prevent burn-in. Has no effect on accuracy.</value></data>
+  <data name="Preset_DragToReorder"><value>Drag to reorder. Next / Previous preset hotkeys follow this order.</value></data>
+  <data name="Library_Open"><value>Template library</value></data>
+  <data name="Library_OpenTip"><value>Browse 500+ ready-made crosshairs and add the ones you like to your presets.</value></data>
+  <data name="Library_Title"><value>TEMPLATE LIBRARY</value></data>
+  <data name="Library_Close"><value>Close</value></data>
+  <data name="Library_SearchPlaceholder"><value>Search by player name, style...</value></data>
+  <data name="Library_CatAll"><value>All</value></data>
+  <data name="Library_CatPro"><value>Pro players</value></data>
+  <data name="Library_CatDots"><value>Dots</value></data>
+  <data name="Library_CatCrosses"><value>Crosses</value></data>
+  <data name="Library_CatCircles"><value>Circles</value></data>
+  <data name="Library_CatOther"><value>Other</value></data>
+  <data name="Library_Use"><value>+ Use</value></data>
+  <data name="Library_Added"><value>Added {0} to your presets</value></data>
+  <data name="Library_AddFailed"><value>Could not add the template: {0}</value></data>
+  <data name="Library_Loading"><value>Loading library…</value></data>
+  <data name="Library_Empty"><value>No templates match. Try another keyword or pick "All".</value></data>
+  <data name="Library_Missing"><value>Template library not found (Data\builtin_presets.json). Please reinstall the app.</value></data>
+  <data name="Library_Count"><value>{0} templates</value></data>
 </root>

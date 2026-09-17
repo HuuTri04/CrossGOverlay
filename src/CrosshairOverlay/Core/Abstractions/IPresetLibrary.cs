@@ -21,7 +21,11 @@ public interface IPresetLibrary : IDisposable
     CrosshairProfile? Active { get; }
 
     /// <summary>Nạp thư viện từ đĩa và chọn preset active theo Id đã lưu trong settings.</summary>
-    Task InitializeAsync(Guid preferredActiveId, CancellationToken cancellationToken = default);
+    /// <param name="order">
+    /// Thứ tự đã lưu (Id). Preset không có trong đó xếp sau, theo tên. null/rỗng là xếp hết theo tên.
+    /// </param>
+    Task InitializeAsync(
+        Guid preferredActiveId, IReadOnlyList<Guid>? order = null, CancellationToken cancellationToken = default);
 
     void SetActive(CrosshairProfile profile);
 
@@ -42,6 +46,13 @@ public interface IPresetLibrary : IDisposable
     Task<CrosshairProfile> DuplicateAsync(
         CrosshairProfile source, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Chuyển preset tới vị trí <paramref name="newIndex"/> (kéo thả trong danh sách). Next/Previous preset
+    /// đi theo thứ tự mới ngay. Không đổi preset đang dùng.
+    /// </summary>
+    /// <returns>false nếu preset không thuộc thư viện, chỉ số sai, hoặc đã ở đúng chỗ.</returns>
+    bool Move(CrosshairProfile profile, int newIndex);
+
     /// <summary>Xoá preset. Không bao giờ để thư viện rỗng — xoá cái cuối sẽ sinh lại mặc định.</summary>
     Task DeleteAsync(CrosshairProfile profile, CancellationToken cancellationToken = default);
 
@@ -49,4 +60,10 @@ public interface IPresetLibrary : IDisposable
     Task FlushAsync(CancellationToken cancellationToken = default);
 
     event EventHandler? ActiveChanged;
+
+    /// <summary>
+    /// Thứ tự danh sách vừa đổi: kéo thả, hoặc thêm/nhân bản/xoá preset. Nơi lưu cài đặt nghe sự kiện này
+    /// để ghi lại thứ tự.
+    /// </summary>
+    event EventHandler? OrderChanged;
 }

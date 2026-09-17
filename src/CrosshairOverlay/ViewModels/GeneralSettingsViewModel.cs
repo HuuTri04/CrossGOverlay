@@ -205,6 +205,19 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
         }
     }
 
+    /// <summary>Chống lưu ảnh OLED: dịch overlay 1 pixel theo chu kỳ. Lưu ngay vào cài đặt.</summary>
+    public bool EnableOledPixelShift
+    {
+        get => _settings.Current.EnableOledPixelShift;
+        set
+        {
+            if (_settings.Current.EnableOledPixelShift == value) return;
+            _settings.Current.EnableOledPixelShift = value;
+            _settings.RequestSave();
+            OnPropertyChanged();
+        }
+    }
+
     [ObservableProperty] private IReadOnlyList<MonitorInfo> _availableMonitors = [];
 
     [ObservableProperty] private MonitorSelectionMode _monitorMode;

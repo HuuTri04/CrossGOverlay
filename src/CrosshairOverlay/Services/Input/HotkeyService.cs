@@ -46,6 +46,24 @@ public sealed class HotkeyService : IHotkeyService
 
     /// <summary>Nút phải đang được giữ (1) hay không (0). Đổi qua Interlocked.</summary>
     private int _rightHeld;
+
+    private volatile bool _trackLeftButton;
+
+    /// <summary>Nút trái đang được giữ (1) hay không (0). Đổi qua Interlocked.</summary>
+    private int _leftHeld;
+
+    /// <summary>
+    /// Mốc (Environment.TickCount64) được phép đối chiếu lại trạng thái nút thật. Chỉ luồng input đọc/ghi.
+    /// </summary>
+    private long _nextRightCheck;
+
+    private long _nextLeftCheck;
+
+    /// <summary>
+    /// Khoảng cách tối thiểu giữa hai lần đối chiếu "gói nhả bị lỡ". Giữ chuột trái mà lia (bắn liên thanh)
+    /// là 1000 gói mỗi giây; đối chiếu mỗi gói là 2000 lời gọi hệ thống mỗi giây chỉ cho một lưới an toàn.
+    /// </summary>
+    private const long HeldRecheckIntervalMs = 250;
     private int _nextId = 1;
     private volatile bool _disposed;
 
@@ -63,6 +81,8 @@ public sealed class HotkeyService : IHotkeyService
 
     public event EventHandler<bool>? RightButtonChanged;
 
+    public event EventHandler<bool>? LeftButtonChanged;
+
     public bool TrackRightButton
     {
         get => _trackRightButton;
@@ -74,9 +94,27 @@ public sealed class HotkeyService : IHotkeyService
             // Tắt giữa lúc đang giữ nút: báo nhả để không ai kẹt ở trạng thái "đang ngắm".
             if (!value) SetRightHeld(false);
 
-            SetRawMouse(_wantsMouseBindings || value);
+            SetRawMouse(NeedsRawMouse());
         }
     }
+
+    public bool TrackLeftButton
+    {
+        get => _trackLeftButton;
+        set
+        {
+            if (_trackLeftButton == value) return;
+            _trackLeftButton = value;
+
+            // Tắt giữa lúc đang bắn: báo nhả để tâm ngắm không kẹt ở màu khi bắn.
+            if (!value) SetLeftHeld(false);
+
+            SetRawMouse(NeedsRawMouse());
+        }
+    }
+
+    /// <summary>Raw Input chỉ đăng ký khi còn ít nhất một thứ cần tới nút chuột.</summary>
+    private bool NeedsRawMouse() => _wantsMouseBindings || _trackRightButton || _trackLeftButton;
 
     public void Attach(nint hwnd)
     {
@@ -139,7 +177,7 @@ public sealed class HotkeyService : IHotkeyService
 
         var list = bindings as IReadOnlyCollection<HotkeyBinding> ?? bindings.ToList();
         _wantsMouseBindings = list.Any(b => b.Enabled && b.IsAssigned && b.IsMouseBinding);
-        SetRawMouse(_wantsMouseBindings || _trackRightButton);
+        SetRawMouse(NeedsRawMouse());
 
         var registered = new List<HotkeyBinding>();
         var failures = new List<HotkeyRegistrationFailure>();
@@ -265,6 +303,7 @@ public sealed class HotkeyService : IHotkeyService
         if (_disposed) return;
 
         if (_trackRightButton) TrackRight(buttonFlags);
+        if (_trackLeftButton) TrackLeft(buttonFlags);
 
         if (buttonFlags == 0) return;
 
@@ -308,14 +347,46 @@ public sealed class HotkeyService : IHotkeyService
             return;
         }
 
-        if (Volatile.Read(ref _rightHeld) == 1 && !IsPhysicalRightButtonDown()) SetRightHeld(false);
+        if (Volatile.Read(ref _rightHeld) == 1 && DueForRecheck(ref _nextRightCheck) && !IsPhysicalButtonDown(left: false))
+            SetRightHeld(false);
     }
 
-    private static bool IsPhysicalRightButtonDown()
+    /// <summary>
+    /// Nút TRÁI, cùng cách làm với <see cref="TrackRight"/>: nút vật lý, lưới an toàn khi gói "nhả" bị lỡ.
+    /// </summary>
+    private void TrackLeft(ushort buttonFlags)
     {
-        // GetAsyncKeyState làm việc với nút LOGIC; đổi vai trò nút thì nút phải vật lý là VK_LBUTTON.
+        if ((buttonFlags & Win32Constants.RI_MOUSE_LEFT_BUTTON_DOWN) != 0)
+        {
+            SetLeftHeld(true);
+            return;
+        }
+
+        if ((buttonFlags & Win32Constants.RI_MOUSE_LEFT_BUTTON_UP) != 0)
+        {
+            SetLeftHeld(false);
+            return;
+        }
+
+        if (Volatile.Read(ref _leftHeld) == 1 && DueForRecheck(ref _nextLeftCheck) && !IsPhysicalButtonDown(left: true))
+            SetLeftHeld(false);
+    }
+
+    private static bool DueForRecheck(ref long nextCheck)
+    {
+        var now = Environment.TickCount64;
+        if (now < nextCheck) return false;
+
+        nextCheck = now + HeldRecheckIntervalMs;
+        return true;
+    }
+
+    private static bool IsPhysicalButtonDown(bool left)
+    {
+        // GetAsyncKeyState làm việc với nút LOGIC; đổi vai trò nút trong Windows thì nút vật lý bên phải
+        // là VK_LBUTTON và ngược lại.
         var swapped = NativeMethods.GetSystemMetrics(Win32Constants.SM_SWAPBUTTON) != 0;
-        var key = swapped ? Win32Constants.VK_LBUTTON : Win32Constants.VK_RBUTTON;
+        var key = left != swapped ? Win32Constants.VK_LBUTTON : Win32Constants.VK_RBUTTON;
         return (NativeMethods.GetAsyncKeyState(key) & 0x8000) != 0;
     }
 
@@ -331,6 +402,20 @@ public sealed class HotkeyService : IHotkeyService
         {
             if (_disposed || (held && !_trackRightButton)) return;
             RightButtonChanged?.Invoke(this, held);
+        }, DispatcherPriority.Input);
+    }
+
+    private void SetLeftHeld(bool held)
+    {
+        var value = held ? 1 : 0;
+        if (Interlocked.Exchange(ref _leftHeld, value) == value) return;
+
+        // Cùng lý do với SetRightHeld: báo sang luồng giao diện, ưu tiên Input để màu đổi kịp cùng khung
+        // hình với cú bấm; gói "đang giữ" tới sau khi đã tắt theo dõi thì bỏ.
+        _dispatcher.InvokeAsync(() =>
+        {
+            if (_disposed || (held && !_trackLeftButton)) return;
+            LeftButtonChanged?.Invoke(this, held);
         }, DispatcherPriority.Input);
     }
 

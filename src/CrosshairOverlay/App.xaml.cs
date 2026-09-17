@@ -183,7 +183,8 @@ public partial class App : Application
             }
 
             var library = _provider.GetRequiredService<IPresetLibrary>();
-            await library.InitializeAsync(settings.Current.ActivePresetId).ConfigureAwait(true);
+            await library.InitializeAsync(settings.Current.ActivePresetId, settings.Current.PresetOrder).ConfigureAwait(true);
+            library.OrderChanged += OnPresetOrderChanged;
             boot.Mark("preset");
 
             if (showWindow)
@@ -520,6 +521,21 @@ public partial class App : Application
         RefreshTrayState();
     }
 
+    /// <summary>
+    /// Ghi thứ tự preset vào settings.json. RequestSave ghi trên luồng nền, gom nhiều lần đổi liền nhau.
+    /// </summary>
+    private void OnPresetOrderChanged(object? sender, EventArgs e)
+    {
+        if (_provider is null) return;
+
+        var library = _provider.GetRequiredService<IPresetLibrary>();
+        var settings = _provider.GetRequiredService<IAppSettingsService>();
+
+        // Gán danh sách MỚI — xem ghi chú ở AppSettings.PresetOrder.
+        settings.Current.PresetOrder = [.. library.Presets.Select(p => p.Id)];
+        settings.RequestSave();
+    }
+
     private void OnActivePresetChanged(object? sender, EventArgs e)
     {
         if (_provider is null) return;
@@ -626,6 +642,7 @@ public partial class App : Application
             TryDuringExit("gỡ đăng ký sự kiện", () =>
             {
                 _provider.GetRequiredService<IPresetLibrary>().ActiveChanged -= OnActivePresetChanged;
+                _provider.GetRequiredService<IPresetLibrary>().OrderChanged -= OnPresetOrderChanged;
                 _provider.GetRequiredService<IHotkeyService>().HotkeyPressed -= OnHotkeyPressed;
             });
 

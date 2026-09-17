@@ -150,6 +150,9 @@ public interface IDialogService
     /// <summary>Mở hộp thoại "Xuất mã tâm ngắm" với mã của từng game.</summary>
     void ShowExportCodes(CrosshairExportCodes codes);
 
+    /// <summary>Mở cửa sổ "Thư viện mẫu" (500+ mẫu dựng sẵn). Mẫu được thêm thẳng vào thư viện preset.</summary>
+    void ShowPresetLibrary();
+
     /// <summary>Trả về null nếu người dùng huỷ.</summary>
     string? PickFileToOpen(string filter, string? initialDirectory = null);
 

@@ -66,6 +66,32 @@ public sealed partial class HotkeysViewModel : ObservableObject, IDisposable
         }
     }
 
+    /// <summary>Đổi màu tâm ngắm trong lúc giữ chuột trái. Lưu ngay vào cài đặt.</summary>
+    public bool ChangeColorWhileFiring
+    {
+        get => _settings.Current.ChangeColorWhileFiring;
+        set
+        {
+            if (_settings.Current.ChangeColorWhileFiring == value) return;
+            _settings.Current.ChangeColorWhileFiring = value;
+            _settings.RequestSave();
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>Màu tâm ngắm trong lúc giữ chuột trái. Lưu ngay vào cài đặt.</summary>
+    public System.Windows.Media.Color FiringColor
+    {
+        get => _settings.Current.FiringColor;
+        set
+        {
+            if (_settings.Current.FiringColor == value) return;
+            _settings.Current.FiringColor = value;
+            _settings.RequestSave();
+            OnPropertyChanged();
+        }
+    }
+
     /// <summary>Chỉ hiện tâm ngắm khi con trỏ chuột đang bị ẩn. Lưu ngay vào cài đặt.</summary>
     public bool ShowOnlyWhenCursorHidden
     {

@@ -223,8 +223,11 @@ public sealed class CrosshairRenderer : ICrosshairRenderer
             OutlineColor = profile.Outline.Color,
             OutlineOpacity = Clamp01(profile.Outline.Opacity),
 
-            CoreColor = profile.Color,
-            DotColor = profile.CenterDot.UseProfileColor ? profile.Color : profile.CenterDot.Color,
+            // Màu ghi đè (khi bắn) áp cho CẢ chấm giữa có màu riêng: chỉ đổi phần nhánh mà chấm vẫn
+            // giữ màu cũ thì trông như tính năng chạy nửa vời.
+            CoreColor = options.ColorOverride ?? profile.Color,
+            DotColor = options.ColorOverride
+                ?? (profile.CenterDot.UseProfileColor ? profile.Color : profile.CenterDot.Color),
             DotOpacity = Clamp01(profile.CenterDot.Opacity),
         };
     }

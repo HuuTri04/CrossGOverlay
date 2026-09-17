@@ -450,48 +450,10 @@ public sealed class CrosshairPreview : FrameworkElement
         try
         {
             var dpi = VisualTreeHelper.GetDpi(this);
-            var scaleX = dpi.DpiScaleX > 0 ? dpi.DpiScaleX : 1d;
-            var scaleY = dpi.DpiScaleY > 0 ? dpi.DpiScaleY : 1d;
 
-            var options = new CrosshairRenderOptions(
-                DpiScale: scaleX,
-                SnapToPixels: Math.Abs(profile.Rotation) < 0.01d,
-                MaxExtent: 600d);
-
-            var sizeDip = renderer.Measure(profile, options);
-            var drawing = renderer.Build(profile, options);
-
-            // Có animation (GIF động) thì chụp thành ảnh tĩnh sẽ đứng hình ở khung đầu.
-            if (!drawing.IsFrozen)
-            {
-                _liveDrawing = drawing;
-                return null;
-            }
-
-            var pixelWidth = (int)Math.Round(sizeDip.Width * scaleX);
-            var pixelHeight = (int)Math.Round(sizeDip.Height * scaleY);
-            if (pixelWidth <= 0 || pixelHeight <= 0) return null;
-
-            var visual = new DrawingVisual();
-
-            // Áp ĐÚNG quyết định khử răng cưa mà overlay dùng, nếu không preview sẽ nói dối
-            // về độ sắc của crosshair thật.
-            RenderOptions.SetEdgeMode(
-                visual,
-                renderer.PrefersAliasedEdges(profile) ? EdgeMode.Aliased : EdgeMode.Unspecified);
-
-            using (var vdc = visual.RenderOpen())
-            {
-                vdc.PushTransform(new TranslateTransform(sizeDip.Width / 2d, sizeDip.Height / 2d));
-                vdc.DrawDrawing(drawing);
-                vdc.Pop();
-            }
-
-            var bitmap = new RenderTargetBitmap(
-                pixelWidth, pixelHeight, 96d * scaleX, 96d * scaleY, PixelFormats.Pbgra32);
-
-            bitmap.Render(visual);
-            bitmap.Freeze();
+            // Có animation (GIF động) thì helper trả về hình vẽ sống thay vì ảnh tĩnh đứng hình ở khung đầu.
+            var bitmap = CrosshairSnapshot.Render(renderer, profile, dpi.DpiScaleX, dpi.DpiScaleY, 600d, out var live);
+            _liveDrawing = live;
             return bitmap;
         }
         catch (Exception)
