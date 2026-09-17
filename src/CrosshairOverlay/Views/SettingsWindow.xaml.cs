@@ -55,6 +55,9 @@ public partial class SettingsWindow : Window
         var editor = (DataTemplate)FindResource("EditorPanel");
         if (ReferenceEquals(EditorHost.ContentTemplate, editor)) return;
 
+        // Con số người dùng thực sự cảm nhận: từ lúc bấm mở app tới lúc cửa sổ có hình trên màn hình.
+        LogFirstFrame();
+
         // Loaded: ngay sau khung hình đầu tiên, TRƯỚC khi xử lý chuột/bàn phím — khoảng trống chỉ
         // kéo dài đúng thời gian dựng cây, không bị lùi thêm vì người dùng động vào cửa sổ.
         Dispatcher.InvokeAsync(
@@ -68,6 +71,22 @@ public partial class SettingsWindow : Window
                     _logger, "Cột chỉnh sửa nạp trong {Elapsed:0} ms sau khung hình đầu.", watch.Elapsed.TotalMilliseconds);
             },
             System.Windows.Threading.DispatcherPriority.Loaded);
+    }
+
+    private void LogFirstFrame()
+    {
+        try
+        {
+            using var process = global::System.Diagnostics.Process.GetCurrentProcess();
+            Microsoft.Extensions.Logging.LoggerExtensions.LogInformation(
+                _logger,
+                "Cửa sổ Settings có khung hình đầu sau {Elapsed:0} ms kể từ khi tiến trình khởi động.",
+                (DateTime.Now - process.StartTime).TotalMilliseconds);
+        }
+        catch (Exception)
+        {
+            // Chỉ là số đo; không đọc được giờ khởi động của tiến trình thì bỏ qua.
+        }
     }
 
     /// <summary>

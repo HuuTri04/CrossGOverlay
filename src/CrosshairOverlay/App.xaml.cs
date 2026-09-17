@@ -26,6 +26,9 @@ public partial class App : Application
     private bool _fatalReported;
     private StartupArguments _arguments = StartupArguments.None;
 
+    /// <summary>Từ hàm dựng tới OnStartup: đọc App.xaml (gồm các ResourceDictionary gộp) và khởi động vòng lặp.</summary>
+    private double _appXamlMs;
+
     /// <summary>
     /// Bật lên ngay khi quy trình thoát bắt đầu.
     /// </summary>
@@ -50,13 +53,23 @@ public partial class App : Application
     }
 
     /// <summary>
-    /// Từ lúc Windows tạo tiến trình tới lúc dòng mã đầu tiên của ứng dụng chạy.
+    /// Từ lúc Windows tạo tiến trình tới lúc hàm dựng của <see cref="App"/> chạy: nạp .NET runtime và
+    /// các assembly cần để dựng đối tượng Application. Khoảng này KHÔNG thuộc quyền ứng dụng.
     /// </summary>
+    private readonly double _runtimeStartupMs;
+
+    /// <summary>Mốc hàm dựng chạy, để đo phần đọc App.xaml (Theme.xaml, TrayMenu.xaml) tới OnStartup.</summary>
+    private readonly long _constructedAt;
+
     /// <remarks>
-    /// Khoảng này KHÔNG thuộc quyền ứng dụng: nạp .NET runtime, nạp các assembly của WPF, dựng
-    /// đối tượng Application và đọc App.xaml. Đo được mới biết phần còn lại đáng tối ưu tới đâu.
+    /// Hàm Main do WPF sinh ra gọi hàm dựng này TRƯỚC <c>InitializeComponent</c>, nên hai mốc ở đây
+    /// tách được "runtime nạp xong" với "App.xaml đọc xong".
     /// </remarks>
-    private static readonly double RuntimeStartupMs = MeasureRuntimeStartup();
+    public App()
+    {
+        _constructedAt = global::System.Diagnostics.Stopwatch.GetTimestamp();
+        _runtimeStartupMs = MeasureRuntimeStartup();
+    }
 
     private static double MeasureRuntimeStartup()
     {
@@ -73,8 +86,8 @@ public partial class App : Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        _appXamlMs = global::System.Diagnostics.Stopwatch.GetElapsedTime(_constructedAt).TotalMilliseconds;
         base.OnStartup(e);
-        _ = RuntimeStartupMs;
         _arguments = StartupArguments.Parse(e.Args);
 
         // Một đợt thu gom gen2 gây khựng sẽ thành micro-stutter nhìn thấy được trong game.
@@ -126,7 +139,28 @@ public partial class App : Application
             // Chế độ render cũng phải có trước cửa sổ đầu tiên.
             Services.Overlay.OverlayBehaviorController.ApplyRenderMode(settings.Current.UseHardwareAcceleration);
 
-            await StartOverlayAsync(settings, boot).ConfigureAwait(true);
+            var library = _provider.GetRequiredService<IPresetLibrary>();
+            await library.InitializeAsync(settings.Current.ActivePresetId).ConfigureAwait(true);
+            boot.Mark("preset");
+
+            // GIAO DIỆN TRƯỚC, phần còn lại SAU. Đo trên bản publish: tạo HWND của cửa sổ WPF ĐẦU TIÊN
+            // (khởi tạo Direct3D/DWM) mất 105–580 ms, cộng khay và phím tắt thêm ~50 ms. Trước đây toàn
+            // bộ chạy xong rồi mới dựng cửa sổ Settings, nên người dùng nhìn màn hình trống suốt khoảng
+            // đó. Giờ cửa sổ hiện trước; overlay, khay và phím tắt khởi động ngay sau khung hình đầu.
+            var showWindow = !settings.Current.StartMinimizedToTray;
+            if (showWindow)
+            {
+                _provider.GetRequiredService<IDialogService>().ShowSettingsWindow();
+                boot.Mark("cửa sổ Settings");
+
+                // Nhả luồng giao diện: ưu tiên Background đứng sau Render, nên khung hình đầu của cửa sổ
+                // được vẽ lên màn hình trước khi phần khởi động còn lại chiếm luồng.
+                await global::System.Windows.Threading.Dispatcher.Yield(global::System.Windows.Threading.DispatcherPriority.Background);
+                boot.Mark("chờ khung hình đầu");
+            }
+
+            StartOverlay(settings, library);
+            boot.Mark("overlay");
 
             StartTray();
             boot.Mark("khay");
@@ -149,22 +183,17 @@ public partial class App : Application
             // chỉ ghi vào cài đặt; phản ứng tập trung tại đây để không nơi nào tự bật overlay thẳng.
             settings.Current.PropertyChanged += OnVisibilitySettingChanged;
 
-            if (settings.Current.StartMinimizedToTray)
+            if (!showWindow)
             {
                 _provider.GetRequiredService<ITrayIconController>()
                     .ShowNotification(Core.AppInfo.DisplayName, Tr.Get("Tray_RunningInTray"));
+                boot.Mark("thông báo khay");
             }
-            else
-            {
-                _provider.GetRequiredService<IDialogService>().ShowSettingsWindow();
-            }
-
-            boot.Mark(settings.Current.StartMinimizedToTray ? "thông báo khay" : "cửa sổ Settings");
 
             RefreshTrayState();
             _log.LogInformation(
-                "Khởi động hoàn tất: {Runtime:0} ms nạp runtime + {Total:0} ms trong app — nặng nhất {Summary}",
-                RuntimeStartupMs, boot.TotalMs, boot.Summary());
+                "Khởi động hoàn tất: {Runtime:0} ms nạp runtime + {AppXaml:0} ms App.xaml + {Total:0} ms trong app — nặng nhất {Summary}",
+                _runtimeStartupMs, _appXamlMs, boot.TotalMs, boot.Summary());
 
             ScheduleImageCleanup();
 
@@ -244,16 +273,14 @@ public partial class App : Application
         return true;
     }
 
-    private async Task StartOverlayAsync(IAppSettingsService settings, Core.Diagnostics.BootTimeline boot)
+    /// <summary>
+    /// Dựng cửa sổ overlay và nối nó với thư viện preset (đã nạp xong từ trước).
+    /// </summary>
+    private void StartOverlay(IAppSettingsService settings, IPresetLibrary library)
     {
-        // Bắt vào biến cục bộ: sau mỗi lời gọi phương thức, phân tích nullable phải đặt lại
-        // trạng thái của field, nên dùng _provider! lặp lại sẽ sinh cảnh báo ở mọi dòng sau.
-        var provider = _provider!;
-        var overlay = provider.GetRequiredService<IOverlayController>();
-        var library = provider.GetRequiredService<IPresetLibrary>();
+        var overlay = _provider!.GetRequiredService<IOverlayController>();
 
         overlay.Initialize();
-        boot.Mark("overlay");
 
         // Menu khay phải theo trạng thái THẬT của overlay: ngoài bật/tắt thủ công, game profile
         // cũng có thể ẩn/hiện overlay (HideOverlay, "chỉ hiện trong game đã khớp").
@@ -267,8 +294,10 @@ public partial class App : Application
         // cửa sổ Settings đang đóng (hotkey, tray, auto-switch theo game).
         library.ActiveChanged += OnActivePresetChanged;
 
-        await library.InitializeAsync(settings.Current.ActivePresetId).ConfigureAwait(true);
-        boot.Mark("preset");
+        // Thư viện đã chọn preset hoạt động TRƯỚC khi overlay tồn tại (để cửa sổ Settings hiện sớm),
+        // nên sự kiện đó đã qua mà chưa ai nghe — đẩy preset hiện tại sang overlay một lần ở đây.
+        if (library.Active is not null) OnActivePresetChanged(this, EventArgs.Empty);
+
         // KHÔNG hiện overlay ở đây: quy tắc hiện/ẩn (ApplyVisibility) chạy ngay sau khi bộ tự đổi theo
         // game khởi động. Hiện trước sẽ làm crosshair nháy lên trên desktop một khoảnh khắc ở chế độ
         // "chỉ hiện trong game" rồi mới bị ẩn.

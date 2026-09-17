@@ -80,14 +80,24 @@ public sealed class OverlayController : IOverlayController
         ThrowIfDisposed();
         if (_window is not null) return;
 
+        var watch = global::System.Diagnostics.Stopwatch.StartNew();
+
         _window = new OverlayWindow();
+        var createdMs = watch.Elapsed.TotalMilliseconds;
+
         _window.EnsureHandle();          // áp extended styles TRƯỚC lần Show đầu tiên
+        var handleMs = watch.Elapsed.TotalMilliseconds;
         _window.DpiChanged += OnWindowDpiChanged;
 
         _monitors.DisplayConfigurationChanged += OnDisplayConfigurationChanged;
+        var monitorsMs = watch.Elapsed.TotalMilliseconds;
 
         _overlayHandle = _window.Handle;
         _topmostTimer = new Timer(OnTopmostTimerTick, null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+
+        _logger.LogDebug(
+            "Khởi tạo overlay: dựng Window {Create:0} ms, tạo HWND {Handle:0} ms, theo dõi màn hình {Monitors:0} ms.",
+            createdMs, handleMs - createdMs, monitorsMs - handleMs);
 
         _logger.LogInformation("Cửa sổ overlay đã khởi tạo, HWND={Handle:X}.", _window.Handle);
     }
