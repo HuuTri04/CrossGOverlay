@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Media.Animation;
 
 namespace CrosshairOverlay.Views;
 
@@ -15,9 +16,20 @@ public partial class SplashWindow : Window
     /// <summary>Lưới an toàn: cửa sổ chính không bao giờ vẽ được thì màn hình chờ cũng không được treo mãi.</summary>
     private static readonly TimeSpan MaxLifetime = TimeSpan.FromSeconds(15);
 
+    /// <summary>Đồng hồ nhấp nháy của dòng chữ trạng thái; phải dừng bằng tay, xem CloseQuietly.</summary>
+    private Storyboard? _blink;
+
     public SplashWindow()
     {
         InitializeComponent();
+
+        Loaded += (_, _) =>
+        {
+            _blink = (Storyboard)FindResource("BlinkStatus");
+
+            // isControllable: true để sau này Stop được — Begin không kèm cờ này thì đồng hồ không điều khiển được nữa.
+            _blink.Begin(this, isControllable: true);
+        };
     }
 
     /// <summary>Có khung hình đầu từ lúc nào — để ghi log thời gian người dùng thấy được thứ gì đó.</summary>
@@ -70,10 +82,29 @@ public partial class SplashWindow : Window
         CloseQuietly();
     }
 
+    /// <summary>
+    /// Dừng hẳn animation nhấp nháy.
+    /// </summary>
+    /// <remarks>
+    /// Đóng cửa sổ KHÔNG dừng đồng hồ animation. Một Storyboard lặp vô hạn còn sống giữ cho WPF đập nhịp render
+    /// theo tần số quét màn hình suốt phiên chạy: đo trên máy thật, ứng dụng tốn ~3% CPU của một nhân khi rảnh, cho
+    /// tới lúc thoát — dù màn hình chờ đã biến mất từ lâu.
+    /// </remarks>
+    private void StopBlinking()
+    {
+        if (_blink is null) return;
+
+        _blink.Stop(this);
+        _blink.Remove(this);
+        _blink = null;
+    }
+
     /// <summary>Đóng được gọi nhiều lần từ nhiều nhánh (đã vẽ, cửa sổ chính đóng, hết giờ, lỗi khởi động).</summary>
     public void CloseQuietly()
     {
         if (!IsLoaded && !IsVisible) return;
+
+        StopBlinking();
 
         try
         {

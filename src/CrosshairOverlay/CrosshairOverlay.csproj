@@ -22,7 +22,15 @@
     <NeutralResourcesLanguage>vi</NeutralResourcesLanguage>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
-    <Version>0.1.0</Version>
+    <!--
+      Một chỗ duy nhất cho số phiên bản: build\publish.ps1 đặt tên file .zip theo nó, tính năng tự cập nhật so
+      sánh với thẻ phát hành trên GitHub, và huy hiệu phiên bản trên giao diện đọc từ assembly (Core.AppInfo).
+      THẺ PHÁT HÀNH PHẢI KHỚP: gắn thẻ v1.0.1 mà gói vẫn là build 1.0.0 thì người dùng cập nhật xong vẫn ở
+      bản cũ và bị mời cập nhật lại mãi.
+    -->
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
 
     <!--
       GC kiểu workstation + background. Overlay chạy nền suốt phiên chơi và chỉ cấp phát khi

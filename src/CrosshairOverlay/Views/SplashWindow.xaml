@@ -19,6 +19,18 @@
         rồi màn hình chờ đóng lại, mắt không thấy hai mảng màu khác nhau chớp qua.
         Không Effect (đổ bóng/làm mờ): viền 1px mờ là đủ tách khỏi nền desktop.
     -->
+    <Window.Resources>
+        <!--
+            Nhấp nháy mờ 0.5 ↔ 1 cho dòng chữ trạng thái. Lặp vô hạn, nên PHẢI dừng bằng tay khi đóng màn hình chờ:
+            đóng cửa sổ KHÔNG dừng đồng hồ animation, và một đồng hồ còn sống giữ cho WPF đập nhịp render theo tần
+            số quét màn hình suốt phiên — đo được ~3% CPU của một nhân, cho tới khi thoát app.
+        -->
+        <Storyboard x:Key="BlinkStatus" RepeatBehavior="Forever">
+            <DoubleAnimation Storyboard.TargetName="StatusText" Storyboard.TargetProperty="Opacity"
+                             From="0.5" To="1" Duration="0:0:0.8" AutoReverse="True"/>
+        </Storyboard>
+    </Window.Resources>
+
     <Border Width="300" Height="350" CornerRadius="8"
             Background="{StaticResource WindowBg}"
             BorderBrush="#1AFFFFFF" BorderThickness="1">
@@ -47,21 +59,6 @@
             <TextBlock x:Name="StatusText" Text="{loc:Loc Splash_Starting}" HorizontalAlignment="Center"
                        Margin="0,10,0,0" FontFamily="{StaticResource UiFont}" FontSize="13" FontWeight="SemiBold"
                        Foreground="{StaticResource TextPrimary}" Opacity="0.5">
-                <!--
-                    Nhấp nháy mờ 0.5 ↔ 1. Chỉ sống trong khoảng một giây màn hình chờ hiện; cửa sổ đóng là
-                    đồng hồ animation dừng theo. Luồng giao diện đang bận khởi động nên nhịp có thể không
-                    đều — chấp nhận được cho một dòng chữ trạng thái.
-                -->
-                <TextBlock.Triggers>
-                    <EventTrigger RoutedEvent="FrameworkElement.Loaded">
-                        <BeginStoryboard>
-                            <Storyboard RepeatBehavior="Forever">
-                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                                 From="0.5" To="1" Duration="0:0:0.8" AutoReverse="True"/>
-                            </Storyboard>
-                        </BeginStoryboard>
-                    </EventTrigger>
-                </TextBlock.Triggers>
             </TextBlock>
         </StackPanel>
     </Border>
