@@ -1097,10 +1097,10 @@
         </Setter>
     </Style>
 
-    <!-- Thẻ một mẫu trong lưới: 160 x 170, bo 6, nền xám đen. -->
+    <!-- Thẻ một mẫu trong lưới: 160 x 175, bo 6, nền xám đen (#1C2D38 = CardBg). -->
     <Style x:Key="CatalogCard" TargetType="Border">
         <Setter Property="Width" Value="160"/>
-        <Setter Property="Height" Value="170"/>
+        <Setter Property="Height" Value="175"/>
         <Setter Property="Background" Value="{StaticResource CardBg}"/>
         <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}"/>
         <Setter Property="BorderThickness" Value="1"/>

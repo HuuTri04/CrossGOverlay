@@ -55,8 +55,12 @@ public sealed partial class PresetLibraryViewModel : ObservableObject, IDisposab
         _logger = logger;
         Renderer = renderer;
 
-        Categories = [.. catalog.GetCategories().Select(key => new CategoryChipViewModel(key, CategoryLabel(key), this))];
-        Categories[0].IsSelected = true;
+        // Dịch vụ luôn trả danh sách cố định, nhưng ViewModel không được sập nếu nó trả rỗng.
+        var keys = catalog.GetCategories() is { Count: > 0 } fromService ? fromService : CatalogCategories.Ordered;
+        Categories = [.. keys.Select(key => new CategoryChipViewModel(key, CategoryLabel(key), this))];
+
+        // Chip đầu tiên ("Tất cả") ứng với bộ lọc mặc định; đánh dấu thẳng, không đi vòng qua SelectCategory.
+        Categories[0].SetSelectedSilently(true);
     }
 
     /// <summary>Renderer dùng chung với overlay, cho ảnh thu nhỏ của từng thẻ.</summary>

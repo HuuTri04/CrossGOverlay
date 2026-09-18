@@ -15,19 +15,14 @@ namespace CrosshairOverlay.Services.System;
 public sealed class DialogService : IDialogService
 {
     private readonly Func<Window> _settingsWindowFactory;
-    private readonly Func<Window>? _presetLibraryWindowFactory;
     private Window? _settingsWindow;
 
     /// <param name="settingsWindowFactory">
     /// Do composition root cung cấp. Dịch vụ này không tự dựng cửa sổ Settings được vì cửa sổ
     /// đó lại phụ thuộc ngược vào chính nó.
     /// </param>
-    /// <param name="presetLibraryWindowFactory">Cửa sổ Thư viện mẫu cần ViewModel từ DI, nên cũng do composition root dựng.</param>
-    public DialogService(Func<Window> settingsWindowFactory, Func<Window>? presetLibraryWindowFactory = null)
-    {
+    public DialogService(Func<Window> settingsWindowFactory) =>
         _settingsWindowFactory = settingsWindowFactory;
-        _presetLibraryWindowFactory = presetLibraryWindowFactory;
-    }
 
     public void ShowSettingsWindow()
     {
@@ -83,16 +78,6 @@ public sealed class DialogService : IDialogService
     {
         // Hộp thoại chỉ hiển thị dữ liệu đã dựng sẵn nên không cần gì từ DI.
         var window = new ExportCodeWindow(codes) { Owner = Owner() };
-        window.ShowDialog();
-    }
-
-    public void ShowPresetLibrary()
-    {
-        if (_presetLibraryWindowFactory is null) return;
-
-        // Hộp thoại: người dùng chọn mẫu xong thì quay lại đúng chỗ, và không có hai cửa sổ thư viện cùng lúc.
-        var window = _presetLibraryWindowFactory();
-        window.Owner = Owner();
         window.ShowDialog();
     }
 

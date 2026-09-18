@@ -46,6 +46,7 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
         IStorageLocationService storage,
         IDisplayModeReader displayModes,
         ICrosshairTranslator translator,
+        PresetLibraryViewModel catalogTab,
         ILogger<SettingsViewModel> logger)
     {
         _library = library;
@@ -70,6 +71,7 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
         _settings.Current.PropertyChanged += OnSettingsChanged;
         TranslationSource.Instance.PropertyChanged += OnLanguageChanged;
 
+        Library = catalogTab;
         _library.ActiveChanged += OnLibraryActiveChanged;
         SyncFromLibrary();
     }
@@ -83,6 +85,9 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
     public GameProfilesViewModel Games { get; }
 
     public SystemInfoViewModel SystemInfo { get; }
+
+    /// <summary>Tab "Thư viện": dữ liệu chỉ được nạp khi người dùng mở tab đó lần đầu.</summary>
+    public PresetLibraryViewModel Library { get; }
 
     public ReadOnlyObservableCollection<CrosshairProfile> Presets => _library.Presets;
 
@@ -274,10 +279,6 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
             return false;
         }
     }
-
-    /// <summary>Mở "Thư viện mẫu". Mẫu được thêm qua thư viện preset nên danh sách bên này tự cập nhật và chọn theo.</summary>
-    [RelayCommand]
-    private void OpenPresetLibrary() => _dialogs.ShowPresetLibrary();
 
     /// <summary>
     /// Mở hộp thoại "Xuất mã tâm ngắm": dịch preset đang chọn ra mã Valorant, CS2 và mã nội bộ.
@@ -507,6 +508,7 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
         _disposed = true;
 
         _library.ActiveChanged -= OnLibraryActiveChanged;
+        Library.Dispose();
         _settings.Current.PropertyChanged -= OnSettingsChanged;
         TranslationSource.Instance.PropertyChanged -= OnLanguageChanged;
 

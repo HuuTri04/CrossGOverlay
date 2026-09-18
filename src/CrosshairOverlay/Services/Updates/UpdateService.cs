@@ -19,7 +19,7 @@ public sealed class UpdateService : IUpdateService, IDisposable
     /// Chưa trỏ tới kho thật. Khi chưa đổi, <see cref="CheckAsync"/> sẽ thất bại và trả null —
     /// đúng hành vi mong muốn: ứng dụng vẫn khởi động bình thường.
     /// </remarks>
-    private const string RepositoryPath = "your-account/CrosshairOverlay";
+    private const string RepositoryPath = "HuuTri04/CrosshairOverlay";
 
     /// <summary>Đủ để một mạng bình thường trả lời, và đủ ngắn để mạng hỏng không làm chờ lâu.</summary>
     private static readonly TimeSpan CheckTimeout = TimeSpan.FromSeconds(8);

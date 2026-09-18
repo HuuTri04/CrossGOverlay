@@ -17,6 +17,9 @@ public partial class SettingsWindow : Window
     /// <summary>Chỉ nhắc "app vẫn đang chạy" một lần mỗi phiên, không nhắc mỗi lần ẩn.</summary>
     private bool _hintShown;
 
+    /// <summary>Tab "Thư viện" đã được dựng và bắt đầu nạp dữ liệu hay chưa.</summary>
+    private bool _libraryStarted;
+
     public SettingsWindow(
         SettingsViewModel viewModel, ITrayIconController tray, Microsoft.Extensions.Logging.ILogger<SettingsWindow> logger)
     {
@@ -71,6 +74,41 @@ public partial class SettingsWindow : Window
                     _logger, "Cột chỉnh sửa nạp trong {Elapsed:0} ms sau khung hình đầu.", watch.Elapsed.TotalMilliseconds);
             },
             System.Windows.Threading.DispatcherPriority.Loaded);
+    }
+
+    /// <summary>
+    /// Dựng tab "Thư viện" và bắt đầu nạp dữ liệu vào ĐÚNG lần đầu người dùng mở tab đó.
+    /// </summary>
+    /// <remarks>
+    /// Hai việc đều phải trễ: dựng cây giao diện của lưới thẻ, và đọc file <c>builtin_presets.json</c>. Người chỉ vào
+    /// chỉnh tâm ngắm rồi thoát thì không trả một mili-giây nào cho thư viện. Đọc file chạy trên luồng nền, còn tab đã
+    /// hiện sẵn dòng "Đang tải 500+ mẫu tâm ngắm…".
+    /// </remarks>
+    private async void OnTabChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        // TabControl phát sự kiện này cả khi ComboBox/ListBox bên trong đổi lựa chọn.
+        if (!ReferenceEquals(e.OriginalSource, sender) || _libraryStarted || !LibraryTab.IsSelected) return;
+
+        _libraryStarted = true;
+        LibraryHost.ContentTemplate = (DataTemplate)FindResource("LibraryPanel");
+        LibraryHost.UpdateLayout();
+
+        FindChild<PresetLibraryView>(LibraryHost)?.FocusSearch();
+
+        await _viewModel.Library.LoadAsync();
+    }
+
+    private static T? FindChild<T>(DependencyObject root) where T : DependencyObject
+    {
+        for (var i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(root); i++)
+        {
+            var child = System.Windows.Media.VisualTreeHelper.GetChild(root, i);
+            if (child is T match) return match;
+
+            if (FindChild<T>(child) is { } deeper) return deeper;
+        }
+
+        return null;
     }
 
     /// <summary>
