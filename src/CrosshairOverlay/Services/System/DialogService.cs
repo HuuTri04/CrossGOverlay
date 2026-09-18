@@ -15,14 +15,21 @@ namespace CrosshairOverlay.Services.System;
 public sealed class DialogService : IDialogService
 {
     private readonly Func<Window> _settingsWindowFactory;
+    private readonly Func<UpdateInfo, Window>? _updateDialogFactory;
     private Window? _settingsWindow;
 
     /// <param name="settingsWindowFactory">
     /// Do composition root cung cấp. Dịch vụ này không tự dựng cửa sổ Settings được vì cửa sổ
     /// đó lại phụ thuộc ngược vào chính nó.
     /// </param>
-    public DialogService(Func<Window> settingsWindowFactory) =>
+    /// <param name="updateDialogFactory">
+    /// Hộp thoại cập nhật cần <c>IUpdateService</c>, nên cũng do composition root dựng.
+    /// </param>
+    public DialogService(Func<Window> settingsWindowFactory, Func<UpdateInfo, Window>? updateDialogFactory = null)
+    {
         _settingsWindowFactory = settingsWindowFactory;
+        _updateDialogFactory = updateDialogFactory;
+    }
 
     public void ShowSettingsWindow()
     {
@@ -79,6 +86,17 @@ public sealed class DialogService : IDialogService
         // Hộp thoại chỉ hiển thị dữ liệu đã dựng sẵn nên không cần gì từ DI.
         var window = new ExportCodeWindow(codes) { Owner = Owner() };
         window.ShowDialog();
+    }
+
+    public bool ShowUpdate(UpdateInfo update)
+    {
+        if (_updateDialogFactory is null) return false;
+
+        var window = _updateDialogFactory(update);
+        window.Owner = Owner();
+
+        // DialogResult true = script cập nhật đã chạy (xem UpdateDialog).
+        return window.ShowDialog() == true;
     }
 
     public CrosshairProfile? PromptForCrosshairCode()

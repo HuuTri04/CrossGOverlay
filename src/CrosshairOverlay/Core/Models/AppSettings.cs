@@ -98,6 +98,12 @@ public sealed partial class AppSettings : ObservableObject
     public ObservableCollection<GameProfile> GameProfiles { get; set; } = [];
 
     /// <summary>
+    /// Phiên bản đã thử cập nhật lên ở lần chạy trước, vd "0.1.1"; null nếu chưa thử lần nào.
+    /// </summary>
+    /// <remarks>Xem <c>UpdateOfferPolicy</c>: dùng để không nhắc lại mãi khi gói phát hành gắn sai phiên bản.</remarks>
+    public string? LastUpdateAttempt { get; set; }
+
+    /// <summary>
     /// Thứ tự preset người dùng tự sắp (kéo thả), theo Id. Preset không có trong danh sách (file mới thả vào
     /// thư mục, bản cũ chưa có khoá này) xếp sau, theo tên.
     /// </summary>

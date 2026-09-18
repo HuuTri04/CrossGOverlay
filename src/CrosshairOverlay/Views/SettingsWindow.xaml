@@ -554,11 +554,9 @@
                                             <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
+                                        <!-- Kết quả hiện bằng thông báo nhỏ ở góc cửa sổ, xem Toast bên dưới. -->
                                         <Button Content="{loc:Loc Update_CheckNow}"
                                                 Command="{Binding General.CheckForUpdatesCommand}"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding General.UpdateStatus, Mode=OneWay}" Margin="14,0,0,0"
-                                                   VerticalAlignment="Center" TextWrapping="Wrap"
-                                                   Style="{StaticResource FieldLabel}"/>
                                     </Grid>
                                 </StackPanel>
                             </Border>
@@ -1062,5 +1060,15 @@
             </TabItem>
 
         </TabControl>
+
+        <!--
+            Thông báo nhỏ dùng chung cho cả cửa sổ (vd kết quả "Kiểm tra cập nhật"). Nằm ngoài TabControl nên đổi tab
+            không làm nó biến mất, và không nhận chuột nên không che nút nào bên dưới.
+        -->
+        <Border Grid.Row="1" Style="{StaticResource Toast}" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                Margin="0,0,24,24"
+                Visibility="{Binding Toast.IsVisible, Converter={StaticResource BoolToVisibility}}">
+            <TextBlock Text="{Binding Toast.Text}" FontSize="13" TextWrapping="Wrap" MaxWidth="460"/>
+        </Border>
     </Grid>
 </Window>

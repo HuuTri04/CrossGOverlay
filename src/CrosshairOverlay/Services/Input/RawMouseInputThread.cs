@@ -20,7 +20,16 @@ namespace CrosshairOverlay.Services.Input;
 /// sửa, không giả lập sự kiện nào.
 /// </para>
 /// </remarks>
-internal sealed class RawMouseInputThread : IDisposable
+internal interface IRawMouseInput : IDisposable
+{
+    bool IsRunning { get; }
+
+    bool Start();
+
+    void Stop();
+}
+
+internal sealed class RawMouseInputThread : IRawMouseInput, IDisposable
 {
     private const uint WmApp = 0x8000;
     private const uint WmStop = WmApp + 1;

@@ -15,6 +15,7 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
     private readonly IOverlayController _overlay;
     private readonly IStartupService _startup;
     private readonly IUpdateService _updates;
+    private readonly ToastViewModel _toast;
     private readonly IDialogService _dialogs;
     private readonly IAppPathProvider _paths;
     private readonly IProcessLauncher _launcher;
@@ -33,8 +34,10 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
         IAppPathProvider paths,
         IProcessLauncher launcher,
         IAppRestartService restart,
-        IStorageLocationService storage)
+        IStorageLocationService storage,
+        ToastViewModel toast)
     {
+        _toast = toast;
         _storage = storage;
         _paths = paths;
         _launcher = launcher;
@@ -228,27 +231,28 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
 
     [ObservableProperty] private string _languageCode;
 
-    [ObservableProperty] private string _updateStatus = string.Empty;
-
     /// <summary>
     /// Kiểm tra cập nhật theo yêu cầu. Hoàn toàn bất đồng bộ — nút không bao giờ làm treo
     /// giao diện, kể cả khi máy chủ không phản hồi.
     /// </summary>
+    /// <remarks>
+    /// Có bản mới thì mở hộp thoại; còn lại chỉ là một thông báo nhỏ tự tắt. "Đã mới nhất" và "không hỏi được máy
+    /// chủ" là hai câu KHÁC nhau: mất mạng mà báo "bạn đang dùng bản mới nhất" là nói sai.
+    /// </remarks>
     [RelayCommand]
     private async Task CheckForUpdatesAsync()
     {
-        UpdateStatus = string.Empty;
+        var result = await _updates.CheckAsync();
 
-        var update = await _updates.CheckAsync();
-
-        if (update is null)
+        if (result.Status == UpdateCheckStatus.UpdateAvailable && result.Update is { } update)
         {
-            UpdateStatus = Tr.Format("Update_UpToDate", _updates.CurrentVersion);
+            if (_dialogs.ShowUpdate(update)) App.RequestShutdown();
             return;
         }
 
-        if (await Services.Updates.UpdatePrompt.OfferAsync(_updates, _dialogs, update))
-            App.RequestShutdown();
+        _toast.Show(result.Status == UpdateCheckStatus.UpToDate
+            ? Tr.Format("Update_UpToDate", Core.AppInfo.Short(_updates.CurrentVersion))
+            : Tr.Get("Update_CheckFailed"));
     }
 
     public bool ShowMonitorPicker => MonitorMode == MonitorSelectionMode.Specific;

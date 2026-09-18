@@ -1,5 +1,4 @@
 using System.IO;
-using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CrosshairOverlay.Core.Abstractions;
@@ -30,16 +29,12 @@ public sealed partial class PresetLibraryViewModel : ObservableObject, IDisposab
     /// </summary>
     public const int MaxColumns = CatalogRow.SlotCount;
 
-    /// <summary>Thời gian thông báo "Đã thêm…" hiện trên màn hình.</summary>
-    internal static readonly TimeSpan ToastDuration = TimeSpan.FromMilliseconds(2500);
-
     private readonly IPresetCatalogService _catalog;
     private readonly IPresetLibrary _library;
     private readonly ILogger<PresetLibraryViewModel> _logger;
 
     private readonly Dictionary<Guid, CatalogItemViewModel> _items = [];
     private IReadOnlyList<CatalogItemViewModel> _filtered = [];
-    private DispatcherTimer? _toastTimer;
     private string _selectedCategory = CatalogCategories.All;
     private int _columnCount = 4;
     private bool _disposed;
@@ -68,6 +63,9 @@ public sealed partial class PresetLibraryViewModel : ObservableObject, IDisposab
 
     public IReadOnlyList<CategoryChipViewModel> Categories { get; }
 
+    /// <summary>Thông báo "Đã thêm …" ở góc dưới; người dùng ở lại tab để chọn tiếp mẫu khác.</summary>
+    public ToastViewModel Toast { get; } = new();
+
     [ObservableProperty] private IReadOnlyList<CatalogRow> _rows = [];
 
     [ObservableProperty] private string _searchText = string.Empty;
@@ -80,10 +78,6 @@ public sealed partial class PresetLibraryViewModel : ObservableObject, IDisposab
     [ObservableProperty] private string _emptyText = string.Empty;
 
     [ObservableProperty] private string _resultText = string.Empty;
-
-    [ObservableProperty] private string? _toastText;
-
-    [ObservableProperty] private bool _isToastVisible;
 
     public string SelectedCategory => _selectedCategory;
 
@@ -175,37 +169,13 @@ public sealed partial class PresetLibraryViewModel : ObservableObject, IDisposab
             var added = await _library.AddAsync(profile).ConfigureAwait(true);
 
             _logger.LogInformation("Thêm mẫu '{Template}' từ thư viện thành preset '{Name}'.", item.Name, added.Name);
-            ShowToast(Tr.Format("Library_Added", added.Name));
+            Toast.Show(Tr.Format("Library_Added", added.Name));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
             _logger.LogError(ex, "Không thêm được mẫu '{Template}'.", item.Name);
-            ShowToast(Tr.Format("Library_AddFailed", ex.Message));
+            Toast.Show(Tr.Format("Library_AddFailed", ex.Message));
         }
-    }
-
-    private void ShowToast(string text)
-    {
-        ToastText = text;
-        IsToastVisible = true;
-
-        // Một timer duy nhất, chỉ chạy trong 2,5 giây sau mỗi lần thêm rồi tự dừng: không có nhịp nền nào.
-        _toastTimer ??= CreateToastTimer();
-        _toastTimer.Stop();
-        _toastTimer.Start();
-    }
-
-    private DispatcherTimer CreateToastTimer()
-    {
-        var timer = new DispatcherTimer(DispatcherPriority.Background) { Interval = ToastDuration };
-        timer.Tick += OnToastTimerTick;
-        return timer;
-    }
-
-    private void OnToastTimerTick(object? sender, EventArgs e)
-    {
-        _toastTimer?.Stop();
-        IsToastVisible = false;
     }
 
     internal static string CategoryLabel(string key) => key switch
@@ -223,12 +193,7 @@ public sealed partial class PresetLibraryViewModel : ObservableObject, IDisposab
         if (_disposed) return;
         _disposed = true;
 
-        if (_toastTimer is not null)
-        {
-            _toastTimer.Stop();
-            _toastTimer.Tick -= OnToastTimerTick;
-            _toastTimer = null;
-        }
+        Toast.Dispose();
     }
 }
 

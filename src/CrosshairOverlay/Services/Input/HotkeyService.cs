@@ -27,7 +27,7 @@ public sealed class HotkeyService : IHotkeyService
     private readonly Dictionary<int, HotkeyAction> _byId = [];
     private readonly List<MouseHotkey> _mouseBindings = [];
     private readonly Dispatcher _dispatcher;
-    private readonly RawMouseInputThread _rawInput;
+    private readonly IRawMouseInput _rawInput;
 
     /// <summary>
     /// Bản chụp phím tắt chuột mà luồng input đọc. Mảng bất biến, thay cả mảng khi đổi — luồng input
@@ -68,10 +68,19 @@ public sealed class HotkeyService : IHotkeyService
     private volatile bool _disposed;
 
     public HotkeyService(ILogger<HotkeyService> logger)
+        : this(logger, null)
+    {
+    }
+
+    /// <param name="rawInput">
+    /// Nguồn gói tin chuột. Test truyền nguồn giả: luồng Raw Input thật nhận CHUỘT THẬT của máy, nên bật nó lên trong
+    /// test là để chuột người dùng đang cầm lọt vào phép kiểm tra (đã làm test đỏ ngẫu nhiên đúng như vậy).
+    /// </param>
+    internal HotkeyService(ILogger<HotkeyService> logger, IRawMouseInput? rawInput)
     {
         _logger = logger;
         _dispatcher = Dispatcher.CurrentDispatcher;
-        _rawInput = new RawMouseInputThread(OnRawMousePacket);
+        _rawInput = rawInput ?? new RawMouseInputThread(OnRawMousePacket);
     }
 
     /// <summary>Một phím tắt chuột dạng gọn cho luồng input: không chạm tới đối tượng binding của giao diện.</summary>

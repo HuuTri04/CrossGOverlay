@@ -150,6 +150,12 @@ public interface IDialogService
     /// <summary>Mở hộp thoại "Xuất mã tâm ngắm" với mã của từng game.</summary>
     void ShowExportCodes(CrosshairExportCodes codes);
 
+    /// <summary>
+    /// Mở hộp thoại cập nhật (ghi chú phát hành + thanh tiến trình).
+    /// </summary>
+    /// <returns>true khi script cập nhật đã chạy — người gọi phải cho ứng dụng thoát ngay.</returns>
+    bool ShowUpdate(UpdateInfo update);
+
     /// <summary>Trả về null nếu người dùng huỷ.</summary>
     string? PickFileToOpen(string filter, string? initialDirectory = null);
 

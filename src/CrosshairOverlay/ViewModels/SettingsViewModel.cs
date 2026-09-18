@@ -60,7 +60,7 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
         _logger = logger;
 
         Editor = new CrosshairEditorViewModel(renderer, dialogs, images, settings);
-        General = new GeneralSettingsViewModel(settings, monitors, overlay, startup, updates, dialogs, paths, launcher, restart, storage);
+        General = new GeneralSettingsViewModel(settings, monitors, overlay, startup, updates, dialogs, paths, launcher, restart, storage, Toast);
         Hotkeys = new HotkeysViewModel(settings, hotkeys);
         Games = new GameProfilesViewModel(settings, library, watcher, matcher, scanner);
         SystemInfo = new SystemInfoViewModel(hardware, monitors, displayModes);
@@ -88,6 +88,9 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
 
     /// <summary>Tab "Thư viện": dữ liệu chỉ được nạp khi người dùng mở tab đó lần đầu.</summary>
     public PresetLibraryViewModel Library { get; }
+
+    /// <summary>Thông báo nhỏ ở góc cửa sổ, dùng chung cho mọi tab (vd "Bạn đang dùng phiên bản mới nhất").</summary>
+    public ToastViewModel Toast { get; } = new();
 
     public ReadOnlyObservableCollection<CrosshairProfile> Presets => _library.Presets;
 
@@ -509,6 +512,7 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
 
         _library.ActiveChanged -= OnLibraryActiveChanged;
         Library.Dispose();
+        Toast.Dispose();
         _settings.Current.PropertyChanged -= OnSettingsChanged;
         TranslationSource.Instance.PropertyChanged -= OnLanguageChanged;
 

@@ -335,7 +335,7 @@ Download and update now? The app will restart itself.</value></data>
 
 You can download it manually from the releases page.</value></data>
   <data name="Update_CheckNow"><value>Check for updates</value></data>
-  <data name="Update_UpToDate"><value>You are on the latest version ({0}).</value></data>
+  <data name="Update_UpToDate"><value>You are on the latest version (v{0}).</value></data>
   <data name="Update_CheckFailed"><value>Could not check for updates — try again later.</value></data>
   <data name="Update_AutoCheck"><value>Check for updates on startup</value></data>
   <data name="Perf_Header"><value>PERFORMANCE</value></data>
@@ -449,4 +449,11 @@ The app will restart to apply the change.</value></data>
   <data name="Library_Missing"><value>Template library not found (Data\builtin_presets.json). Please reinstall the app.</value></data>
   <data name="Library_Count"><value>{0} templates</value></data>
   <data name="Tab_Library"><value>Library</value></data>
+  <data name="Update_DialogTitle"><value>A new version is available!</value></data>
+  <data name="Update_Downloading"><value>Downloading the installer...</value></data>
+  <data name="Update_Restarting"><value>Restarting...</value></data>
+  <data name="Update_NoNotes"><value>• Performance improvements and small fixes.</value></data>
+  <data name="Update_HeaderLabel"><value>SOFTWARE UPDATE</value></data>
+  <data name="Update_NotesLabel"><value>RELEASE NOTES</value></data>
+  <data name="Common_Close"><value>Close</value></data>
 </root>

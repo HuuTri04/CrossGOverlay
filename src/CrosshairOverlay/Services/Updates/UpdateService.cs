@@ -12,14 +12,24 @@ namespace CrosshairOverlay.Services.Updates;
 /// <inheritdoc cref="IUpdateService"/>
 public sealed class UpdateService : IUpdateService, IDisposable
 {
+    /// <summary>Chủ sở hữu kho phát hành trên GitHub.</summary>
+    public const string GithubOwner = "HuuTri04";
+
+    /// <summary>Tên kho phát hành trên GitHub.</summary>
+    public const string GithubRepo = "CrossGOverlay";
+
     /// <summary>
-    /// Kho phát hành trên GitHub, dạng "chu-so-huu/ten-kho".
+    /// Địa chỉ API của bản phát hành mới nhất.
     /// </summary>
     /// <remarks>
-    /// Chưa trỏ tới kho thật. Khi chưa đổi, <see cref="CheckAsync"/> sẽ thất bại và trả null —
-    /// đúng hành vi mong muốn: ứng dụng vẫn khởi động bình thường.
+    /// Phải là <c>api.github.com</c>, KHÔNG phải trang web <c>github.com/.../releases/latest</c>: trang web trả về
+    /// HTML, không phải JSON có <c>tag_name</c> và <c>assets</c>.
     /// </remarks>
-    private const string RepositoryPath = "HuuTri04/CrosshairOverlay";
+    public static readonly string LatestReleaseUrl =
+        $"https://api.github.com/repos/{GithubOwner}/{GithubRepo}/releases/latest";
+
+    /// <summary>GitHub trả 403 nếu request không có User-Agent.</summary>
+    public const string UserAgent = "CrossGOverlay-App";
 
     /// <summary>Đủ để một mạng bình thường trả lời, và đủ ngắn để mạng hỏng không làm chờ lâu.</summary>
     private static readonly TimeSpan CheckTimeout = TimeSpan.FromSeconds(8);
@@ -31,14 +41,20 @@ public sealed class UpdateService : IUpdateService, IDisposable
     private bool _disposed;
 
     public UpdateService(ILogger<UpdateService> logger)
+        : this(logger, new HttpClientHandler())
+    {
+    }
+
+    /// <param name="handler">Test truyền handler giả để không đụng tới mạng thật.</param>
+    internal UpdateService(ILogger<UpdateService> logger, HttpMessageHandler handler)
     {
         _logger = logger;
 
-        _http = new HttpClient { Timeout = DownloadTimeout };
+        _http = new HttpClient(handler) { Timeout = DownloadTimeout };
 
         // GitHub API từ chối request không có User-Agent.
         _http.DefaultRequestHeaders.UserAgent.Add(
-            new ProductInfoHeaderValue(Core.AppInfo.DisplayName, CurrentVersion.ToString()));
+            new ProductInfoHeaderValue(UserAgent, CurrentVersion.ToString()));
         _http.DefaultRequestHeaders.Accept.Add(
             new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
     }
@@ -46,58 +62,83 @@ public sealed class UpdateService : IUpdateService, IDisposable
     public Version CurrentVersion { get; } =
         typeof(UpdateService).Assembly.GetName().Version ?? new Version(0, 0, 0, 0);
 
-    public async Task<UpdateInfo?> CheckAsync(CancellationToken cancellationToken = default)
+    public async Task<UpdateCheck> CheckAsync(CancellationToken cancellationToken = default)
     {
         try
         {
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeout.CancelAfter(CheckTimeout);
 
-            var url = $"https://api.github.com/repos/{RepositoryPath}/releases/latest";
-            using var response = await _http.GetAsync(url, timeout.Token).ConfigureAwait(false);
+            using var response = await _http.GetAsync(LatestReleaseUrl, timeout.Token).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)
             {
+                // Kho chưa có bản phát hành nào cũng rơi vào đây (404). Không nói với người dùng là "đã mới nhất":
+                // ta không biết điều đó, ta chỉ biết là không hỏi được.
                 _logger.LogDebug("Kiểm tra cập nhật trả về {Status}.", (int)response.StatusCode);
-                return null;
+                return new UpdateCheck(UpdateCheckStatus.Failed);
             }
 
             await using var stream = await response.Content.ReadAsStreamAsync(timeout.Token).ConfigureAwait(false);
             using var document = await JsonDocument.ParseAsync(stream, cancellationToken: timeout.Token)
                 .ConfigureAwait(false);
 
-            return Parse(document.RootElement);
+            var (result, reason) = Evaluate(document.RootElement, CurrentVersion);
+
+            // Bản phát hành đặt sai (thẻ không phải số phiên bản, thiếu gói .zip) không được im lặng: người phát
+            // hành cần biết vì sao người dùng không nhận được bản cập nhật.
+            if (result.Status == UpdateCheckStatus.Failed) _logger.LogWarning("Kiểm tra cập nhật: {Reason}.", reason);
+            else _logger.LogInformation("Kiểm tra cập nhật: {Reason}.", reason);
+
+            return result;
         }
         catch (Exception ex)
         {
             // Mất mạng, DNS hỏng, timeout, JSON lạ — tất cả đều chỉ có nghĩa "không kiểm tra
             // được lúc này". Không bao giờ để chuyện này nổi lên thành lỗi cho người dùng.
             _logger.LogDebug(ex, "Không kiểm tra được cập nhật.");
-            return null;
+            return new UpdateCheck(UpdateCheckStatus.Failed);
         }
     }
 
-    private UpdateInfo? Parse(JsonElement release) => ParseRelease(release, CurrentVersion);
+    /// <summary>Chỉ để test đọc nhanh: bản cập nhật, hoặc null nếu vì bất kỳ lý do gì không có.</summary>
+    internal static UpdateInfo? ParseRelease(JsonElement release, Version current) => Evaluate(release, current).Result.Update;
 
     /// <summary>
-    /// Đọc bản phát hành mới nhất trên GitHub; null nếu không mới hơn hoặc không có gói dùng được.
+    /// Xét bản phát hành mới nhất trên GitHub.
     /// </summary>
+    /// <returns>Trạng thái, kèm một câu giải thích để ghi log.</returns>
     /// <remarks>
+    /// <para>
+    /// "Thẻ không đọc được thành số phiên bản" KHÔNG phải "đang ở bản mới nhất": nói câu thứ hai là nói sai với người
+    /// dùng. Thẻ phải có dạng <c>v1.2.3</c> (chữ "v" tuỳ chọn); thẻ như <c>First-release</c> thì không so sánh được
+    /// với phiên bản đang chạy.
+    /// </para>
+    /// <para>
     /// Ứng dụng phát hành dạng THƯ MỤC, nên gói cập nhật phải là file <c>.zip</c> chứa cả thư mục.
     /// Cố tình KHÔNG nhận file <c>.exe</c>: một bản phát hành dạng một file mà chép đè lên
     /// <c>CrossGOverlay.exe</c> của bản thư mục thì chỉ thay được file khởi chạy, còn mã của ứng dụng
     /// (CrossGOverlay.dll) vẫn là bản cũ — cập nhật "thành công" mà không có gì đổi.
     /// Có nhiều .zip thì ưu tiên gói ghi rõ <c>win-x64</c>.
+    /// </para>
     /// </remarks>
-    internal static UpdateInfo? ParseRelease(JsonElement release, Version current)
+    internal static (UpdateCheck Result, string Reason) Evaluate(JsonElement release, Version current)
     {
-        if (!release.TryGetProperty("tag_name", out var tag)) return null;
+        var rawTag = release.TryGetProperty("tag_name", out var tag) ? tag.GetString() : null;
+        var latest = ParseVersion(rawTag);
 
-        var latest = ParseVersion(tag.GetString());
-        if (latest is null || latest <= current) return null;
+        if (latest is null)
+        {
+            return (new UpdateCheck(UpdateCheckStatus.Failed),
+                $"thẻ phát hành '{rawTag ?? "(không có)"}' không phải số phiên bản (cần dạng v1.2.3)");
+        }
+
+        if (latest <= current) return (new UpdateCheck(UpdateCheckStatus.UpToDate), $"đang ở bản mới nhất ({current})");
 
         if (!release.TryGetProperty("assets", out var assets) || assets.ValueKind != JsonValueKind.Array)
-            return null;
+        {
+            return (new UpdateCheck(UpdateCheckStatus.Failed), $"bản {latest} không có file đính kèm nào");
+        }
 
         string? chosen = null;
 
@@ -118,10 +159,17 @@ public sealed class UpdateService : IUpdateService, IDisposable
             chosen ??= url;
         }
 
-        if (chosen is null) return null;
+        if (chosen is null)
+        {
+            return (new UpdateCheck(UpdateCheckStatus.Failed),
+                $"bản {latest} không có gói .zip nào (bản phát hành dạng thư mục bắt buộc phải kèm .zip)");
+        }
 
         var page = release.TryGetProperty("html_url", out var h) ? h.GetString() : null;
-        return new UpdateInfo(latest, chosen, page ?? chosen);
+        var notes = release.TryGetProperty("body", out var b) ? b.GetString() : null;
+        var update = new UpdateInfo(latest, chosen, page ?? chosen, (notes ?? string.Empty).Trim());
+
+        return (new UpdateCheck(UpdateCheckStatus.UpdateAvailable, update), $"có bản {latest}");
     }
 
     /// <summary>Thẻ phát hành thường có tiền tố "v", vd "v1.4.0".</summary>
@@ -134,7 +182,7 @@ public sealed class UpdateService : IUpdateService, IDisposable
     }
 
     public async Task<bool> DownloadAndApplyAsync(
-        UpdateInfo update, CancellationToken cancellationToken = default)
+        UpdateInfo update, IProgress<double>? progress = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(update);
 
@@ -150,7 +198,7 @@ public sealed class UpdateService : IUpdateService, IDisposable
         var package = Path.Combine(Path.GetTempPath(), $"CrosshairOverlay-{update.Version}.zip");
         var staging = Path.Combine(Path.GetTempPath(), $"CrosshairOverlay-update-{update.Version}-{Guid.NewGuid():N}");
 
-        await DownloadAsync(update.DownloadUrl, package, cancellationToken).ConfigureAwait(false);
+        await DownloadAsync(update.DownloadUrl, package, progress, cancellationToken).ConfigureAwait(false);
 
         // Giải nén TRƯỚC khi thoát: gói hỏng thì báo lỗi ngay khi ứng dụng còn chạy, thay vì để
         // script chép dở một thư mục hỏng đè lên bản đang dùng tốt. ExtractToDirectory tự chặn
@@ -221,7 +269,16 @@ public sealed class UpdateService : IUpdateService, IDisposable
         }
     }
 
-    private async Task DownloadAsync(string url, string destination, CancellationToken cancellationToken)
+    /// <summary>
+    /// Tải gói về file tạm, vừa tải vừa báo phần trăm.
+    /// </summary>
+    /// <remarks>
+    /// <c>ResponseHeadersRead</c> để đọc được Content-Length rồi chép theo từng khối; đợi tải xong cả nội dung mới
+    /// trả về thì thanh tiến trình chỉ có hai trạng thái 0% và 100%. Máy chủ không gửi Content-Length (hiếm) thì
+    /// không có phần trăm để báo, chỉ báo lúc xong.
+    /// </remarks>
+    internal async Task DownloadAsync(
+        string url, string destination, IProgress<double>? progress, CancellationToken cancellationToken)
     {
         using var response = await _http
             .GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
@@ -229,17 +286,40 @@ public sealed class UpdateService : IUpdateService, IDisposable
 
         response.EnsureSuccessStatusCode();
 
-        // Tải ra file tạm rồi mới đổi tên: tải dở dang không được để lại một file .exe cụt mà
+        var total = response.Content.Headers.ContentLength;
+
+        // Tải ra file tạm rồi mới đổi tên: tải dở dang không được để lại một gói cụt mà
         // script sau đó lại đem chép đè lên bản đang chạy tốt.
         var partial = destination + ".part";
 
         await using (var source = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false))
         await using (var target = File.Create(partial))
         {
-            await source.CopyToAsync(target, cancellationToken).ConfigureAwait(false);
+            var buffer = new byte[81920];
+            long received = 0;
+            var lastPercent = -1;
+
+            while (true)
+            {
+                var read = await source.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
+                if (read == 0) break;
+
+                await target.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
+                received += read;
+
+                if (progress is null || total is not > 0) continue;
+
+                // Chỉ báo khi số phần trăm thật sự đổi: gói 60 MB là ~800 khối, không cần 800 lần vẽ lại giao diện.
+                var percent = (int)(received * 100 / total.Value);
+                if (percent == lastPercent) continue;
+
+                lastPercent = percent;
+                progress.Report(percent / 100d);
+            }
         }
 
         File.Move(partial, destination, overwrite: true);
+        progress?.Report(1d);
     }
 
     /// <summary>

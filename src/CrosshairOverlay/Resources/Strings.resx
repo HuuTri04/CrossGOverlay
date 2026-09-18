@@ -347,7 +347,7 @@ Tải về và cập nhật ngay bây giờ? Ứng dụng sẽ tự khởi độ
 
 Bạn có thể tải thủ công từ trang phát hành.</value></data>
   <data name="Update_CheckNow"><value>Kiểm tra cập nhật</value></data>
-  <data name="Update_UpToDate"><value>Bạn đang dùng phiên bản mới nhất ({0}).</value></data>
+  <data name="Update_UpToDate"><value>Bạn đang sử dụng phiên bản mới nhất (v{0}).</value></data>
   <data name="Update_CheckFailed"><value>Không kiểm tra được cập nhật — hãy thử lại sau.</value></data>
   <data name="Update_AutoCheck"><value>Tự kiểm tra cập nhật khi khởi động</value></data>
   <data name="Perf_Header"><value>HIỆU NĂNG</value></data>
@@ -462,4 +462,11 @@ Dữ liệu ở thư mục cũ luôn được giữ nguyên.</value></data>
   <data name="Library_Missing"><value>Không tìm thấy thư viện mẫu (Data\builtin_presets.json). Hãy cài lại ứng dụng.</value></data>
   <data name="Library_Count"><value>{0} mẫu</value></data>
   <data name="Tab_Library"><value>Thư viện</value></data>
+  <data name="Update_DialogTitle"><value>Đã có phiên bản mới!</value></data>
+  <data name="Update_Downloading"><value>Đang tải xuống bản cài đặt...</value></data>
+  <data name="Update_Restarting"><value>Đang khởi động lại...</value></data>
+  <data name="Update_NoNotes"><value>• Cải thiện hiệu năng và sửa các lỗi nhỏ hệ thống.</value></data>
+  <data name="Update_HeaderLabel"><value>CẬP NHẬT PHẦN MỀM</value></data>
+  <data name="Update_NotesLabel"><value>GHI CHÚ BẢN CẬP NHẬT</value></data>
+  <data name="Common_Close"><value>Đóng</value></data>
 </root>

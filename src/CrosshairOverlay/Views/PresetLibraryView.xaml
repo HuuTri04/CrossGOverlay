@@ -151,8 +151,8 @@
         <!-- Thông báo nhỏ ở góc dưới, tự ẩn sau 2,5 giây. Người dùng vẫn ở lại tab để chọn tiếp mẫu khác. -->
         <Border Grid.Row="1" Style="{StaticResource Toast}" HorizontalAlignment="Right"
                 VerticalAlignment="Bottom" Margin="0,0,18,18"
-                Visibility="{Binding IsToastVisible, Converter={StaticResource BoolToVisibility}}">
-            <TextBlock Text="{Binding ToastText}" FontSize="13" TextWrapping="Wrap" MaxWidth="520"/>
+                Visibility="{Binding Toast.IsVisible, Converter={StaticResource BoolToVisibility}}">
+            <TextBlock Text="{Binding Toast.Text}" FontSize="13" TextWrapping="Wrap" MaxWidth="520"/>
         </Border>
     </Grid>
 </UserControl>

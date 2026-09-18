@@ -29,6 +29,22 @@ public static class AppInfo
     private static string BuildVersion()
     {
         var version = Assembly.GetExecutingAssembly().GetName().Version;
-        return version is null ? "v0.0.0" : $"v{version.Major}.{version.Minor}.{version.Build}";
+        return version is null ? "v0.0.0" : "v" + Short(version);
+    }
+
+    /// <summary>
+    /// Phiên bản dạng người đọc: "0.1.0", không phải "0.1.0.0".
+    /// </summary>
+    /// <remarks>
+    /// Phiên bản assembly luôn có 4 số, còn thẻ phát hành trên GitHub ("v0.2.0") chỉ có 3. Hiện cả hai cạnh nhau mà
+    /// một bên thừa số 0 thì trông như hai cách đánh số khác nhau.
+    /// </remarks>
+    public static string Short(Version version)
+    {
+        ArgumentNullException.ThrowIfNull(version);
+
+        // Revision > 0 mới đáng hiện; Build âm nghĩa là phiên bản chỉ có hai số.
+        if (version.Revision > 0) return version.ToString(4);
+        return version.Build > 0 ? version.ToString(3) : version.ToString(Math.Max(2, Math.Min(3, version.Build + 3)));
     }
 }

@@ -437,11 +437,21 @@ public partial class App : Application
             try
             {
                 var updates = _provider!.GetRequiredService<IUpdateService>();
-                var update = await updates.CheckAsync().ConfigureAwait(false);
-                if (update is null) return;
+                var result = await updates.CheckAsync().ConfigureAwait(false);
 
-                await Dispatcher.InvokeAsync(() => OfferUpdateAsync(updates, update))
-                    .Task.Unwrap().ConfigureAwait(false);
+                // Không có bản mới thì im lặng: người dùng vừa mở app để vào game, không cần biết.
+                if (result.Status != UpdateCheckStatus.UpdateAvailable || result.Update is not { } update) return;
+
+                if (!UpdateOfferPolicy.ShouldOfferAutomatically(update.Version, settings.Current.LastUpdateAttempt))
+                {
+                    _log?.LogWarning(
+                        "Đã cập nhật lên {Attempted} nhưng ứng dụng vẫn là {Current} — gói phát hành có thể gắn sai "
+                        + "phiên bản. Không tự nhắc nữa; nút \"Kiểm tra cập nhật\" vẫn dùng được.",
+                        settings.Current.LastUpdateAttempt, updates.CurrentVersion);
+                    return;
+                }
+
+                await Dispatcher.InvokeAsync(() => OfferUpdate(update));
             }
             catch (Exception ex)
             {
@@ -450,12 +460,11 @@ public partial class App : Application
         });
     }
 
-    private async Task OfferUpdateAsync(IUpdateService updates, UpdateInfo update)
+    private void OfferUpdate(UpdateInfo update)
     {
         if (_provider is null) return;
 
-        var dialogs = _provider.GetRequiredService<IDialogService>();
-        if (await UpdatePrompt.OfferAsync(updates, dialogs, update)) RequestShutdown();
+        if (_provider.GetRequiredService<IDialogService>().ShowUpdate(update)) RequestShutdown();
     }
 
     // ------------------------------------------------------------------ sự kiện

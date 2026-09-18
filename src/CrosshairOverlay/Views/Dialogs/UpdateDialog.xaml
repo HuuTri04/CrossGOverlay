@@ -1,0 +1,132 @@
+<Window x:Class="CrosshairOverlay.Views.Dialogs.UpdateDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:loc="clr-namespace:CrosshairOverlay.Localization"
+        xmlns:core="clr-namespace:CrosshairOverlay.Core"
+        Title="{x:Static core:AppInfo.DisplayName}"
+        Width="460" SizeToContent="Height" MaxHeight="500"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ShowInTaskbar="False"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
+        KeyDown="OnKeyDown">
+
+    <!-- Lề 12 để đổ bóng có chỗ vẽ: cửa sổ trong suốt nên bóng bị cắt đúng mép cửa sổ. -->
+    <Border Background="{StaticResource UpdSurface}"
+            BorderBrush="{StaticResource UpdBorder}" BorderThickness="1"
+            CornerRadius="8" Margin="12">
+        <Border.Effect>
+            <!--
+                Ngoại lệ có chủ ý với quy tắc "không dùng Effect": quy tắc đó áp cho cửa sổ overlay vẽ liên tục trên
+                game. Đây là hộp thoại nhỏ, tĩnh, thỉnh thoảng mới hiện.
+            -->
+            <DropShadowEffect Color="Black" BlurRadius="24" ShadowDepth="4" Direction="270" Opacity="0.65"/>
+        </Border.Effect>
+
+        <Grid Margin="18,10,18,18">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="40"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- ======== Thanh tiêu đề tự vẽ: kéo được, nút đóng bên phải -->
+            <Grid Grid.Row="0" Background="Transparent" MouseLeftButtonDown="OnHeaderMouseDown">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- Mũi tên tải xuống, cùng màu nhấn với phần còn lại của ứng dụng. -->
+                    <Path Width="12" Height="13" Stretch="Uniform" VerticalAlignment="Center"
+                          Fill="{StaticResource AccentBright}"
+                          Data="M 5,0 L 7,0 L 7,7 L 10,7 L 6,12 L 2,7 L 5,7 Z"/>
+                    <TextBlock Text="{loc:Loc Update_HeaderLabel}" Margin="8,0,0,0" VerticalAlignment="Center"
+                               FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource UpdHeaderText}"/>
+                </StackPanel>
+
+                <Button HorizontalAlignment="Right" VerticalAlignment="Center"
+                        Style="{StaticResource DialogCloseButton}"
+                        AutomationProperties.Name="{loc:Loc Common_Close}" ToolTip="{loc:Loc Common_Close}"
+                        Click="OnCloseClick"/>
+            </Grid>
+
+            <!-- ======== Tiêu đề lớn -->
+            <TextBlock Grid.Row="1" Text="{loc:Loc Update_DialogTitle}" Margin="0,4,0,0"
+                       FontSize="16" FontWeight="Bold" Foreground="White" TextWrapping="Wrap"/>
+
+            <!-- ======== Hai huy hiệu phiên bản: đang dùng ➜ sắp cài -->
+            <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,12,0,0">
+                <Border Style="{StaticResource VersionBadge}">
+                    <TextBlock Text="{Binding CurrentVersionText}" FontSize="11.5" FontWeight="SemiBold"
+                               Foreground="{StaticResource UpdGhostText}"/>
+                </Border>
+                <TextBlock Text="➜" Margin="10,0" VerticalAlignment="Center" FontSize="12"
+                           Foreground="{StaticResource UpdHeaderText}"/>
+                <Border Style="{StaticResource VersionBadgeNew}">
+                    <TextBlock Text="{Binding LatestVersionText}" FontSize="11.5" FontWeight="SemiBold"
+                               Foreground="{StaticResource AccentBright}"/>
+                </Border>
+            </StackPanel>
+
+            <!-- ======== Ghi chú phát hành -->
+            <StackPanel Grid.Row="3" Margin="0,18,0,0">
+                <TextBlock Text="{loc:Loc Update_NotesLabel}" FontSize="10" FontWeight="Bold"
+                           Foreground="{StaticResource UpdLabel}" Margin="0,0,0,6"/>
+                <Border Background="{StaticResource UpdNotesBg}" BorderBrush="{StaticResource UpdNotesBorder}"
+                        BorderThickness="1" CornerRadius="6" Padding="12" Height="120">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <TextBlock Text="{Binding Changelog}" TextWrapping="Wrap" FontSize="12" LineHeight="18"
+                                   Foreground="{StaticResource UpdNotesText}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                    <Style.Triggers>
+                                        <!-- Không có ghi chú thật: câu thay thế để nghiêng cho khỏi bị đọc nhầm là nội dung của bản phát hành. -->
+                                        <DataTrigger Binding="{Binding HasChangelog}" Value="False">
+                                            <Setter Property="FontStyle" Value="Italic"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </ScrollViewer>
+                </Border>
+            </StackPanel>
+
+            <!-- ======== Tiến trình: chỉ hiện trong lúc tải -->
+            <StackPanel Grid.Row="4" Margin="0,16,0,0"
+                        Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVisibility}}">
+                <ProgressBar Style="{StaticResource UpdateProgressBar}" Value="{Binding ProgressPercent, Mode=OneWay}"/>
+                <DockPanel Margin="0,8,0,0">
+                    <TextBlock DockPanel.Dock="Right" Text="{Binding ProgressText}" FontSize="12"
+                               FontWeight="SemiBold" Foreground="{StaticResource AccentBright}"/>
+                    <TextBlock Text="{Binding DownloadStatus}" FontSize="12"
+                               Foreground="{StaticResource UpdHeaderText}" TextTrimming="CharacterEllipsis"/>
+                </DockPanel>
+            </StackPanel>
+
+            <!-- Lỗi tải: thay chỗ của thanh tiến trình, vì lúc đó không còn tải nữa. -->
+            <TextBlock Grid.Row="4" Margin="0,16,0,0" Text="{Binding ErrorText}" FontSize="12"
+                       Foreground="{StaticResource Danger}" TextWrapping="Wrap">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                        <Style.Triggers>
+                            <Trigger Property="Text" Value="">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+
+            <!-- ======== Nút bấm -->
+            <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
+                <Button Content="{loc:Loc Update_Later}" Style="{StaticResource UpdateGhostButton}"
+                        Margin="0,0,10,0" Command="{Binding LaterCommand}"/>
+                <Button Content="{loc:Loc Update_Primary}" Style="{StaticResource UpdatePrimaryButton}"
+                        Command="{Binding UpdateNowCommand}" IsDefault="True"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>
