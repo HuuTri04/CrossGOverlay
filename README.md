@@ -209,4 +209,4 @@ Sử dụng bộ UI **MongoDB LeafyGreen (Dark mode)**:
 Mọi định dạng nằm ở `src\CrosshairOverlay\Resources\Theme.xaml`.
 
 ## Contributors
-Cảm ơn @HuuwxLoiwf đã đồng hành và đóng góp cho project này
+Cảm ơn [HuuwxLoiwf (HuuLoii)](https://github.com/HuuwxLoiwf) đã đồng hành và đóng góp cho project này
