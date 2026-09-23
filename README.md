@@ -19,7 +19,7 @@ Thiết kế và lý do đằng sau từng quyết định được ghi chú chi
 7. [Kiểm thử (Manual & Auto)](#7-kiểm-thử)
 8. [Ký số bản phát hành (Code Signing)](#8-ký-số-bản-phát-hành)
 9. [Đa ngôn ngữ](#9-ngôn-ngữ-giao-diện)
-10. [Thiết kế & Icon](#11-ngôn-ngữ-thiết-kế--icon)
+10. [Thiết kế](#11-ngôn-ngữ-thiết-kế)
 
 ---
 
@@ -68,20 +68,6 @@ Kết quả nằm ở `src\CrosshairOverlay\bin\Release\net8.0-windows\win-x64\p
   <DebugType>embedded</DebugType>
 </PropertyGroup>
 ```
-
-**Vì sao không dùng một file .exe** — đo trên cùng mã nguồn, dựng sạch từng biến thể, chạy xen kẽ nhiều vòng:
-
-| Kiểu đóng gói | .NET nạp xong | Cửa sổ có hình đầu tiên | Tải về |
-|---|---|---|---|
-| Một file .exe có nén (cách cũ) | ~960 ms | 1407–1921 ms | 69 MB |
-| **Thư mục (hiện tại)** | **~110–175 ms** | **~650–760 ms** | **63 MB (.zip)** |
-
-Chi phí nằm ở chính gói một file (nén hay không, để DLL native ra ngoài hay không đều như nhau).
-
-**Lưu ý khi đo tốc độ:** lần mở đầu tiên ngay sau khi publish chậm bất thường (5–11 giây) vì Windows Defender quét file mới; từ lần thứ hai trở đi mới là con số thật. Luôn publish sạch trước khi đo — publish tăng dần sau nhiều lần sửa-hoàn-tác nhanh từng đóng gói nhầm mã cũ mà không báo lỗi gì.
-
-Muốn gói nhẹ (~2 MB) và chấp nhận yêu cầu máy đích cài sẵn .NET 8 Desktop Runtime thì thêm `-p:SelfContained=false`.
-
 ## 3. Cách sử dụng & Phím tắt
 
 Chạy `CrossGOverlay.exe`. Ở lần khởi động đầu tiên, ứng dụng sẽ:
@@ -214,7 +200,7 @@ Hỗ trợ **Tiếng Việt** và **Tiếng Anh**. Mặc định lấy theo ngô
 3. Khai báo vào `LanguageCatalog.All`.
 4. Cập nhật bài test `LocalizationTests`.
 
-## 10. Ngôn ngữ thiết kế & Icon
+## 10. Ngôn ngữ thiết kế
 Sử dụng bộ UI **MongoDB LeafyGreen (Dark mode)**:
 - Nền `#001E2B`, thẻ `#1C2D38`, viền `#3D4F58`.
 - Điểm nhấn xanh lá `#00A35C` / `#00ED64`.
@@ -222,17 +208,5 @@ Sử dụng bộ UI **MongoDB LeafyGreen (Dark mode)**:
 - Không dùng `MessageBox` gốc của Windows, mọi dialog được custom đồng bộ thiết kế.
 Mọi định dạng nằm ở `src\CrosshairOverlay\Resources\Theme.xaml`.
 
-### File Logo & Icon
-Icon được build dưới dạng `Resource` để nhúng thẳng vào file `.exe` (pack URI), không lo mất icon khi publish portable.
-
-| File | Chức năng |
-|---|---|
-| `app.ico` | Icon cho `.exe`, Taskbar, Khay hệ thống |
-| `BrandingLogo.ico` | Logo góc thương hiệu (load qua `<Image>`) |
-| `app.source.png` | Ảnh gốc để build ra `app.ico` |
-
-**Cách đổi logo:**
-Phải tạo file `.ico` chuẩn (không được phép đổi đuôi từ PNG). Dùng script sau để gen file:
-```powershell
-.\build\make-icon.ps1 -Source src\CrosshairOverlay\images\app.source.png `
-                      -Destination src\CrosshairOverlay\images\app.ico
+## Contributors
+Cảm ơn @HuuwxLoiwf đã đồng hành và đóng góp cho project này
