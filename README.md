@@ -267,33 +267,7 @@ CrossGOverlay/
 
 ---
 
-## 9. Contribution Guidelines
-
-Contributions are welcome from the community. To keep code quality consistent across the codebase, please review the following engineering standards:
-
-### Development Workflow
-1. **Fork & Branch**: Create a feature branch off `main` with a standard naming convention:
-   ```bash
-   git checkout -b feat/dynamic-spread-indicator
-   # or: git checkout -b fix/multimonitor-dpi-offset
-   ```
-2. **Coding Standards**:
-   - Write clean, idiomatically typed C# 12 code adhering to standard .NET framework conventions.
-   - P/Invoke signatures must strictly define safe native marshaling types with explicit CharSet parameters (`CharSet.Unicode`).
-   - Retain full MVVM separation: No UI orchestration inside raw models; rely on data bindings, commands, and dependency injection.
-3. **Localization Support**:
-   - Never hardcode user-visible strings inside views or models. Add string values to `Strings.resx` (en-US default) and `Strings.vi.resx` (Vietnamese).
-4. **Automated Verification**:
-   - Run the test suite before opening a pull request. Every unit test must pass:
-   ```bash
-   dotnet test Crosshair.sln -c Release
-   ```
-5. **Pull Request Protocol**:
-   - Submit clear, well-described PRs referencing relevant issue IDs. Include visual screenshots or animated captures for UI changes.
-
----
-
-## 10. License
+## 9. License
 
 CrossGOverlay is licensed under the open-source **[MIT License](LICENSE)**.
 
@@ -310,24 +284,6 @@ furnished to do so, subject to the following conditions:
 The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
 ```
-
----
-
-## 11. Roadmap
-
-- [x] **v1.0.0 — Core Foundation**
-  - [x] WPF .NET 8 layered transparent overlay window implementation.
-  - [x] Full CS2 and Valorant crosshair code import and export parser.
-  - [x] Game profile matching via Windows foreground hooks.
-  - [x] MongoDB LeafyGreen dark UI system and full Vietnamese/English localization.
-- [ ] **v1.1.0 — Extended Graphics Engine**
-  - [ ] DirectComposition / Direct2D hardware swap-chain rendering support for reduced CPU usage.
-  - [ ] Dynamic crosshair spread profiles (timer/movement simulation presets).
-  - [ ] Custom image and SVG reticle asset importing.
-- [ ] **v1.2.0 — Ecosystem & Community**
-  - [ ] Community reticle gallery browser with one-click direct import.
-  - [ ] Auto-detection support for Apex Legends and Overwatch 2 crosshair formats.
-  - [ ] Cloud-synced profile backups via secure webhooks or GitHub Gist integration.
 
 ---
 

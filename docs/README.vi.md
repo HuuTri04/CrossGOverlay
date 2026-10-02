@@ -264,36 +264,9 @@ CrossGOverlay/
 ├── LICENSE                       # Giấy phép mã nguồn mở MIT
 └── README.md                     # Tài liệu giới thiệu dự án
 ```
-
 ---
 
-## 9. Hướng dẫn đóng góp (Contribution Guidelines)
-
-Cộng đồng lập trình viên luôn được hoan nghênh tham gia đóng góp. Để giữ chất lượng mã nguồn luôn đồng nhất, vui lòng tuân thủ quy chuẩn kỹ thuật sau:
-
-### Quy trình phát triển
-1. **Fork & Phân nhánh**: Tạo nhánh làm việc mới từ `main` với tiền tố rõ ràng:
-   ```bash
-   git checkout -b feat/dynamic-spread-indicator
-   # hoặc: git checkout -b fix/multimonitor-dpi-offset
-   ```
-2. **Quy chuẩn lập trình**:
-   - Tuân thủ cú pháp C# 12 hiện đại và các nguyên tắc thiết kế của Microsoft .NET.
-   - Các chữ ký P/Invoke phải được cấu hình kiểu dữ liệu an toàn (`CharSet = CharSet.Unicode`).
-   - Duy trì chuẩn MVVM: Không lồng ghép xử lý giao diện trực tiếp vào Model; ưu tiên Command, Data Binding và Service Injection.
-3. **Đa ngôn ngữ**:
-   - Tuyệt đối không hardcode text hiển thị lên màn hình. Thêm chuỗi văn bản tương ứng vào cả hai file tài nguyên `Strings.resx` (mặc định) và `Strings.vi.resx` (Tiếng Việt).
-4. **Kiểm thử tự động**:
-   - Chạy toàn bộ unit test trước khi gửi Pull Request. Đảm bảo 100% kiểm thử thành công:
-   ```bash
-   dotnet test Crosshair.sln -c Release
-   ```
-5. **Tiêu chuẩn Pull Request**:
-   - Đặt tiêu đề rõ ràng, mô tả chi tiết nội dung thay đổi và liên kết với Issue liên quan. Đính kèm ảnh chụp hoặc video minh họa nếu có thay đổi về giao diện.
-
----
-
-## 10. Giấy phép mã nguồn (License)
+## 9. Giấy phép mã nguồn (License)
 
 CrossGOverlay được phát hành dưới điều khoản của giấy phép mã nguồn mở **[MIT License](LICENSE)**.
 
@@ -310,25 +283,6 @@ furnished to do so, subject to the following conditions:
 The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
 ```
-
----
-
-## 11. Kế hoạch phát triển (Roadmap)
-
-- [x] **v1.0.0 — Nền tảng cốt lõi**
-  - [x] Cửa sổ overlay trong suốt WPF .NET 8 tăng tốc phần cứng.
-  - [x] Trình phân tích và chuyển đổi mã chia sẻ tâm giữa CS2 và Valorant.
-  - [x] Tự nhận diện game profile theo thời gian thực qua Windows Hook.
-  - [x] Giao diện MongoDB LeafyGreen Dark mode cùng bản dịch song ngữ Việt - Anh.
-- [ ] **v1.1.0 — Mở rộng engine đồ họa**
-  - [ ] Hỗ trợ DirectComposition / Direct2D SwapChain để tối ưu hóa hiệu năng render.
-  - [ ] Mô phỏng độ giãn tâm động (Dynamic Spread) theo bước di chuyển/thời gian.
-  - [ ] Cho phép tải trực tiếp file đồ họa vector SVG hoặc ảnh làm tâm ngắm.
-- [ ] **v1.2.0 — Hệ sinh thái & Cộng đồng**
-  - [ ] Thư viện tâm ngắm cộng đồng trực tuyến tích hợp sẵn (tải về với 1 cú click).
-  - [ ] Nhận diện định dạng mã tâm từ Apex Legends và Overwatch 2.
-  - [ ] Đồng bộ hồ sơ cá nhân qua GitHub Gist hoặc đám mây cá nhân.
-
 ---
 
 ## Lời cảm ơn (Acknowledgements)
