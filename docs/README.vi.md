@@ -1,5 +1,9 @@
 # CrossGOverlay
 
+> Tài liệu tiếng Việt
+
+[🇬🇧 English](README.md)
+
 > Ứng dụng tâm ngắm tùy chỉnh siêu nhẹ, hiệu năng cao và an toàn tuyệt đối với Anti-cheat dành cho môi trường Windows.
 
 [![Platform: Windows](https://img.shields.io/badge/Nền%20tảng-Windows%2010%20%7C%2011%20(x64)-0078D6?logo=windows&logoColor=white)](#yêu-cầu-hệ-thống)
