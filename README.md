@@ -2,7 +2,7 @@
 
 > English documentation
 
-[🇻🇳 Tiếng Việt](README.vi.md)
+[🇻🇳 Tiếng Việt](docs/README.vi.md)
 
 > An ultra-lightweight, high-performance, and anti-cheat safe custom crosshair overlay designed for Windows desktop environments.
 
