@@ -1,5 +1,9 @@
 # CrossGOverlay
 
+> English documentation
+
+[🇻🇳 Tiếng Việt](README.vi.md)
+
 > An ultra-lightweight, high-performance, and anti-cheat safe custom crosshair overlay designed for Windows desktop environments.
 
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011%20(x64)-0078D6?logo=windows&logoColor=white)](#5-installation)
