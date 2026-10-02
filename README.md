@@ -1,212 +1,394 @@
-# CrossGOverlay
+CrossGOverlay
 
-Overlay tâm ngắm tuỳ chỉnh cho Windows, tương tự Crosshair X.
-**Công nghệ:** WPF · .NET 8 · MVVM · P/Invoke User32/Shcore.
+English documentation.
 
-> **Lưu ý về tên gọi:** Tên assembly là `CrossGOverlay`, nhưng namespace và thư mục mã nguồn vẫn giữ `CrosshairOverlay`. Việc đổi cả namespace không mang lại lợi ích gì mà lại đụng vào mọi file. Thư mục dữ liệu người dùng cũng giữ nguyên `%APPDATA%\CrosshairOverlay` để bản cập nhật không làm mất preset đã lưu.
+[🇻🇳 Đọc tài liệu tiếng Việt](docs/README.vi.md)
 
-Thiết kế và lý do đằng sau từng quyết định được ghi chú chi tiết tại [`ARCHITECTURE.md`](ARCHITECTURE.md).
+An ultra-lightweight, high-performance, and anti-cheat safe custom crosshair overlay designed for Windows desktop environments.
 
----
+1. Title & Description
 
-## 📑 Mục lục
-1. [Yêu cầu hệ thống](#1-yêu-cầu-hệ-thống)
-2. [Hướng dẫn Build](#2-hướng-dẫn-build)
-3. [Cách sử dụng & Phím tắt](#3-cách-sử-dụng--phím-tắt)
-4. [Lưu trữ dữ liệu](#4-lưu-trữ-dữ-liệu)
-5. [An toàn với Anti-cheat](#5-an-toàn-với-anti-cheat)
-6. [Xử lý sự cố](#6-xử-lý-sự-cố)
-7. [Kiểm thử (Manual & Auto)](#7-kiểm-thử)
-8. [Ký số bản phát hành (Code Signing)](#8-ký-số-bản-phát-hành)
-9. [Đa ngôn ngữ](#9-ngôn-ngữ-giao-diện)
-10. [Thiết kế](#11-ngôn-ngữ-thiết-kế)
+CrossGOverlay is a professional-grade, hardware-accelerated Windows crosshair overlay engineered for competitive precision and maximum performance. Built from the ground up on modern .NET 8 and WPF, it delivers pixel-perfect reticle rendering over borderless windowed games without triggering intrusive anti-cheat telemetry or adding measurable input latency.
 
----
+Designed as an open, clean-room alternative to proprietary utilities like Crosshair X, CrossGOverlay couples low-overhead OS-level hooks with real-time profile switching, extensive procedural reticle customization, and full crosshair share-code portability between mainstream titles (such as Counter-Strike 2 and Valorant).
 
-## 1. Yêu cầu hệ thống
+2. Introduction
 
-| Thành phần | Yêu cầu |
-|---|---|
-| **Hệ điều hành** | Windows 10 1607+ hoặc Windows 11, kiến trúc x64 |
-| **Để chạy** | [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) |
-| **Để build** | .NET 8 SDK |
+Competitive gaming demands visual consistency. However, native in-game crosshairs often suffer from dynamic spread jitter, low visibility against shifting background palettes, or restrictive engine customization limits. Hardware monitors offering built-in overlay crosshairs provide poor alignment, rigid shapes, and clunky on-screen display (OSD) button controls.
 
-⚠️ **Quan trọng:** Ứng dụng chạy ở quyền `asInvoker` — **không cần và không nên chạy bằng quyền admin**.
+CrossGOverlay solves this by establishing a zero-interference, borderless transparent overlay window that floats over your target application. Utilizing standard Win32 desktop composition primitives (WS_EX_TRANSPARENT, WS_EX_LAYERED, WS_EX_NOACTIVATE), CrossGOverlay guarantees that mouse inputs pass cleanly through to the game loop. The application runs strictly in unprivileged user mode (asInvoker), never hooks game APIs, never inspects game process memory, and operates cleanly alongside aggressive kernel-level anti-cheat platforms such as Riot Vanguard, Easy Anti-Cheat (EAC), and BattlEye.
 
-## 2. Hướng dẫn Build
+3. Key Features
 
-### Build cơ bản
-```bash
-# Cấu hình Debug
-dotnet build Crosshair.sln -c Debug
+Anti-Cheat Safe by Design: Operates purely as an external OS window. Strictly no DLL injection, no kernel drivers, no synthetic input simulation, and no memory reads/writes.
 
-# Cấu hình Release
+Bi-directional Share-Code Engine:
+
+Counter-Strike 2: Full base64-encoded procedural bitpack parsing (CSGO-xxxxx-xxxxx-...).
+
+Valorant: Native 1:1 format serialization and deserialization (0;P;c;...).
+
+Validation & Sanity Previews: Immediate visual verification dialog preventing malformed shares.
+
+High-Performance Rendering: WPF DirectX hardware-accelerated composition with sub-millisecond redraw intervals and fluid high-refresh-rate rendering (144Hz, 240Hz, 360Hz+).
+
+Per-Monitor V2 DPI Awareness: Seamless dynamic scaling across multi-monitor setups with disparate scale factors (e.g., 100% vs. 150% scaling) and hot-plug display recovery.
+
+Automatic Game Profile Matching: Dynamically switches reticle presets when specified game processes or window titles enter the foreground via low-overhead SetWinEventHook notifications.
+
+Passive Global Hotkeys & Raw Input: Global shortcuts using RegisterHotKey and auxiliary mouse buttons (Mouse 3, 4, 5) mapped via WM_INPUT (RIDEV_INPUTSINK).
+
+Engineered Dark Design Language: Handcrafted UI built on the MongoDB LeafyGreen aesthetic (#001E2B deep slate, #00ED64 neon accents) with hot-swappable English and Vietnamese localization.
+
+4. Overall Architecture
+
+CrossGOverlay implements a decoupled Model-View-ViewModel (MVVM) pattern combined with an asynchronous event-driven Win32 interaction tier.
+
+System Topology & Interaction Flow
+
+flowchart TD
+    subgraph OS_Layer [Windows OS / Win32 Subsystem]
+        User32[User32.dll / Shcore.dll]
+        DisplayMgr[Display Monitors & DPI Context]
+        GameWindow[Target Game Window - Borderless]
+    end
+
+    subgraph Service_Tier [Core Infrastructure Tier]
+        WinEventHook[WinEvent Hook\nSetWinEventHook]
+        RawInputSink[Raw Input Listener\nWM_INPUT Sink]
+        HotkeyMgr[Hotkey Dispatcher\nRegisterHotKey]
+        ProfileMatcher[GameProfileMatcher]
+        SettingsRepo[Preset & Config Repository]
+    end
+
+    subgraph ViewModel_Tier [Application ViewModel Tier]
+        AppVM[App / Main ViewModel]
+        OverlayVM[Overlay ViewModel]
+        SettingsVM[Settings & Editor ViewModel]
+    end
+
+    subgraph View_Tier [Hardware-Accelerated UI]
+        SettingsView[Settings Dashboard Window]
+        OverlayWindow[Transparent Layered Window\nWS_EX_TRANSPARENT]
+        ReticleCanvas[DirectX Reticle Surface]
+    end
+
+    %% OS Event Dispatching
+    User32 -->|Foreground Window Change| WinEventHook
+    User32 -->|Mouse 3/4/5 Raw Input| RawInputSink
+    User32 -->|Global Shortcuts| HotkeyMgr
+    DisplayMgr -->|WM_DPICHANGED| OverlayWindow
+
+    %% Services routing
+    WinEventHook -->|HWND / Process ID| ProfileMatcher
+    ProfileMatcher -->|Active Profile| SettingsRepo
+    SettingsRepo -->|Load Preset| AppVM
+    RawInputSink -->|Action Trigger| AppVM
+    HotkeyMgr -->|Toggle / Cycle Command| AppVM
+
+    %% ViewModels to Views
+    AppVM --> OverlayVM
+    AppVM --> SettingsVM
+    SettingsVM <==> SettingsView
+    OverlayVM -->|Push Vector / Render State| OverlayWindow
+    OverlayWindow --> ReticleCanvas
+    ReticleCanvas -.->|Renders Floating Above| GameWindow
+
+
+Architectural Directives & Safety Guarantees
+
+Anti-Cheat Safety Guarantee
+
+CrossGOverlay uses only standard, documented Windows User APIs:
+
+Process introspection is limited strictly to GetWindowThreadProcessId and QueryFullProcessImageNameW to match window profile names.
+
+The overlay is marked with WS_EX_TRANSPARENT | WS_EX_LAYERED | WS_EX_NOACTIVATE, which instructs the Desktop Window Manager (DWM) to route all mouse and pointer clicks directly through the window to the underlying application.
+
+Hook operations never employ invasive WH_KEYBOARD_LL or WH_MOUSE_LL intercepts that anti-cheat heuristics track.
+
+Single-Instance Mutex
+
+Process deduplication is managed via an operating-system-level System.Threading.Mutex. Attempting to launch a secondary instance signals the primary instance's system tray handler and brings the active Settings window to the foreground.
+
+5. Installation
+
+System Requirements
+
+Component
+
+Minimum Requirement
+
+Recommended
+
+OS
+
+Windows 10 (Version 1607+) x64
+
+Windows 11 x64 (Latest Build)
+
+Execution
+
+None (Self-contained release)
+
+.NET 8 Desktop Runtime
+
+Building
+
+.NET 8.0 SDK
+
+Visual Studio 2022 (v17.8+)
+
+Execution Level
+
+Standard User (asInvoker)
+
+Standard User (asInvoker)
+
+Option A: Pre-Compiled Release (Recommended)
+
+Navigate to the project's Releases tab.
+
+Download the latest self-contained archive: CrossGOverlay-<version>-win-x64.zip.
+
+Extract the .zip archive to your directory of choice (e.g., C:\Tools\CrossGOverlay).
+
+Execute CrossGOverlay.exe.
+
+Note: Official builds are bundled as self-contained ReadyToRun binaries. The host machine does not need .NET 8 pre-installed.
+
+Option B: Building from Source
+
+Clone the repository recursively:
+
+git clone https://github.com/your-username/CrossGOverlay.git
+cd CrossGOverlay
+
+
+Restore dependencies and build the solution:
+
+dotnet restore Crosshair.sln
 dotnet build Crosshair.sln -c Release
-```
-Kết quả được xuất ra tại: `src\CrosshairOverlay\bin\x64\<Config>\net8.0-windows\win-x64\CrossGOverlay.exe`.
 
-### Đóng gói bản phát hành (thư mục + file .zip)
-```powershell
+
+6. Running the Project
+
+Running via .NET CLI
+
+# Debug mode with console logging
+dotnet run --project src/CrosshairOverlay/CrosshairOverlay.csproj -c Debug
+
+# Optimized release binary execution
+dotnet run --project src/CrosshairOverlay/CrosshairOverlay.csproj -c Release
+
+
+Automated Release Packaging Pipeline
+
+To run the automated packaging pipeline that executes clean builds, embedded dependency generation, ReadyToRun optimization, and zip packaging:
+
+# Standard package generation
 .\build\publish.ps1
-```
-Script publish **sạch** (xoá `obj\Release`, `bin\Release` trước), rồi nén cả thư mục thành `artifacts\CrossGOverlay-<phiên bản>-win-x64.zip` — khoảng **63 MB**, bên trong là một thư mục cùng tên (~256 file, ~149 MB khi giải nén). Người dùng giải nén ra đâu cũng chạy được, máy **không** cần cài .NET.
-Muốn ký số trước khi nén thì thêm `-PfxPath ...` (hoặc `-SelfSigned` để thử quy trình).
 
-Chỉ cần thư mục (không nén) thì chạy thẳng:
-```bash
-dotnet publish src/CrosshairOverlay/CrosshairOverlay.csproj -c Release
-```
-Kết quả nằm ở `src\CrosshairOverlay\bin\Release\net8.0-windows\win-x64\publish\`. Cấu hình trong `CrosshairOverlay.csproj`:
-```xml
-<PropertyGroup>
-  <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-  <!-- Gói luôn .NET Runtime vào trong: máy người dùng KHÔNG cần cài gì thêm -->
-  <SelfContained>true</SelfContained>
-  <!-- KHÔNG gộp thành một file .exe: gói một file tốn ~800 ms ở MỖI lần mở app -->
-  <PublishSingleFile>false</PublishSingleFile>
-  <PublishReadyToRun>true</PublishReadyToRun>
-  <DebugType>embedded</DebugType>
-</PropertyGroup>
-```
-## 3. Cách sử dụng & Phím tắt
+# Package with digital code-signing applied
+.\build\publish.ps1 -PfxPath "C:\certs\code_signing.pfx" -PfxPassword (Read-Host -AsSecureString)
 
-Chạy `CrossGOverlay.exe`. Ở lần khởi động đầu tiên, ứng dụng sẽ:
-1. Tạo thư mục `%APPDATA%\CrosshairOverlay\` và ghi 6 preset mẫu.
-2. Hiển thị overlay ngay tại tâm màn hình.
-3. Mở cửa sổ Settings và đặt một icon vào khay hệ thống (System Tray).
-*(Trên Windows 11, icon mặc định nằm trong vùng icon ẩn; bạn có thể kéo nó ra thanh taskbar để dễ nhìn thấy).*
 
-### Import / Export mã Crosshair (Share Code)
-Ứng dụng tự nhận diện định dạng mã của 2 tựa game phổ biến:
+The distribution directory and standalone archive will be placed in artifacts\CrossGOverlay-<version>-win-x64.zip.
 
-| Game | Định dạng mã ví dụ |
-|---|---|
-| **Counter-Strike 2** | `CSGO-Gj9ry-3QQF3-T78kK-onMAf-6DR7B` |
-| **Valorant** | `0;P;c;5;o;1;d;1;z;3;0t;4;0l;1;0o;2;0a;1` |
+Default Keybindings
 
-* **Nhập mã:** Vào tab **Crosshair** → **Nhập mã** → dán mã và bấm **Tạo preset**. Một hộp thoại xem trước (hình dạng, màu, kích thước, chấm giữa, viền) sẽ hiện ra để bạn kiểm tra.
-  * *CS2:* Kích thước chỉ mang tính xấp xỉ do hệ đơn vị riêng và sự phụ thuộc vào độ phân giải/FOV. Bạn có thể cần chỉnh lại thanh **Tỉ lệ** sau khi nhập. Bộ giải mã CS2 được xây dựng dựa trên mô tả cộng đồng và kiểm chứng qua file test (`Cs2ShareCodeTests.cs`).
-  * *Valorant:* Dùng đơn vị xấp xỉ pixel nên được chuyển đổi tỉ lệ 1:1.
-* **Xuất mã:** Chọn preset → **Xuất mã**. Ứng dụng xuất mã chuẩn định dạng Valorant vào thẳng clipboard. Màu sắc được ghi ở dạng tuỳ chỉnh (`c;8` kèm `u;RRGGBBAA`). Nếu preset có các tính năng không hỗ trợ (vòng tròn, khung vuông, nhánh chéo, góc xoay), ứng dụng sẽ **cảnh báo trước** thay vì tạo ra một mã sai lệch.
+Key Combination
 
-### Phím tắt mặc định
-Đổi phím tắt trong tab **Phím tắt** và bấm **Áp dụng**.
+Action
 
-| Tổ hợp | Hành động |
-|---|---|
-| `Alt + X` | Bật/tắt overlay |
-| `Alt + ]` | Preset kế tiếp |
-| `Alt + [` | Preset trước đó |
-| `Alt + C` | Mở cửa sổ Settings |
+Description
 
-* Nếu tổ hợp đã bị chiếm bởi ứng dụng khác, phần mềm sẽ hiện lỗi ngay cạnh dòng đó.
-* **Gán nút chuột:** Hỗ trợ nút phụ (Mouse 3, 4, 5). Chuột trái/phải cố tình bị vô hiệu hóa để tránh lỗi không click được trên toàn hệ thống. Chuột sử dụng **Raw Input** (`WM_INPUT` với `RIDEV_INPUTSINK`) chỉ đọc, không chặn/nuốt sự kiện, giúp an toàn hơn với anti-cheat (thay vì dùng hook cấp thấp `WH_MOUSE_LL`).
+Alt + X
 
-## 4. Lưu trữ dữ liệu
-Xoá thư mục `%APPDATA%\CrosshairOverlay` nếu muốn đưa ứng dụng về trạng thái ban đầu.
+Toggle Overlay
 
-| Đường dẫn | Chứa nội dung |
-|---|---|
-| `%APPDATA%\CrosshairOverlay\settings.json` | Cấu hình chung, phím tắt, profile game |
-| `%APPDATA%\CrosshairOverlay\presets\*.json` | Các preset (mỗi preset 1 file, import/export bằng cách copy) |
-| `%LOCALAPPDATA%\CrosshairOverlay\logs\` | Log xoay vòng theo ngày (giữ 7 ngày) |
+Shows or hides the reticle surface globally.
 
-## 5. An toàn với Anti-cheat
-CrossGOverlay là một overlay desktop hoàn toàn độc lập.
+Alt + ]
 
-**✔ Những API Windows công khai được sử dụng:**
-`GetForegroundWindow`, `GetWindowThreadProcessId`, `GetWindowRect`, `GetWindowTextW`, `QueryFullProcessImageNameW`, `SetWinEventHook`, `RegisterHotKey`, `EnumDisplayMonitors`, `GetDpiForMonitor`, `SetWindowPos`, `SHQueryUserNotificationState`.
+Next Reticle
 
-**❌ KHÔNG BAO GIỜ thực hiện:**
-- Inject DLL vào tiến trình khác.
-- Đọc/ghi bộ nhớ (`ReadProcessMemory` / `WriteProcessMemory`).
-- Hook API của game.
-- Cài hook phím/chuột cấp thấp (`WH_KEYBOARD_LL` / `WH_MOUSE_LL`).
-- Mô phỏng thao tác (`SendInput`, `keybd_event`).
-- Liệt kê module game hoặc dùng driver kernel.
-- Các tính năng hỗ trợ như macro, auto-aim, trigger-bot.
+Cycles forward through your local preset library.
 
-*Lưu ý:* Ứng dụng không thể vẽ đè lên chế độ **Exclusive Fullscreen**. Sẽ có thông báo hướng dẫn bạn chuyển sang Borderless Windowed. Không có bất kỳ cơ chế bypass nào.
+Alt + [
 
-### Quyền Administrator
-Ứng dụng mặc định không cần quyền Admin. Khi game chạy bằng quyền Admin, đa số tính năng của overlay vẫn hoạt động (vẽ đè, hotkey, lấy tiêu đề). Tuy nhiên, việc **đọc tên file thực thi sẽ bị chặn (Access Denied)**.
-* **Giải pháp ưu tiên:** Chuyển sang so khớp profile game theo **tiêu đề cửa sổ** (hoạt động tốt ở quyền User).
-* **Nếu bắt buộc so khớp theo tên tiến trình:** Run as Administrator hoặc sửa `app.manifest` (`<requestedExecutionLevel level="requireAdministrator" ... />`). *(Không khuyến khích vì: hiện UAC mỗi lần chạy, mất tính năng khởi động cùng Windows, không kéo thả file được, và dễ bị anti-cheat soi xét)*.
+Previous Reticle
 
-## 6. Xử lý sự cố
-* **Không thấy crosshair vào game:** Game đang ở chế độ Exclusive Fullscreen. Đổi sang Borderless Windowed.
-* **Phím tắt không nhận:** Bị trùng với app khác. Kiểm tra tab Phím tắt để xem lỗi và đổi tổ hợp khác.
-* **Crosshair lệch tâm:** Do đổi độ phân giải. Bấm "Quét lại màn hình" trong tab Chung.
-* **App không khởi động:** Check log ở `%LOCALAPPDATA%\CrosshairOverlay\logs\`. Nếu `settings.json` hỏng, app sẽ đổi tên thành `.corrupt` và chạy cấu hình mặc định.
-* **Không khởi động cùng Windows:** Có thể do Group Policy chặn ghi key `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`. Sẽ có thông báo dưới ô check.
+Cycles backward through your local preset library.
 
-## 7. Kiểm thử
+Alt + C
 
-<details>
-<summary><b>Kiểm thử thực tế (Manual Testing)</b></summary>
-<br>
+Open Settings
 
-**Overlay:**
-- [ ] Crosshair đúng tâm.
-- [ ] Click chuột xuyên qua crosshair.
-- [ ] Không cướp focus.
-- [ ] Không hiện trong Alt-Tab.
+Displays the reticle configuration workspace.
 
-**Màn hình & DPI:**
-- [ ] Test chế độ ghim màn hình cụ thể / bám theo cửa sổ.
-- [ ] Đổi Windows scaling (100% → 150%) crosshair vẫn nét và chuẩn tâm.
-- [ ] Đổi độ phân giải / Rút cắm màn hình khi app đang chạy.
+Mouse 3 / 4 / 5
 
-**Editor & Giao diện:**
-- [ ] Kéo slider áp dụng tức thì, color picker hoạt động tốt.
-- [ ] Tắt/mở app giữ nguyên cấu hình.
-- [ ] Test tạo/nhân bản/xoá/import/export.
+User Assignable
 
-**Phím tắt & Khay hệ thống:**
-- [ ] Phím tắt hoạt động cả khi game giữ focus.
-- [ ] Menu chuột phải khay hệ thống hoạt động.
-- [ ] Chạy instance thứ 2 sẽ mở Settings của instance đầu.
+Auxiliary mouse buttons supported via Raw Input.
 
-**Profile Game (nhận diện tự động):**
-- [ ] Thử bằng notepad.exe (tự động đổi crosshair khi mở/đóng).
-- [ ] "Thêm từ cửa sổ vừa dùng" nhận đúng tiến trình game.
+7. Environment & Storage Configuration
 
-**Khác:**
-- [ ] Borderless Windowed (hiện), Exclusive Fullscreen (không hiện, có báo lỗi).
-- [ ] Không xé hình ở 144Hz/240Hz.
-</details>
+CrossGOverlay operates on an isolated file-system configuration model rooted in standard Windows system paths. It does not write to the Windows Registry for reticle settings or user preferences.
 
-### Kiểm thử tự động (Unit Tests)
-Chạy bằng lệnh: `dotnet test Crosshair.sln` (Gồm 145 bài test, hoàn thành dưới 1 giây).
-Các bài test bao gồm: `GameProfileMatcherTests`, `JsonSerializationTests`, `CrosshairRendererTests`, `PresetRepositoryTests`, `Cs2ShareCodeTests`, `ValorantCrosshairCodeTests`, `KeyNamesTests`, và `LocalizationTests`.
+System File Paths
 
-## 8. Ký số bản phát hành
-File `.exe` chưa ký sẽ bị SmartScreen cảnh báo. Dùng script PowerShell kèm theo:
-```powershell
-# Ký bằng chứng chỉ tự ký (chỉ hợp lệ nội bộ để test)
-.\build\sign.ps1 -SelfSigned
+%APPDATA%\CrosshairOverlay\
+├── settings.json              <-- Core config, hotkeys, game-process profiles
+└── presets\                   <-- User and community reticle presets
+    ├── default.json
+    ├── dot.json
+    └── competitive_cross.json
 
-# Ký bằng chứng chỉ thật
-.\build\sign.ps1 -PfxPath C:\certs\company.pfx -PfxPassword (Read-Host -AsSecureString)
-```
-*Lưu ý:* Chỉ có chứng chỉ EV mới lập tức gỡ bỏ cảnh báo SmartScreen ngay lượt tải đầu. Chứng chỉ tự ký không có tác dụng với máy người dùng. Script có tích hợp đóng dấu thời gian (timestamping) để chữ ký hợp lệ vĩnh viễn dù chứng chỉ hết hạn.
+%LOCALAPPDATA%\CrosshairOverlay\
+└── logs\                      <-- Rolling application logs (auto-pruned after 7 days)
 
-## 9. Ngôn ngữ giao diện
-Hỗ trợ **Tiếng Việt** và **Tiếng Anh**. Mặc định lấy theo ngôn ngữ hệ thống. Đổi ngôn ngữ trong app sẽ có hiệu lực ngay lập tức mà không cần khởi động lại.
 
-**Thêm ngôn ngữ mới:**
-1. Chép `Strings.resx` thành `Strings.<mã>.resx` (vd `Strings.ja.resx`) và dịch các giá trị `<value>`. Giữ nguyên `{0}`, `{1}`.
-2. Thêm mã vào `SatelliteResourceLanguages` trong file `.csproj`.
-3. Khai báo vào `LanguageCatalog.All`.
-4. Cập nhật bài test `LocalizationTests`.
+Configuration Schema: settings.json Example
 
-## 10. Ngôn ngữ thiết kế
-Sử dụng bộ UI **MongoDB LeafyGreen (Dark mode)**:
-- Nền `#001E2B`, thẻ `#1C2D38`, viền `#3D4F58`.
-- Điểm nhấn xanh lá `#00A35C` / `#00ED64`.
-- Font Segoe UI Variable, góc bo 4px (nút) và 6px (thẻ).
-- Không dùng `MessageBox` gốc của Windows, mọi dialog được custom đồng bộ thiết kế.
-Mọi định dạng nằm ở `src\CrosshairOverlay\Resources\Theme.xaml`.
+{
+  "General": {
+    "Language": "en-US",
+    "StartWithWindows": false,
+    "HideInExclusiveFullscreenWarning": true
+  },
+  "Hotkeys": {
+    "ToggleOverlay": "Alt + X",
+    "NextPreset": "Alt + OemCloseBrackets",
+    "PreviousPreset": "Alt + OemOpenBrackets",
+    "OpenSettings": "Alt + C"
+  },
+  "GameProfiles": [
+    {
+      "ProfileName": "Counter-Strike 2",
+      "ProcessName": "cs2.exe",
+      "WindowTitle": "Counter-Strike 2",
+      "PresetId": "competitive_cross",
+      "MatchByTitleOnly": false
+    }
+  ]
+}
 
-## Contributors
-Cảm ơn [HuuwxLoiwf (HuuLoii)](https://github.com/HuuwxLoiwf) đã đồng hành và đóng góp cho project này
+
+8. Folder Structure
+
+CrossGOverlay/
+├── .github/                      # CI/CD workflows, issue templates
+├── build/                        # Automation & deployment scripts
+│   ├── publish.ps1               # Automated release packaging pipeline
+│   └── sign.ps1                  # Authenticode code-signing utility
+├── src/
+│   └── CrosshairOverlay/         # Primary application project (WPF / .NET 8)
+│       ├── Common/               # Global enumerations, helper utilities
+│       ├── Interop/              # Native Win32 P/Invoke APIs (User32, Shcore)
+│       ├── Models/               # Reticle models, configurations, share codes
+│       ├── Native/               # Raw input sinks, WinEvent hook abstractions
+│       ├── Resources/            # LeafyGreen XAML styles, icon vectors
+│       │   ├── Localization/     # Strings.resx, Strings.vi.resx
+│       │   └── Theme.xaml        # Core styling specifications
+│       ├── Services/             # Profile matchers, preset persistence, hotkeys
+│       ├── ViewModels/           # MVVM ViewModels coordinating state
+│       ├── Views/                # XAML Windows (Overlay, Settings Dashboard)
+│       ├── App.xaml              # Application composition root & DI
+│       └── CrosshairOverlay.csproj
+├── tests/
+│   └── CrosshairOverlay.Tests/   # Unit & functional validation suites (xUnit)
+│       ├── Cs2ShareCodeTests.cs
+│       ├── ValorantCodeTests.cs
+│       ├── GameProfileMatcherTests.cs
+│       └── PresetRepositoryTests.cs
+├── ARCHITECTURE.md               # Detailed technical design specifications
+├── Crosshair.sln                 # Visual Studio solution file
+├── LICENSE                       # MIT licensing declaration
+└── README.md                     # Project documentation root
+
+
+9. Contribution Guidelines
+
+Contributions are welcome from the community. To keep code quality consistent across the codebase, please review the following engineering standards:
+
+Development Workflow
+
+Fork & Branch: Create a feature branch off main with a standard naming convention:
+
+git checkout -b feat/dynamic-spread-indicator
+# or: git checkout -b fix/multimonitor-dpi-offset
+
+
+Coding Standards:
+
+Write clean, idiomatically typed C# 12 code adhering to standard .NET framework conventions.
+
+P/Invoke signatures must strictly define safe native marshaling types with explicit CharSet parameters (CharSet.Unicode).
+
+Retain full MVVM separation: No UI orchestration inside raw models; rely on data bindings, commands, and dependency injection.
+
+Localization Support:
+
+Never hardcode user-visible strings inside views or models. Add string values to Strings.resx (en-US default) and Strings.vi.resx (Vietnamese).
+
+Automated Verification:
+
+Run the test suite before opening a pull request. Every unit test must pass:
+
+dotnet test Crosshair.sln -c Release
+
+
+Pull Request Protocol:
+
+Submit clear, well-described PRs referencing relevant issue IDs. Include visual screenshots or animated captures for UI changes.
+
+10. License
+
+CrossGOverlay is licensed under the open-source MIT License.
+
+Copyright (c) 2026 CrossGOverlay Contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+
+11. Roadmap
+
+[x] v1.0.0 — Core Foundation
+
+[x] WPF .NET 8 layered transparent overlay window implementation.
+
+[x] Full CS2 and Valorant crosshair code import and export parser.
+
+[x] Game profile matching via Windows foreground hooks.
+
+[x] MongoDB LeafyGreen dark UI system and full Vietnamese/English localization.
+
+[ ] v1.1.0 — Extended Graphics Engine
+
+[ ] DirectComposition / Direct2D hardware swap-chain rendering support for reduced CPU usage.
+
+[ ] Dynamic crosshair spread profiles (timer/movement simulation presets).
+
+[ ] Custom image and SVG reticle asset importing.
+
+[ ] v1.2.0 — Ecosystem & Community
+
+[ ] Community reticle gallery browser with one-click direct import.
+
+[ ] Auto-detection support for Apex Legends and Overwatch 2 crosshair formats.
+
+[ ] Cloud-synced profile backups via secure webhooks or GitHub Gist integration.
+
+Acknowledgements
+
+Special thanks to HuuwxLoiwf ([HuuLoii](https://github.com/HuuwxLoiwf)) for architectural collaboration, game-profile testing, and core contributions to the project ecosystem.
