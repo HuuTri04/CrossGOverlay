@@ -53,52 +53,50 @@ CrossGOverlay tuân thủ nghiêm ngặt mô hình kiến trúc **Model-View-Vie
 
 ```mermaid
 flowchart TD
-    subgraph OS_Layer [Tầng Hệ điều hành / Win32 Subsystem]
-        User32[User32.dll / Shcore.dll]
-        DisplayMgr[Quản lý Hiển thị & DPI Context]
-        GameWindow[Cửa sổ Game mục tiêu - Borderless]
+
+    subgraph OS_Layer["Tầng Hệ điều hành / Win32 Subsystem"]
+        User32["User32.dll / Shcore.dll"]
+        DisplayMgr["Quản lý Hiển thị và DPI Context"]
+        GameWindow["Cửa sổ Game mục tiêu - Borderless"]
     end
 
-    subgraph Service_Tier [Tầng Dịch vụ & Xử lý nền]
-        WinEventHook[WinEvent Hook\nSetWinEventHook]
-        RawInputSink[Bộ thu Raw Input\nWM_INPUT Sink]
-        HotkeyMgr[Điều phối Phím tắt\nRegisterHotKey]
-        ProfileMatcher[GameProfileMatcher]
-        SettingsRepo[Preset & Config Repository]
+    subgraph Service_Tier["Tầng Dịch vụ và Xử lý nền"]
+        WinEventHook["WinEvent Hook - SetWinEventHook"]
+        RawInputSink["Bộ thu Raw Input - WM_INPUT Sink"]
+        HotkeyMgr["Điều phối Phím tắt - RegisterHotKey"]
+        ProfileMatcher["GameProfileMatcher"]
+        SettingsRepo["Preset và Config Repository"]
     end
 
-    subgraph ViewModel_Tier [Tầng Quản lý trạng thái (MVVM)]
-        AppVM[App / Main ViewModel]
-        OverlayVM[Overlay ViewModel]
-        SettingsVM[Settings & Editor ViewModel]
+    subgraph ViewModel_Tier["Tầng Quản lý trạng thái - MVVM"]
+        AppVM["App / Main ViewModel"]
+        OverlayVM["Overlay ViewModel"]
+        SettingsVM["Settings và Editor ViewModel"]
     end
 
-    subgraph View_Tier [Giao diện Tăng tốc phần cứng]
-        SettingsView[Cửa sổ Cấu hình Settings]
-        OverlayWindow[Cửa sổ Layered Trong suốt\nWS_EX_TRANSPARENT]
-        ReticleCanvas[Bề mặt vẽ DirectX]
+    subgraph View_Tier["Tầng Giao diện Tăng tốc phần cứng"]
+        SettingsView["Cửa sổ Cấu hình Settings"]
+        OverlayWindow["Cửa sổ Layered Trong suốt - WS_EX_TRANSPARENT"]
+        ReticleCanvas["Bề mặt vẽ DirectX"]
     end
 
-    %% Điều phối sự kiện từ OS
-    User32 -->|Thay đổi cửa sổ Foreground| WinEventHook
-    User32 -->|Raw Input nút chuột phụ| RawInputSink
-    User32 -->|Tổ hợp phím tắt toàn cục| HotkeyMgr
-    DisplayMgr -->|WM_DPICHANGED| OverlayWindow
+    User32 -->|"Thay đổi cửa sổ Foreground"| WinEventHook
+    User32 -->|"Raw Input nút chuột phụ"| RawInputSink
+    User32 -->|"Tổ hợp phím tắt toàn cục"| HotkeyMgr
+    DisplayMgr -->|"WM_DPICHANGED"| OverlayWindow
 
-    %% Định tuyến dịch vụ
-    WinEventHook -->|HWND / Process ID| ProfileMatcher
-    ProfileMatcher -->|Profile tương ứng| SettingsRepo
-    SettingsRepo -->|Nạp Preset| AppVM
-    RawInputSink -->|Lệnh kích hoạt| AppVM
-    HotkeyMgr -->|Lệnh Bật/Tắt / Đổi tâm| AppVM
+    WinEventHook -->|"HWND / Process ID"| ProfileMatcher
+    ProfileMatcher -->|"Profile tương ứng"| SettingsRepo
+    SettingsRepo -->|"Nạp Preset"| AppVM
+    RawInputSink -->|"Lệnh kích hoạt"| AppVM
+    HotkeyMgr -->|"Lệnh Bật/Tắt / Đổi tâm"| AppVM
 
-    %% ViewModels tới Views
     AppVM --> OverlayVM
     AppVM --> SettingsVM
-    SettingsVM <==> SettingsView
-    OverlayVM -->|Đẩy thông số Vector / Render| OverlayWindow
+    SettingsVM <-->|"Data Binding"| SettingsView
+    OverlayVM -->|"Đẩy thông số Vector / Render"| OverlayWindow
     OverlayWindow --> ReticleCanvas
-    ReticleCanvas -.->|Hiển thị đè không cướp focus| GameWindow
+    ReticleCanvas -.->|"Hiển thị đè không cướp focus"| GameWindow
 ```
 
 ### Nguyên tắc kiến trúc & An toàn hệ thống
