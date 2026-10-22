@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
 using CrosshairOverlay.Core.Abstractions;
@@ -16,14 +17,16 @@ public partial class SettingsWindow : Window
 {
     private void OnApplyObsPassword(object sender, RoutedEventArgs e)
     {
-        if (DataContext is SettingsViewModel vm)
-            vm.General.SetObsPassword(ObsPasswordBox.Password);
+        if (DataContext is SettingsViewModel vm && sender is Button { Tag: PasswordBox passwordBox })
+            vm.General.SetObsPassword(passwordBox.Password);
     }
     private readonly SettingsViewModel _viewModel;
     private readonly ITrayIconController _tray;
     private readonly Microsoft.Extensions.Logging.ILogger<SettingsWindow> _logger;
     private readonly PerformanceMonitorService _performanceMonitor;
     private readonly DispatcherTimer _statsTimer;
+
+    public PerformanceMonitorService PerformanceMonitor => _performanceMonitor;
 
     /// <summary>Chỉ nhắc "app vẫn đang chạy" một lần mỗi phiên, không nhắc mỗi lần ẩn.</summary>
     private bool _hintShown;
@@ -46,7 +49,6 @@ public partial class SettingsWindow : Window
             Interval = TimeSpan.FromSeconds(3),
         };
         _statsTimer.Tick += OnStatsTick;
-        PerformanceBadge.DataContext = _performanceMonitor;
         Loaded += (_, _) => UpdateVisibleTabServices();
         IsVisibleChanged += (_, _) => UpdateVisibleTabServices();
         StateChanged += (_, _) => UpdateVisibleTabServices();
@@ -145,6 +147,7 @@ public partial class SettingsWindow : Window
 
     private void UpdateVisibleTabServices()
     {
+        _viewModel.General.SetBackgroundViewActive(IsVisible && WindowState != WindowState.Minimized);
         UpdatePerformanceMonitor();
         UpdateStatsTimer();
     }

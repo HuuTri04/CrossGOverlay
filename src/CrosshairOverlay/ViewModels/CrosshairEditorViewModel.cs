@@ -21,6 +21,7 @@ public sealed partial class CrosshairEditorViewModel : ObservableObject, IDispos
     private readonly IDialogService _dialogs;
     private readonly ICustomImageStore _images;
     private readonly IAppSettingsService _settings;
+    private int _previewBackgroundVersion;
     private bool _disposed;
 
     public CrosshairEditorViewModel(
@@ -58,7 +59,20 @@ public sealed partial class CrosshairEditorViewModel : ObservableObject, IDispos
     /// <summary>Ảnh chỉ nạp khi mở Settings hoặc khi người dùng chọn; không tham gia vòng render của overlay.</summary>
     [ObservableProperty] private BitmapSource? _customPreviewBackgroundImage;
 
-    public bool HasCustomPreviewBackground => !string.IsNullOrWhiteSpace(_settings.Current.CustomPreviewBgPath);
+    // A path alone is insufficient: the file can be missing or fail to decode.
+    public bool HasCustomPreviewBackground => CustomPreviewBackgroundImage is not null;
+    public bool CanResetPreviewBackground => !string.IsNullOrWhiteSpace(_settings.Current.CustomPreviewBgPath);
+    public bool ArePreviewBackdropOptionsEnabled => !HasCustomPreviewBackground;
+    public bool IsCheckerboardBgVisible => !HasCustomPreviewBackground && ShowCheckerboard;
+    public bool IsDarkBgVisible => !HasCustomPreviewBackground && UseDarkPreviewBackground;
+
+    partial void OnCustomPreviewBackgroundImageChanged(BitmapSource? value)
+    {
+        OnPropertyChanged(nameof(HasCustomPreviewBackground));
+        OnPropertyChanged(nameof(ArePreviewBackdropOptionsEnabled));
+        OnPropertyChanged(nameof(IsCheckerboardBgVisible));
+        OnPropertyChanged(nameof(IsDarkBgVisible));
+    }
 
     [RelayCommand]
     private async Task ChoosePreviewBackgroundAsync()
@@ -68,29 +82,32 @@ public sealed partial class CrosshairEditorViewModel : ObservableObject, IDispos
             Path.GetDirectoryName(_settings.Current.CustomPreviewBgPath));
         if (path is null) return;
 
+        var version = Interlocked.Increment(ref _previewBackgroundVersion);
         var image = await TryDecodePreviewAsync(path, reportError: true);
-        if (image is null || _disposed) return;
+        if (image is null || _disposed || version != _previewBackgroundVersion) return;
 
         CustomPreviewBackgroundImage = image;
         _settings.Current.CustomPreviewBgPath = path;
-        OnPropertyChanged(nameof(HasCustomPreviewBackground));
+        OnPropertyChanged(nameof(CanResetPreviewBackground));
         SavePreviewOptions();
     }
 
     [RelayCommand]
     private void ResetPreviewBackground()
     {
+        Interlocked.Increment(ref _previewBackgroundVersion);
         CustomPreviewBackgroundImage = null;
         _settings.Current.CustomPreviewBgPath = null;
-        OnPropertyChanged(nameof(HasCustomPreviewBackground));
+        OnPropertyChanged(nameof(CanResetPreviewBackground));
         SavePreviewOptions();
     }
 
     private async Task LoadSavedPreviewBackgroundAsync(string? path)
     {
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return;
+        var version = _previewBackgroundVersion;
         var image = await TryDecodePreviewAsync(path, reportError: false);
-        if (!_disposed && _settings.Current.CustomPreviewBgPath == path)
+        if (!_disposed && version == _previewBackgroundVersion && _settings.Current.CustomPreviewBgPath == path)
             CustomPreviewBackgroundImage = image;
     }
 
@@ -193,6 +210,7 @@ public sealed partial class CrosshairEditorViewModel : ObservableObject, IDispos
 
     partial void OnShowCheckerboardChanged(bool value)
     {
+        OnPropertyChanged(nameof(IsCheckerboardBgVisible));
         if (_settings.Current.PreviewShowCheckerboard == value) return;
 
         _settings.Current.PreviewShowCheckerboard = value;
@@ -201,6 +219,7 @@ public sealed partial class CrosshairEditorViewModel : ObservableObject, IDispos
 
     partial void OnUseDarkPreviewBackgroundChanged(bool value)
     {
+        OnPropertyChanged(nameof(IsDarkBgVisible));
         if (_settings.Current.PreviewShowDarkBackground == value) return;
 
         _settings.Current.PreviewShowDarkBackground = value;

@@ -33,6 +33,7 @@ public sealed class CrosshairPreview : FrameworkElement
 
     private static readonly Brush MarkerFallback = Frozen(new SolidColorBrush(Color.FromRgb(0x00, 0xED, 0x64)));
     private ImageBrush? _customBackdrop;
+    private CrosshairProfile? _hookedProfile;
 
     private BitmapSource? _cached;
     private bool _dirty = true;
@@ -71,6 +72,19 @@ public sealed class CrosshairPreview : FrameworkElement
 
     public CrosshairPreview()
     {
+        Loaded += (_, _) =>
+        {
+            HookCurrentProfile();
+            Rebuild();
+        };
+        Unloaded += (_, _) =>
+        {
+            UnhookProfile();
+            DrawingAnimations.Stop(_liveDrawing);
+            _liveDrawing = null;
+            _cached = null;
+            _dirty = true;
+        };
         // Cửa sổ Settings bị ẩn xuống khay: dừng GIF trong preview, hiện lại thì dựng mới.
         IsVisibleChanged += (_, e) =>
         {
@@ -166,14 +180,25 @@ public sealed class CrosshairPreview : FrameworkElement
     private static void OnProfileChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         var preview = (CrosshairPreview)d;
-
-        if (e.OldValue is CrosshairProfile old)
-            ProfileNotifications.Hook(old, preview.OnProfilePartChanged, subscribe: false);
-
-        if (e.NewValue is CrosshairProfile now)
-            ProfileNotifications.Hook(now, preview.OnProfilePartChanged, subscribe: true);
-
+        if (preview.IsLoaded) preview.HookCurrentProfile();
+        else preview.UnhookProfile();
         preview.Rebuild();
+    }
+
+    private void HookCurrentProfile()
+    {
+        if (ReferenceEquals(_hookedProfile, Profile)) return;
+        UnhookProfile();
+        if (Profile is not { } profile) return;
+        ProfileNotifications.Hook(profile, OnProfilePartChanged, subscribe: true);
+        _hookedProfile = profile;
+    }
+
+    private void UnhookProfile()
+    {
+        if (_hookedProfile is not { } profile) return;
+        ProfileNotifications.Hook(profile, OnProfilePartChanged, subscribe: false);
+        _hookedProfile = null;
     }
 
     private static void OnVisualInputChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) =>

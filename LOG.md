@@ -509,3 +509,40 @@ Khi hoàn thành một tính năng hoặc bản sửa lỗi tiếp theo, thêm m
 - Đánh dấu 37 `SolidColorBrush` tĩnh trong Theme là frozen và dùng lại tài nguyên chung. `ColorPickerButton` dùng một brush mutable cho preview RGB, không cấp phát brush mới mỗi lần kéo; các swatch bất biến được chia sẻ và đã frozen.
 - Giữ binding Slider cập nhật ngay: `Delay=10` không gom được phần lớn sự kiện kéo ở 60 Hz (cách nhau khoảng 16 ms), trong khi preview WPF đã gom `InvalidateVisual` theo khung hình; lưu settings và blur ảnh nền có debounce riêng. Không thêm hiệu ứng render vào Label/Slider.
 - Build Release 0 cảnh báo/lỗi; 749 bài kiểm thử đạt khi loại một bài Raw Input cần thiết bị thật. Chưa đo độ trễ khung hình trên máy có ảnh nền, nên chưa thể kết luận hiệu năng bằng nền mặc định.
+
+### 2026-10-22 — Giữ khung panel và thêm độ trễ binding slider 10 ms
+
+- Rà soát lại các tab trong `SettingsWindow` và `StatsTab`: giữ nguyên toàn bộ thẻ `Border`, đường viền, thứ tự lồng và các vùng bắt chuột. Card đã dùng ARGB `#D9111B22` khi có ảnh nền, không có `Opacity` trên khung Card; `InnerCard` vẫn giữ đường viền và nền trong suốt, còn nền mặc định không đổi.
+- Bổ sung `Delay=10` cho 27 binding `Value` từ các slider Crosshair/Chung và thanh zoom preview tới ViewModel, đúng yêu cầu mới. Giá trị số trong `SliderField` vẫn đồng bộ trực tiếp với slider; cập nhật model được hoãn ngắn. Slider màu RGB tiếp tục dùng sự kiện trực tiếp vì không có binding `Value` và cần phản hồi màu ngay.
+- Kiểm tra lại vùng cuộn cấp trang đang dùng pixel scroll/48 DIP mỗi nấc, Thư viện giữ virtualization; 37 brush tĩnh trong Theme đã frozen. Không ép mọi control con dùng `Background="Transparent"` vì có thể làm mất trạng thái hover/nhấn hoặc đổi hit testing.
+- Build Release 0 cảnh báo/lỗi; 749 bài kiểm thử đạt khi loại một bài Raw Input cần thiết bị thật. `Delay=10` không chứng minh đạt 60 FPS hoặc hết lag trên mọi máy; chưa có đo đạc khung hình thực tế.
+
+### 2026-10-22 — Đồng bộ thẻ Đang nhận diện trong Tab Game
+
+- Chuyển khung chẩn đoán “ĐANG NHẬN DIỆN” từ `InnerCard` sang style `Card` dùng chung với `PROFILE GAME` và `CHI TIẾT`. Nhờ vậy nền ARGB, đường viền, bo góc và padding tự đồng bộ theo theme, kể cả khi bật ảnh nền ứng dụng; giữ nguyên bốn binding trạng thái, cảnh báo quyền và chấm chờ.
+- Căn lại khoảng cách tiêu đề trong thẻ; không thêm nền `Transparent` cho `TextBlock` vì nhãn vốn không vẽ nền và việc thêm brush không mang lại lợi ích render.
+- Build Release thành công với 0 cảnh báo/lỗi.
+
+### 2026-10-22 — Giải phóng ảnh nền khi cửa sổ Settings không hiển thị
+
+- Chỉ bắt đầu nạp ảnh nền sau khi cửa sổ Settings hiển thị. Khi cửa sổ bị ẩn hoặc thu nhỏ, hủy tác vụ xử lý ảnh đang chạy, bỏ tham chiếu đến bitmap nguồn/ảnh đã làm mờ và thu gọn lớp nền; khi mở lại, nạp và xử lý ảnh bất đồng bộ từ đường dẫn đã lưu. Việc đổi ảnh mới hủy tác vụ render cũ sau khi giải mã thành công, tránh để kết quả cũ ghi đè ảnh mới và giữ ảnh cũ nếu tệp mới bị lỗi.
+- Chỉ dùng `BitmapScalingMode="LowQuality"` trên ảnh nền; giữ `UseLayoutRounding`/`SnapsToDevicePixels` có sẵn trên cửa sổ để không làm giảm chất lượng icon, chữ và control. Ảnh được giải mã tối đa 1280 px nên thay đổi kích thước cửa sổ không giải mã lại; không thêm timer resize hay ép `GC.Collect()` gây khựng giao diện.
+- Build Release thành công với 0 cảnh báo và 0 lỗi; 63 bài kiểm thử liên quan đạt (bộ kiểm thử có 1 cảnh báo analyzer tồn tại sẵn). Chưa đo VRAM/FPS trên máy thật; WPF/DWM quyết định thời điểm thu hồi bộ nhớ đồ họa sau khi tham chiếu được giải phóng.
+
+### 2026-10-22 — Tắt nền phụ trong Preview khi dùng ảnh tùy chỉnh
+
+- Preview trong dự án nằm ở `SettingsWindow` và `CrosshairEditorViewModel`. Khi ảnh tùy chỉnh đã nạp thành công, hai checkbox “Nền ca-rô” và “Nền tối” bị khóa; các cờ hiển thị thực tế gửi tới `CrosshairPreview` đều tắt. Bộ vẽ tiếp tục chỉ vẽ ảnh tùy chỉnh một lần, không vẽ thêm ca-rô hoặc nền tối.
+- Giữ nguyên các lựa chọn nền đã lưu trong settings, nên khi bấm “Khôi phục”, hai checkbox và nền cũ hoạt động lại đúng trạng thái trước đó. Nút khôi phục vẫn dùng được nếu đường dẫn ảnh đã lưu bị mất hoặc ảnh lỗi; kết quả nạp ảnh cũ không thể ghi đè thao tác khôi phục/chọn ảnh mới.
+- Build Release thành công với 0 cảnh báo/lỗi; 7 kiểm thử hiện có về lựa chọn nền Preview đạt. Chưa đo FPS trên thiết bị thực tế.
+
+### 2026-10-22 — Hoãn dựng tab và giảm chi phí tài nguyên giao diện
+
+- Chuyển nội dung Tab Chung, Phím tắt, Game và Thống kê của `SettingsWindow` sang `DataTemplate`: cây visual chỉ được tạo khi tab được chọn. Tab Crosshair mặc định vẫn hiện ngay; cột chỉnh sửa và Tab Thư viện tiếp tục dùng cơ chế nạp trễ có sẵn. Badge CPU/RAM chuyển sang binding với service của cửa sổ để không phụ thuộc vào trường XAML được tạo sớm; nút kết nối OBS lấy PasswordBox trong cùng template.
+- Chỉ tạo `SystemInfoViewModel` và bắt đầu đọc phần cứng khi người dùng mở Tab Phím tắt lần đầu. Theme/brush/style đã được chia sẻ qua `App.xaml` từ trước; không có MergedDictionaries lặp trong UserControl cần xóa. Chuyển text formatting của cửa sổ và TextBlock mặc định sang `Display`, bật hinting `Fixed`; không ép ClearType trên mọi bề mặt bán trong suốt để tránh viền màu trên chữ.
+- `CrosshairPreview` gỡ đăng ký sự kiện Profile, dừng animation và bỏ bitmap preview đã cache khi rời cây visual; khi được nạp lại sẽ đăng ký và dựng lại. Các ViewModel phục vụ tính năng nền tiếp tục sống đến lúc đóng Settings, nơi chúng đã được Dispose và hủy đăng ký sự kiện với service.
+- Build Release 0 cảnh báo/lỗi; 749 kiểm thử đạt (loại một bài Raw Input cần thiết bị thật). Chưa đo thời gian khởi động, RAM hay chất lượng chữ trên máy thật, nên không khẳng định mức cải thiện phần trăm cố định.
+
+### 2026-10-22 — Khôi phục kiểu dựng chữ mượt ban đầu
+
+- Bỏ `TextOptions.TextFormattingMode="Display"` và `TextOptions.TextHintingMode="Fixed"` khỏi cửa sổ Settings; `App.xaml` không có thiết lập `TextOptions` cấp ứng dụng cần gỡ. Đưa style `TextBlock` dùng chung trong `Theme.xaml` về `TextFormattingMode="Ideal"` như trước đợt tối ưu tab.
+- Giữ nguyên toàn bộ FontFamily, FontSize, FontWeight và màu chữ của các tab. Build Release thành công với 0 cảnh báo và 0 lỗi.

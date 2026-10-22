@@ -35,6 +35,7 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
     private int _backgroundRenderVersion;
     private CancellationTokenSource? _backgroundRenderCancellation;
     private BitmapSource? _sourceBackgroundImage;
+    private bool _backgroundViewActive;
 
     private bool _disposed;
 
@@ -71,8 +72,6 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
         _updates = updates;
         _dialogs = dialogs;
         IsAdminRunning = CheckAdminRights();
-        _ = LoadSavedAppBackgroundAsync(settings.Current.CustomAppBgPath);
-
         _monitorMode = settings.Current.MonitorSelectionMode;
         _languageCode = settings.Current.Language;
         MonitorModes = BuildMonitorModes();
@@ -93,6 +92,23 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
     [ObservableProperty] private BitmapSource? _appBackgroundImage;
 
     public bool HasAppBackground => AppBackgroundImage is not null && _settings.Current.AppBgOpacity > 0d;
+
+    /// <summary>Release decoded and processed bitmaps while the settings window is not displayed.</summary>
+    public void SetBackgroundViewActive(bool active)
+    {
+        if (_disposed || _backgroundViewActive == active) return;
+        _backgroundViewActive = active;
+        if (active)
+        {
+            _ = LoadSavedAppBackgroundAsync(_settings.Current.CustomAppBgPath);
+            return;
+        }
+
+        Interlocked.Increment(ref _backgroundLoadVersion);
+        CancelBackgroundRender();
+        _sourceBackgroundImage = null;
+        AppBackgroundImage = null;
+    }
 
     partial void OnAppBackgroundImageChanged(BitmapSource? value) =>
         OnPropertyChanged(nameof(HasAppBackground));
@@ -132,10 +148,13 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
             Path.GetDirectoryName(_settings.Current.CustomAppBgPath));
         if (path is null) return;
 
+        // An explicit choice can also come from a ViewModel consumer without a visible window.
+        _backgroundViewActive = true;
         var version = Interlocked.Increment(ref _backgroundLoadVersion);
         var image = await DecodeAppBackgroundAsync(path, reportError: true);
-        if (image is null || _disposed || version != _backgroundLoadVersion) return;
+        if (image is null || _disposed || !_backgroundViewActive || version != _backgroundLoadVersion) return;
 
+        CancelBackgroundRender();
         _sourceBackgroundImage = image;
         _settings.Current.CustomAppBgPath = path;
         _settings.RequestSave();
@@ -160,7 +179,7 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
         if (string.IsNullOrWhiteSpace(path)) return;
         var version = _backgroundLoadVersion;
         var image = await DecodeAppBackgroundAsync(path, reportError: false);
-        if (image is not null && !_disposed && version == _backgroundLoadVersion
+        if (image is not null && !_disposed && _backgroundViewActive && version == _backgroundLoadVersion
             && _settings.Current.CustomAppBgPath == path)
         {
             _sourceBackgroundImage = image;
@@ -185,7 +204,7 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
     private async Task RenderBackgroundAsync(bool debounce, bool reportError)
     {
         var source = _sourceBackgroundImage;
-        if (_disposed || source is null) return;
+        if (_disposed || !_backgroundViewActive || source is null) return;
 
         var version = Interlocked.Increment(ref _backgroundRenderVersion);
         var cancellation = new CancellationTokenSource();
@@ -195,7 +214,7 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
             if (debounce) await Task.Delay(200, cancellation.Token);
             var rendered = await ImageBlurHelper.CreatePreBlurredBitmapAsync(
                 source, _settings.Current.AppBgBlurRadius, cancellation.Token);
-            if (!_disposed && !cancellation.IsCancellationRequested
+            if (!_disposed && _backgroundViewActive && !cancellation.IsCancellationRequested
                 && version == _backgroundRenderVersion && ReferenceEquals(source, _sourceBackgroundImage))
                 AppBackgroundImage = rendered;
         }

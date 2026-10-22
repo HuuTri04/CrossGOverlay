@@ -22,6 +22,7 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
     private readonly IProcessLauncher _launcher;
     private readonly ICrosshairTranslator _translator;
     private readonly ILogger<SettingsViewModel> _logger;
+    private readonly Lazy<SystemInfoViewModel> _systemInfo;
 
     private bool _syncingSelection;
     private bool _disposed;
@@ -69,7 +70,7 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
         General = new GeneralSettingsViewModel(settings, monitors, displayAnalyzer, tray, overlay, startup, updates, dialogs, paths, launcher, restart, storage, Toast, obs, library);
         Hotkeys = new HotkeysViewModel(settings, hotkeys);
         Games = new GameProfilesViewModel(settings, library, watcher, matcher, scanner);
-        SystemInfo = new SystemInfoViewModel(hardware, monitors, displayModes);
+        _systemInfo = new Lazy<SystemInfoViewModel>(() => new SystemInfoViewModel(hardware, monitors, displayModes));
         Stats = new StatsViewModel(usageStats, dialogs);
 
         // Ô "Bật overlay" là lựa chọn của người dùng, không phải overlay có đang hiện hay không —
@@ -91,7 +92,7 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
 
     public GameProfilesViewModel Games { get; }
 
-    public SystemInfoViewModel SystemInfo { get; }
+    public SystemInfoViewModel SystemInfo => _systemInfo.Value;
 
     public StatsViewModel Stats { get; }
 
@@ -529,7 +530,7 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
         General.Dispose();
         Hotkeys.Dispose();
         Games.Dispose();
-        SystemInfo.Dispose();
+        if (_systemInfo.IsValueCreated) _systemInfo.Value.Dispose();
     }
 
     private void Report(Exception ex, string message)
