@@ -5,6 +5,7 @@ using System.Windows.Threading;
 using CrosshairOverlay.Core.Abstractions;
 using CrosshairOverlay.Core.Models;
 using CrosshairOverlay.Interop;
+using CrosshairOverlay.Services.Logging;
 using Microsoft.Extensions.Logging;
 
 namespace CrosshairOverlay.Services.Process;
@@ -19,6 +20,7 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
 
     private readonly IMonitorService _monitors;
     private readonly ILogger<ForegroundWindowWatcher> _logger;
+    private readonly AuditLoggerService _audit;
     private readonly Dispatcher _dispatcher;
 
     /// <summary>
@@ -76,10 +78,11 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
 
     private volatile bool _disposed;
 
-    public ForegroundWindowWatcher(IMonitorService monitors, ILogger<ForegroundWindowWatcher> logger)
+    public ForegroundWindowWatcher(IMonitorService monitors, AuditLoggerService audit, ILogger<ForegroundWindowWatcher> logger)
     {
         _monitors = monitors;
         _logger = logger;
+        _audit = audit;
         _dispatcher = Dispatcher.CurrentDispatcher;
         _callback = OnWinEvent;
         _refresh = Refresh;
@@ -333,6 +336,8 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
             _logger.LogDebug(
                 "Foreground: {Process} — '{Title}' ({Fullscreen})",
                 info.ProcessName, info.WindowTitle, info.Fullscreen);
+
+            _audit.Record("GetForegroundWindow", $"foreground changed; hwnd=0x{(long)info.Handle:X}; process={info.ProcessName}");
 
             ForegroundChanged?.Invoke(this, new ForegroundWindowChangedEventArgs(previous, info));
         }

@@ -115,7 +115,7 @@
             <ItemsControl.Template>
                 <ControlTemplate TargetType="ItemsControl">
                     <ScrollViewer Focusable="False" CanContentScroll="True"
-                                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                  Style="{StaticResource PanelScrollViewer}">
                         <ItemsPresenter/>
                     </ScrollViewer>
                 </ControlTemplate>

@@ -28,6 +28,7 @@ public static class ProfileNotifications
             profile.Outline,
             profile.Ring,
             profile.Image,
+            profile.Shadow,
         ];
 
         foreach (var target in targets)

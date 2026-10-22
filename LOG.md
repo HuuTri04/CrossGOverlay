@@ -202,14 +202,15 @@ Những mục dưới đây cần thao tác tay hoặc cần một game thật.
 `GetForegroundWindow` · `GetWindowThreadProcessId` · `GetWindowRect` · `GetWindowTextW` ·
 `QueryFullProcessImageNameW` (với `PROCESS_QUERY_LIMITED_INFORMATION`) ·
 `SetWinEventHook` (cờ `WINEVENT_OUTOFCONTEXT`) · `RegisterHotKey` ·
-`EnumDisplayMonitors` · `GetDpiForMonitor` · `SetWindowPos` · `SHQueryUserNotificationState`
+`EnumDisplayMonitors` · `GetDpiForMonitor` · `SetWindowPos` · `SetWindowLongPtr` ·
+`SetWindowDisplayAffinity` · `SHQueryUserNotificationState`
 
 Ứng dụng **không** làm những việc sau, ở bất kỳ đâu trong mã nguồn:
 
 - inject DLL vào tiến trình khác
 - đọc hoặc ghi bộ nhớ tiến trình khác (`ReadProcessMemory` / `WriteProcessMemory`)
 - hook API của game
-- cài hook bàn phím/chuột cấp thấp (`WH_KEYBOARD_LL` / `WH_MOUSE_LL`)
+- cài hook chuột cấp thấp (`WH_MOUSE_LL`)
 - mô phỏng thao tác nhập liệu (`SendInput`, `keybd_event`)
 - liệt kê module của game, hay dùng driver kernel
 - bất kỳ hình thức hỗ trợ gameplay nào: macro, auto-aim, trigger-bot
@@ -217,6 +218,7 @@ Những mục dưới đây cần thao tác tay hoặc cần một game thật.
 **Exclusive Fullscreen:** không overlay usermode nào vẽ được lên trên chế độ này. Ứng dụng nhận ra và hiển thị thông báo hướng dẫn chuyển game sang Borderless Windowed. Không có đường bypass nào được cài đặt.
 
 Dù vậy, mỗi anti-cheat có chính sách riêng. Nếu bạn dùng trong giải đấu có luật về phần mềm bên thứ ba, hãy hỏi ban tổ chức trước.
+Khi người dùng gán preset cho phím vũ khí, ứng dụng tạm cài `WH_KEYBOARD_LL` ở tiến trình của chính nó để quan sát phím; hook được gỡ khi rời game khớp profile. Sự kiện luôn được chuyển tiếp cho game. Tính năng này có thể bị một số anti-cheat hạn chế; không có cam kết tương thích hay độ trễ dưới 1 ms. `anticheat_audit.log` chỉ là nhật ký chẩn đoán các lần chuyển trạng thái API cửa sổ đã chọn, không phải bằng chứng chứng nhận an toàn.
 
 ### Quyền Administrator
 
@@ -440,3 +442,70 @@ Khi hoàn thành một tính năng hoặc bản sửa lỗi tiếp theo, thêm m
 ### 2026-10-22 — Chuẩn hóa thẻ Tài nguyên ứng dụng
 
 - Đóng gói CPU/RAM thành thẻ thứ sáu trong panel Thông tin hệ thống, dùng cùng `InnerCard`, padding và khoảng cách với năm thẻ phía trên; bổ sung tiêu đề dịch Việt/Anh và chia hai cột chỉ số rõ ràng.
+
+### 2026-10-22 — Tùy chỉnh nâng cao, Stream Mode, Preset theo vũ khí và Thống kê
+
+- **Tâm ngắm:** thêm độ dày độc lập cho nhánh dọc và hiệu ứng bóng tùy chọn với màu, độ mờ, bán kính; giữ tương thích preset cũ. Các điều khiển viền, khoảng hở và chấm tâm đã có sẵn được giữ nguyên.
+- **Game:** mỗi profile có thể gán preset cho phím 1–4, Q, E. Hook bàn phím chỉ tồn tại khi game đã khớp và có ít nhất một gán phím; callback không chặn phím của game và chuyển cập nhật preset về Dispatcher.
+- **Stream:** thêm công tắc ở Tab Chung và dịch vụ OBS WebSocket v5 chỉ kết nối khi bật. Có thể nhập mật khẩu OBS cho phiên hiện tại; khi OBS báo đang stream hoặc record, overlay tạm ẩn. Ứng dụng yêu cầu Windows loại cửa sổ khỏi các API capture có hỗ trợ; Discord/Game Capture có thể không tuân theo yêu cầu đó và không có API Win32 chung để nhận biết Discord đang quay.
+- **Thư viện:** thêm sáu mẫu hỗ trợ thị giác dựa trên hình dạng, kích thước lớn và viền tương phản trong danh mục riêng. Mẫu chỉ là tùy chọn hiển thị, không thay thế đánh giá khả năng tiếp cận cho từng người.
+- **Thống kê:** Tab Thống kê hiển thị thời gian overlay hiện trong ngày, số lần đổi preset, preset hiện tại và biểu đồ tỉ lệ thời gian; dữ liệu lưu JSON nguyên tử, cập nhật giao diện mỗi 3 giây chỉ khi tab đang mở.
+- **Chẩn đoán:** `anticheat_audit.log` ghi timestamp cho một số lần đổi foreground và gọi API cửa sổ quan trọng theo sự kiện; không ghi mỗi lượt polling để tránh tăng tải. Log không chứng minh ứng dụng được anti-cheat nào chấp thuận. Bộ kiểm thử tự động: 738 bài đạt (trừ một bài Raw Input phụ thuộc thiết bị thật).
+
+### 2026-10-22 — Lịch sử thống kê và dọn dẹp dữ liệu
+
+- Tách Tab Thống kê thành `StatsTab.xaml` và `StatsViewModel.cs`, đặt ngay sau Thư viện. Bổ sung tổng quan hôm nay, biểu đồ thời gian overlay hiển thị theo 7 ngày, 30 ngày hoặc 12 tháng, cùng tỷ lệ sử dụng từng preset trong khoảng đã chọn.
+- Lưu lịch sử theo ngày trong `stats_history.json` bằng ghi JSON nguyên tử; ghi tối đa một lần mỗi 5 phút khi có thay đổi và ghi khi thoát. Dịch vụ chỉ nghe sự kiện overlay/preset, không lấy mẫu liên tục khi overlay ẩn; dữ liệu cũ `usage-stats.json` được chuyển sang định dạng mới khi cần.
+- Hiển thị dung lượng file, cho bật/tắt tự động xóa dữ liệu cũ hơn 30 ngày. Nút xóa yêu cầu xác nhận, ghi lại file rỗng và cập nhật toàn bộ biểu đồ ngay. Bổ sung kiểm thử ghi nhận theo sự kiện, dọn dữ liệu cũ, lưu lựa chọn và xóa; 741 bài kiểm thử đạt (trừ một bài Raw Input phụ thuộc thiết bị thật).
+
+### 2026-10-22 — Rà soát vòng đời tài nguyên và tối ưu UI
+
+- Giảm debounce lưu `settings.json` từ 750 xuống 300 ms; tiếp tục dùng `SemaphoreSlim`, timer một lần và ghi JSON nguyên tử. Các lựa chọn nền preview ít thay đổi vẫn lưu ngay như trước.
+- Chỉ tạo lại HICON khay khi trạng thái bật/tắt overlay thay đổi, thay vì mỗi lần đổi tên preset hoặc ngôn ngữ; giải phóng cả `TaskbarIcon` và HICON hiện tại trong đường thoát thường hoặc bất thường.
+- Cửa sổ Settings dùng layout rounding và snap theo pixel; Overlay kiểm tra, khôi phục `WS_EX_TRANSPARENT | WS_EX_LAYERED` sau lần hiện lại, không kiểm tra trong vòng render. Brush nền thông báo fullscreen được đóng băng và dùng lại.
+- Dừng timer CPU/RAM và timer làm mới thống kê khi Settings bị ẩn hoặc thu nhỏ; chuyển thao tác xóa gán preset vũ khí sang `RelayCommand` của Game ViewModel. Rà soát hook, GDI/DC và bộ giải mã ảnh: các đường dùng hiện có đã gỡ hook khi dừng, hủy icon/bitmap, gọi `ReleaseDC`, `Freeze()` và dùng `OnLoad` cho ảnh đã giải mã.
+- Build Release không có cảnh báo/lỗi; 741 bài kiểm thử đạt (trừ một bài Raw Input cần thiết bị thật). Chưa đo CPU hoặc thời gian khởi động trên máy chơi game thực tế.
+
+### 2026-10-22 — Ảnh nền ứng dụng và cá nhân hóa
+
+- Thêm panel **CÁ NHÂN HÓA** vào Tab Chung của `SettingsWindow`: chọn PNG/JPEG/WebP, khôi phục nền gốc, chỉnh độ mờ 0–100% và blur 0–30 px. Hai ô số hiện `%`/`px`; click nhãn hoặc dùng phím mũi tên để chỉnh slider như các mục khác.
+- Lưu `CustomAppBgPath`, `AppBgOpacity` và `AppBgBlurRadius` vào `settings.json` qua cơ chế ghi nguyên tử/debounce hiện có. Mặc định 18% và 10 px; giá trị JSON không hợp lệ được kẹp an toàn. Ảnh mất hoặc đọc lỗi tự dùng nền tối mặc định.
+- Đặt lớp ảnh riêng phía dưới nội dung cửa sổ, chỉ làm mờ lớp ảnh; Card, InnerCard và khung Tab chuyển sang nền tối bán trong suốt khi có ảnh để chữ và nút vẫn rõ. Ảnh được nạp ngoài luồng UI, giới hạn kích thước giải mã, dùng `OnLoad` và `Freeze()` để không giữ khóa file; giải phóng tham chiếu khi đóng Settings.
+- Bổ sung kiểm thử vòng đời chọn/khôi phục, lưu JSON, kẹp giá trị, định dạng slider và ảnh dọc/ngang. Release build sạch cảnh báo/lỗi; 747 bài kiểm thử đạt (trừ một bài Raw Input cần thiết bị thật).
+
+### 2026-10-22 — Cache ảnh nền và tối ưu vùng cuộn
+
+- Thêm `BitmapCache` cho riêng lớp ảnh nền đã áp dụng `BlurEffect`, tách khỏi nội dung cuộn để các thay đổi ở tab không buộc vẽ lại ảnh nền; dùng chế độ scale nhẹ cho ảnh mờ. Khi thay ảnh, đổi blur/opacity hoặc đổi kích thước cửa sổ, cache vẫn được cập nhật theo thay đổi đó.
+- Giữ bộ nạp ảnh nền `OnLoad` + `Freeze()` và giới hạn cạnh ảnh giải mã tối đa 1920 pixel, tránh giữ file nguồn hoặc giải mã nguyên kích thước ảnh 4K/8K.
+- Bật logical scrolling và virtualization cho `ListBox`; bỏ `ScrollViewer` bọc ngoài hai danh sách Game để virtualization có hiệu lực. Giữ vùng cuộn riêng của Preset vì thao tác kéo thả đang dựa vào vùng đó.
+- Build Release thành công với 0 cảnh báo/lỗi; 6 bài kiểm thử ảnh nền đạt. Chưa đo thời gian khung hình khi cuộn trên thiết bị thực tế.
+
+### 2026-10-22 — Tiền xử lý blur ảnh nền ngoài luồng UI
+
+- Bỏ `BlurEffect` và cache bitmap XAML khỏi lớp ảnh nền của `SettingsWindow`. Lớp này chỉ hiển thị bitmap đã xử lý, đóng băng và không bắt sự kiện chuột.
+- Thêm `ImageBlurHelper` làm mờ hai lượt trên mảng pixel premultiplied trong `Task.Run`; dùng tổng trượt theo hàng/cột để chi phí tuyến tính theo số pixel. Ảnh nguồn chỉ giải mã một lần và giới hạn cạnh ở 1280 px cho cửa sổ Settings; ảnh kết quả được `Freeze()` trước khi gán cho UI.
+- Slider blur chờ 200 ms sau lần thay đổi cuối, hủy tác vụ cũ khi tiếp tục kéo hoặc đổi/khôi phục ảnh; opacity chỉ cập nhật lớp hiển thị, không tính lại blur. Danh sách `ListBox` dùng recycling khi virtualization có hiệu lực; không gắn virtualization giả cho `ScrollViewer` chứa nội dung tĩnh.
+- Build Release 0 cảnh báo/lỗi; 749 bài kiểm thử đạt khi loại một bài Raw Input cần thiết bị thật. Chưa đo FPS thực tế, nên không cam kết cố định 60 FPS trên mọi máy.
+
+### 2026-10-22 — Rà soát lớp nền và vùng cuộn panel
+
+- Kiểm tra toàn bộ XAML của cửa sổ và UserControl: không có `Opacity` trên `Border`/`Grid` trong panel cuộn cần chuyển đổi; Card, InnerCard và khung tab đã dùng màu nền ARGB cố định (`#C0...`/`#A8...`). Giữ độ trong của riêng ảnh nền để slider vẫn chỉnh được tức thì.
+- Gán `Focusable="False"` và `IsHitTestVisible="False"` trực tiếp cho ảnh nền và container nằm ngoài các `ScrollViewer`; lớp ảnh không tham gia xử lý chuột hoặc focus.
+- Thêm style `PanelScrollViewer` cho các vùng cuộn nội dung ở Settings, Thư viện, Thống kê và hộp thoại: cuộn dọc, tắt cuộn ngang, không trì hoãn, bật layout rounding/snap pixel. Không áp đặt style này lên vùng cuộn nội bộ của TextBox/ComboBox, cũng không bật ClearType hint trên nền bán trong suốt. Danh sách Thư viện tiếp tục dùng `VirtualizingStackPanel` với chế độ tái sử dụng phần tử.
+- Build Release thành công với 0 cảnh báo/lỗi. Chưa đo độ trễ cuộn trên phần cứng thực tế nên chưa thể xác nhận đã loại bỏ hoàn toàn giật hình.
+
+### 2026-10-22 — Cuộn panel theo pixel và cố định bước lăn chuột
+
+- Đổi style `PanelScrollViewer` của các tab Crosshair, Chung, Phím tắt, Game, Thống kê và hộp thoại sang `CanContentScroll=False`, `Focusable=False`; các panel tĩnh dùng offset vật lý để thanh cuộn không đổi theo chiều cao từng phần tử.
+- `WheelScrollAssist` cuộn các vùng cấp trang 48 DIP cho mỗi nấc 120 đơn vị, có hỗ trợ delta nhỏ của thiết bị cuộn độ phân giải cao và chặn ở hai đầu. Danh sách không dùng style này vẫn giữ số dòng cuộn của Windows.
+- Lưới Thư viện giữ `CanContentScroll=True` cùng `VirtualizingStackPanel`/`ScrollUnit=Pixel` để không mất ảo hóa; vùng cuộn riêng của danh sách Preset vẫn chuyển cú lăn tới panel bao ngoài khi danh sách bên trong đã tới mép.
+- Không ép đo trước các `Expander` đang đóng vì sẽ làm tab tải chậm và thay đổi nội dung ẩn; chiều cao nội dung tĩnh được WPF tính sau layout đầu tiên, còn việc mở/đóng panel sẽ thay đổi kích thước thanh cuộn theo đúng nội dung mới.
+- Build Release sạch cảnh báo/lỗi; 749 bài kiểm thử đạt khi loại một bài Raw Input cần thiết bị thật. Chưa xác minh độ ổn định kích thước thumb bằng thao tác chuột trên máy thực tế.
+
+### 2026-10-22 — Giảm lớp alpha và chi phí Slider trên ảnh nền
+
+- Khi dùng ảnh nền, nền khung Tab chuyển sang trong suốt; Card ngoài cùng dùng một lớp ARGB `#D9111B22`, còn `InnerCard` chỉ giữ viền và nền trong suốt. Các panel mặc định không có ảnh vẫn giữ màu gốc. Không áp `Background="Transparent"` lên mọi nhãn/control vì việc đó không xóa được các lớp vẽ và có thể đổi vùng bắt chuột.
+- Thu gọn template thumb của Slider còn một `Ellipse`; track vẫn là đường 4 px và giữ `Track`/`RepeatButton` tối thiểu cần cho thao tác chuột. Bỏ `Opacity` cấp toàn Slider ở trạng thái disabled, đổi màu thumb thay thế; bật layout rounding, snap pixel và tắt snap-to-tick, giữ focus ring cho bàn phím.
+- Đánh dấu 37 `SolidColorBrush` tĩnh trong Theme là frozen và dùng lại tài nguyên chung. `ColorPickerButton` dùng một brush mutable cho preview RGB, không cấp phát brush mới mỗi lần kéo; các swatch bất biến được chia sẻ và đã frozen.
+- Giữ binding Slider cập nhật ngay: `Delay=10` không gom được phần lớn sự kiện kéo ở 60 Hz (cách nhau khoảng 16 ms), trong khi preview WPF đã gom `InvalidateVisual` theo khung hình; lưu settings và blur ảnh nền có debounce riêng. Không thêm hiệu ứng render vào Label/Slider.
+- Build Release 0 cảnh báo/lỗi; 749 bài kiểm thử đạt khi loại một bài Raw Input cần thiết bị thật. Chưa đo độ trễ khung hình trên máy có ảnh nền, nên chưa thể kết luận hiệu năng bằng nền mặc định.

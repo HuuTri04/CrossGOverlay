@@ -1,5 +1,7 @@
 ﻿using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using System.IO;
+using System.Windows.Media.Imaging;
 using System.Security.Principal;
 using CommunityToolkit.Mvvm.Input;
 using CrosshairOverlay.Core.Abstractions;
@@ -7,6 +9,7 @@ using CrosshairOverlay.Core.Models;
 using CrosshairOverlay.Localization;
 using CrosshairOverlay.Services.Display;
 using CrosshairOverlay.Services.Storage;
+using CrosshairOverlay.Services.System;
 
 namespace CrosshairOverlay.ViewModels;
 
@@ -27,6 +30,11 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
     private readonly IAppRestartService _restart;
     private readonly IStorageLocationService _storage;
     private readonly IPresetLibrary? _library;
+    private readonly ObsWebSocketService? _obs;
+    private int _backgroundLoadVersion;
+    private int _backgroundRenderVersion;
+    private CancellationTokenSource? _backgroundRenderCancellation;
+    private BitmapSource? _sourceBackgroundImage;
 
     private bool _disposed;
 
@@ -44,8 +52,10 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
         IAppRestartService restart,
         IStorageLocationService storage,
         ToastViewModel toast,
+        ObsWebSocketService? obs = null,
         IPresetLibrary? library = null)
     {
+        _obs = obs;
         _toast = toast;
         _library = library;
         _storage = storage;
@@ -61,6 +71,7 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
         _updates = updates;
         _dialogs = dialogs;
         IsAdminRunning = CheckAdminRights();
+        _ = LoadSavedAppBackgroundAsync(settings.Current.CustomAppBgPath);
 
         _monitorMode = settings.Current.MonitorSelectionMode;
         _languageCode = settings.Current.Language;
@@ -77,6 +88,138 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
 
     /// <summary>View bind thẳng vào đây cho các toggle đơn giản (checkbox).</summary>
     public AppSettings Settings => _settings.Current;
+
+    /// <summary>Frozen, pre-blurred bitmap bound to the backdrop Image.</summary>
+    [ObservableProperty] private BitmapSource? _appBackgroundImage;
+
+    public bool HasAppBackground => AppBackgroundImage is not null && _settings.Current.AppBgOpacity > 0d;
+
+    partial void OnAppBackgroundImageChanged(BitmapSource? value) =>
+        OnPropertyChanged(nameof(HasAppBackground));
+
+    public double AppBgOpacityPercent
+    {
+        get => _settings.Current.AppBgOpacity * 100d;
+        set
+        {
+            var opacity = AppSettings.AppBgOpacityPercentRange.Clamp(value) / 100d;
+            if (Math.Abs(_settings.Current.AppBgOpacity - opacity) < 0.0001d) return;
+            _settings.Current.AppBgOpacity = opacity;
+            _settings.RequestSave();
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(HasAppBackground));
+        }
+    }
+
+    public double AppBgBlurRadius
+    {
+        get => _settings.Current.AppBgBlurRadius;
+        set
+        {
+            var radius = AppSettings.AppBgBlurRadiusRange.Clamp(value);
+            if (Math.Abs(_settings.Current.AppBgBlurRadius - radius) < 0.0001d) return;
+            _settings.Current.AppBgBlurRadius = radius;
+            _settings.RequestSave();
+            OnPropertyChanged();
+            _ = RenderBackgroundAsync(debounce: true, reportError: true);
+        }
+    }
+
+    [RelayCommand]
+    private async Task ChooseAppBackgroundAsync()
+    {
+        var path = _dialogs.PickFileToOpen(Tr.Get("AppBg_ImageFilter"),
+            Path.GetDirectoryName(_settings.Current.CustomAppBgPath));
+        if (path is null) return;
+
+        var version = Interlocked.Increment(ref _backgroundLoadVersion);
+        var image = await DecodeAppBackgroundAsync(path, reportError: true);
+        if (image is null || _disposed || version != _backgroundLoadVersion) return;
+
+        _sourceBackgroundImage = image;
+        _settings.Current.CustomAppBgPath = path;
+        _settings.RequestSave();
+        await RenderBackgroundAsync(debounce: false, reportError: true);
+    }
+
+    [RelayCommand]
+    private void ResetAppBackground()
+    {
+        Interlocked.Increment(ref _backgroundLoadVersion);
+        CancelBackgroundRender();
+        _sourceBackgroundImage = null;
+        AppBackgroundImage = null;
+        _settings.Current.CustomAppBgPath = null;
+        AppBgOpacityPercent = AppSettings.DefaultAppBgOpacity * 100d;
+        AppBgBlurRadius = AppSettings.DefaultAppBgBlurRadius;
+        _settings.RequestSave();
+    }
+
+    private async Task LoadSavedAppBackgroundAsync(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return;
+        var version = _backgroundLoadVersion;
+        var image = await DecodeAppBackgroundAsync(path, reportError: false);
+        if (image is not null && !_disposed && version == _backgroundLoadVersion
+            && _settings.Current.CustomAppBgPath == path)
+        {
+            _sourceBackgroundImage = image;
+            await RenderBackgroundAsync(debounce: false, reportError: false);
+        }
+    }
+
+    private async Task<BitmapSource?> DecodeAppBackgroundAsync(string path, bool reportError)
+    {
+        try { return await Task.Run(() => AppBackgroundImageLoader.Decode(path, maxDecodedSide: 1280)); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException
+                                   or ArgumentException or InvalidOperationException
+                                   or global::System.Runtime.InteropServices.COMException)
+        {
+            if (reportError && !_disposed)
+                _dialogs.ShowMessage(Tr.Get("AppBg_ImageErrorTitle"),
+                    Tr.Format("AppBg_ImageError", ex.Message), isError: true);
+            return null;
+        }
+    }
+
+    private async Task RenderBackgroundAsync(bool debounce, bool reportError)
+    {
+        var source = _sourceBackgroundImage;
+        if (_disposed || source is null) return;
+
+        var version = Interlocked.Increment(ref _backgroundRenderVersion);
+        var cancellation = new CancellationTokenSource();
+        Interlocked.Exchange(ref _backgroundRenderCancellation, cancellation)?.Cancel();
+        try
+        {
+            if (debounce) await Task.Delay(200, cancellation.Token);
+            var rendered = await ImageBlurHelper.CreatePreBlurredBitmapAsync(
+                source, _settings.Current.AppBgBlurRadius, cancellation.Token);
+            if (!_disposed && !cancellation.IsCancellationRequested
+                && version == _backgroundRenderVersion && ReferenceEquals(source, _sourceBackgroundImage))
+                AppBackgroundImage = rendered;
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { }
+        catch (Exception ex)
+        {
+            if (reportError && !_disposed && version == _backgroundRenderVersion)
+                _dialogs.ShowMessage(Tr.Get("AppBg_ImageErrorTitle"),
+                    Tr.Format("AppBg_ImageError", ex.Message), isError: true);
+        }
+        finally
+        {
+            Interlocked.CompareExchange(ref _backgroundRenderCancellation, null, cancellation);
+            cancellation.Dispose();
+        }
+    }
+
+    private void CancelBackgroundRender()
+    {
+        Interlocked.Increment(ref _backgroundRenderVersion);
+        Interlocked.Exchange(ref _backgroundRenderCancellation, null)?.Cancel();
+    }
+
+    public void SetObsPassword(string password) => _obs?.SetPassword(password);
 
     public bool IsAdminRunning { get; }
 
@@ -504,6 +647,10 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
     {
         if (_disposed) return;
         _disposed = true;
+        Interlocked.Increment(ref _backgroundLoadVersion);
+        CancelBackgroundRender();
+        _sourceBackgroundImage = null;
+        AppBackgroundImage = null;
 
         _monitors.DisplayConfigurationChanged -= OnDisplayConfigurationChanged;
         TranslationSource.Instance.PropertyChanged -= OnLanguageChanged;

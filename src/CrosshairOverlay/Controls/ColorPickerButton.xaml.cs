@@ -13,13 +13,17 @@ namespace CrosshairOverlay.Controls;
 /// </remarks>
 public partial class ColorPickerButton : UserControl
 {
+    private static readonly IReadOnlyList<SwatchItem> SharedSwatches = CreateSwatches();
+    private readonly SolidColorBrush _previewBrush = new(Colors.Lime);
+
     /// <summary>Chặn vòng lặp khi slider cập nhật màu rồi màu lại cập nhật ngược slider.</summary>
     private bool _updating;
 
     public ColorPickerButton()
     {
         InitializeComponent();
-        SwatchList.ItemsSource = CreateSwatches();
+        Swatch.Background = _previewBrush;
+        SwatchList.ItemsSource = SharedSwatches;
         Loaded += (_, _) => Refresh();
     }
 
@@ -57,9 +61,7 @@ public partial class ColorPickerButton : UserControl
     {
         var color = SelectedColor;
 
-        var brush = new SolidColorBrush(Color.FromRgb(color.R, color.G, color.B));
-        brush.Freeze();
-        Swatch.Background = brush;
+        _previewBrush.Color = Color.FromRgb(color.R, color.G, color.B);
 
         HexLabel.Text = JsonColorConverter.ToRgbHex(color);
 
@@ -111,9 +113,7 @@ public partial class ColorPickerButton : UserControl
         }
 
         // Refresh bị bỏ qua khi _updating bật, nên cập nhật phần hiển thị ở đây.
-        var brush = new SolidColorBrush(SelectedColor);
-        brush.Freeze();
-        Swatch.Background = brush;
+        _previewBrush.Color = Color.FromRgb(SelectedColor.R, SelectedColor.G, SelectedColor.B);
         HexLabel.Text = JsonColorConverter.ToRgbHex(SelectedColor);
     }
 

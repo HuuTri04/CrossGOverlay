@@ -50,6 +50,19 @@ public sealed partial class GameProfilesViewModel : ObservableObject, IDisposabl
 
     public ReadOnlyObservableCollection<CrosshairProfile> Presets => _library.Presets;
 
+    [RelayCommand] private void ClearWeapon1Preset(GameProfile? profile)
+    { if (profile is not null) profile.Weapon1PresetId = Guid.Empty; }
+    [RelayCommand] private void ClearWeapon2Preset(GameProfile? profile)
+    { if (profile is not null) profile.Weapon2PresetId = Guid.Empty; }
+    [RelayCommand] private void ClearWeapon3Preset(GameProfile? profile)
+    { if (profile is not null) profile.Weapon3PresetId = Guid.Empty; }
+    [RelayCommand] private void ClearWeapon4Preset(GameProfile? profile)
+    { if (profile is not null) profile.Weapon4PresetId = Guid.Empty; }
+    [RelayCommand] private void ClearWeaponQPreset(GameProfile? profile)
+    { if (profile is not null) profile.WeaponQPresetId = Guid.Empty; }
+    [RelayCommand] private void ClearWeaponEPreset(GameProfile? profile)
+    { if (profile is not null) profile.WeaponEPresetId = Guid.Empty; }
+
     /// <summary>Danh sách giữ nguyên khi đổi ngôn ngữ; từng mục tự báo nhãn đã đổi.</summary>
     public IReadOnlyList<LocalizedOption<ProcessMatchMode>> MatchModes { get; }
 

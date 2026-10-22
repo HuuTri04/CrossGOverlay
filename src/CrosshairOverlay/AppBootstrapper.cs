@@ -9,6 +9,7 @@ using CrosshairOverlay.Services.Input;
 using CrosshairOverlay.Services.Hardware;
 using CrosshairOverlay.Services.Logging;
 using CrosshairOverlay.Services.Storage;
+using CrosshairOverlay.Services.System;
 using CrosshairOverlay.Services.Updates;
 using CrosshairOverlay.Views;
 using Microsoft.Extensions.DependencyInjection;
@@ -190,6 +191,8 @@ internal sealed class AppBootstrapper
             StartOverlay(settings, library);
             boot.Mark("overlay");
 
+            await _provider.GetRequiredService<StatsService>().StartAsync();
+
             StartTray();
             boot.Mark("khay");
 
@@ -252,6 +255,11 @@ internal sealed class AppBootstrapper
         var autoSwitcher = _provider!.GetRequiredService<IProfileAutoSwitcher>();
         autoSwitcher.ExclusiveFullscreenDetected += OnExclusiveFullscreenDetected;
         autoSwitcher.Start();
+        _provider!.GetRequiredService<WeaponAutoSwitchService>().Start();
+        var obs = _provider!.GetRequiredService<ObsWebSocketService>();
+        obs.CaptureChanged += OnObsCaptureChanged;
+        obs.Start();
+        ApplyStreamCapturePolicy();
         _backgroundServicesStarted = true;
         // The update service is resolved here; its network check remains scheduled after UI startup.
         _provider!.GetRequiredService<IUpdateService>();
@@ -521,6 +529,15 @@ internal sealed class AppBootstrapper
     {
         if (_provider is null) return;
 
+        if (e.PropertyName == nameof(AppSettings.StreamModeEnabled))
+        {
+            ApplyStreamCapturePolicy();
+            _provider.GetRequiredService<IProfileAutoSwitcher>().SetStreamSuppressed(
+                _provider.GetRequiredService<ObsWebSocketService>().IsCapturing
+                && _provider.GetRequiredService<IAppSettingsService>().Current.StreamModeEnabled);
+            return;
+        }
+
         if (e.PropertyName is not (nameof(AppSettings.OverlayEnabled)
             or nameof(AppSettings.ShowOnlyInMatchedGames)
             or nameof(AppSettings.AutoSwitchByGameProfile)))
@@ -530,6 +547,23 @@ internal sealed class AppBootstrapper
 
         _provider.GetRequiredService<IProfileAutoSwitcher>().ApplyVisibility();
         RefreshTrayState();
+    }
+
+    private void OnObsCaptureChanged(object? sender, EventArgs e)
+    {
+        if (_provider is null) return;
+        _provider.GetRequiredService<IProfileAutoSwitcher>().SetStreamSuppressed(
+            _provider.GetRequiredService<ObsWebSocketService>().IsCapturing
+            && _provider.GetRequiredService<IAppSettingsService>().Current.StreamModeEnabled);
+    }
+
+    private void ApplyStreamCapturePolicy()
+    {
+        if (_provider is null) return;
+        var enabled = _provider.GetRequiredService<IAppSettingsService>().Current.StreamModeEnabled;
+        if (enabled && !_provider.GetRequiredService<IOverlayController>().SetCaptureExclusion(true))
+            _log?.LogWarning("Windows capture exclusion is unavailable for this overlay/window configuration.");
+        if (!enabled) _provider.GetRequiredService<IOverlayController>().SetCaptureExclusion(false);
     }
 
     /// <summary>
@@ -657,6 +691,13 @@ internal sealed class AppBootstrapper
             // Stop producers before flushing. No new callbacks may enqueue writes after this point.
             if (_backgroundServicesStarted)
             {
+                TryDuringExit("ngắt OBS", () =>
+                {
+                    var obs = provider.GetRequiredService<ObsWebSocketService>();
+                    obs.CaptureChanged -= OnObsCaptureChanged;
+                    obs.Dispose();
+                });
+                TryDuringExit("gỡ hook vũ khí", () => provider.GetRequiredService<WeaponAutoSwitchService>().Dispose());
                 TryDuringExit("dừng theo dõi game", () => provider.GetRequiredService<IProfileAutoSwitcher>().Stop());
                 TryDuringExit("dừng timer hành vi", () => provider.GetRequiredService<Services.Overlay.OverlayBehaviorController>().Dispose());
             }
@@ -667,6 +708,8 @@ internal sealed class AppBootstrapper
 
             TryDuringExit("ghi preset", () => provider.GetRequiredService<IPresetLibrary>().FlushAsync().GetAwaiter().GetResult());
             TryDuringExit("ghi cài đặt", () => provider.GetRequiredService<IAppSettingsService>().FlushAsync().GetAwaiter().GetResult());
+            TryDuringExit("ghi thống kê", () => provider.GetRequiredService<StatsService>().SaveNow());
+            TryDuringExit("ghi nhật ký API cửa sổ", () => provider.GetRequiredService<AuditLoggerService>().Flush());
 
             TryDuringExit("đóng RGB", () => provider.GetRequiredService<RgbSyncService>().Disconnect());
 

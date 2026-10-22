@@ -6,6 +6,7 @@ using CrosshairOverlay.Core.Abstractions;
 using CrosshairOverlay.Core.Models;
 using CrosshairOverlay.Core.Threading;
 using CrosshairOverlay.Interop;
+using CrosshairOverlay.Services.Logging;
 using Microsoft.Extensions.Logging;
 
 namespace CrosshairOverlay.Services.Overlay;
@@ -22,6 +23,7 @@ public sealed class OverlayController : IOverlayController, IOverlayRuntimeFeatu
     private readonly ICrosshairRenderer _renderer;
     private readonly IMonitorService _monitors;
     private readonly ILogger<OverlayController> _logger;
+    private readonly AuditLoggerService _audit;
     private readonly ScreenColorSamplerService _screenSampler;
     private readonly Dispatcher _dispatcher;
 
@@ -74,11 +76,13 @@ public sealed class OverlayController : IOverlayController, IOverlayRuntimeFeatu
         ICrosshairRenderer renderer,
         IMonitorService monitors,
         ScreenColorSamplerService screenSampler,
+        AuditLoggerService audit,
         ILogger<OverlayController> logger)
     {
         _renderer = renderer;
         _monitors = monitors;
         _screenSampler = screenSampler;
+        _audit = audit;
         _logger = logger;
         _dispatcher = Dispatcher.CurrentDispatcher;
         _rebuildThrottle = new RenderThrottle(_dispatcher, Rebuild);
@@ -86,6 +90,14 @@ public sealed class OverlayController : IOverlayController, IOverlayRuntimeFeatu
     }
 
     public bool IsVisible => _visible;
+
+    public bool SetCaptureExclusion(bool enabled)
+    {
+        if (!_dispatcher.CheckAccess()) return (bool)_dispatcher.Invoke(() => SetCaptureExclusion(enabled));
+        var result = _window?.SetCaptureExclusion(enabled) ?? false;
+        _audit.Record("SetWindowDisplayAffinity", $"requested={(enabled ? "WDA_EXCLUDEFROMCAPTURE" : "WDA_NONE")}; success={result}");
+        return result;
+    }
 
     public CrosshairProfile? CurrentProfile => _profile;
 
@@ -105,6 +117,7 @@ public sealed class OverlayController : IOverlayController, IOverlayRuntimeFeatu
         var createdMs = watch.Elapsed.TotalMilliseconds;
 
         _window.EnsureHandle();          // áp extended styles TRƯỚC lần Show đầu tiên
+        _audit.Record("SetWindowLongPtr", "Overlay HWND: WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE");
         var handleMs = watch.Elapsed.TotalMilliseconds;
         _window.DpiChanged += OnWindowDpiChanged;
 
@@ -153,6 +166,7 @@ public sealed class OverlayController : IOverlayController, IOverlayRuntimeFeatu
         {
             // ShowActivated=false + WS_EX_NOACTIVATE ⇒ Show() không kéo focus khỏi game.
             _window!.Show();
+            _window.EnsureClickThroughStyles();
             Invalidate();
 
             // Bật overlay là hành động rời rạc, không phải cú kéo liên tục: bỏ qua bộ chặn
@@ -187,6 +201,7 @@ public sealed class OverlayController : IOverlayController, IOverlayRuntimeFeatu
         if (!_window.ReassertTopmost())
             _logger.LogDebug("Không đưa được overlay lên topmost (Win32 error {Error}).",
                 Marshal.GetLastWin32Error());
+        else _audit.Record("SetWindowPos", "HWND_TOPMOST | SWP_NOACTIVATE");
     }
 
     public void OnForegroundGameChanged(nint windowHandle)
@@ -385,6 +400,15 @@ public sealed class OverlayController : IOverlayController, IOverlayRuntimeFeatu
             var drawing = _renderer.Build(_profile, options);
 
             _window.SetAliasedVectorEdges(_renderer.PrefersAliasedEdges(_profile));
+            _window.Host.Effect = _profile.Shadow.Enabled
+                ? new global::System.Windows.Media.Effects.DropShadowEffect
+                {
+                    Color = _profile.Shadow.Color,
+                    BlurRadius = _profile.Shadow.BlurRadius,
+                    Opacity = _profile.Shadow.Opacity,
+                    ShadowDepth = 0d,
+                }
+                : null;
             _window.Host.SetDrawing(drawing);
             _lastContentSize = contentSize;
             ApplyPlacement(monitor, contentSize);

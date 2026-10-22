@@ -29,6 +29,8 @@ namespace CrosshairOverlay.Controls;
 /// </remarks>
 public static class WheelScrollAssist
 {
+    private const double PixelsPerWheelNotch = 48d;
+
     public static readonly DependencyProperty IsEnabledProperty = DependencyProperty.RegisterAttached(
         "IsEnabled", typeof(bool), typeof(WheelScrollAssist),
         new PropertyMetadata(false, OnIsEnabledChanged));
@@ -36,6 +38,16 @@ public static class WheelScrollAssist
     public static bool GetIsEnabled(DependencyObject element) => (bool)element.GetValue(IsEnabledProperty);
 
     public static void SetIsEnabled(DependencyObject element, bool value) => element.SetValue(IsEnabledProperty, value);
+
+    /// <summary>Use a fixed DIP offset on page-level scrollers, independent of Windows wheel line count.</summary>
+    public static readonly DependencyProperty FixedPixelWheelProperty = DependencyProperty.RegisterAttached(
+        "FixedPixelWheel", typeof(bool), typeof(WheelScrollAssist), new PropertyMetadata(false));
+
+    public static bool GetFixedPixelWheel(DependencyObject element) =>
+        (bool)element.GetValue(FixedPixelWheelProperty);
+
+    public static void SetFixedPixelWheel(DependencyObject element, bool value) =>
+        element.SetValue(FixedPixelWheelProperty, value);
 
     private static void OnIsEnabledChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
@@ -51,17 +63,26 @@ public static class WheelScrollAssist
 
         if (FindScrollable(e.OriginalSource as DependencyObject, scrollDown: e.Delta < 0) is not { } viewer) return;
 
-        Scroll(viewer, down: e.Delta < 0);
+        Scroll(viewer, e.Delta);
 
         e.Handled = true;
     }
 
     /// <summary>
-    /// Cuộn giống hệt cú lăn mặc định: số dòng theo cài đặt chuột của Windows (mỗi "dòng" là một
-    /// mục với danh sách, vài DIP với nội dung thường), hoặc cả trang nếu Windows đặt như vậy.
+    /// Trang nội dung cuộn 48 DIP/nấc. Danh sách không dùng style này tiếp tục theo thiết lập
+    /// số dòng của Windows để giữ hành vi cuộn logic và ảo hóa hiện có.
     /// </summary>
-    private static void Scroll(ScrollViewer viewer, bool down)
+    private static void Scroll(ScrollViewer viewer, int delta)
     {
+        if (GetFixedPixelWheel(viewer))
+        {
+            viewer.ScrollToVerticalOffset(Math.Clamp(
+                viewer.VerticalOffset - delta * PixelsPerWheelNotch / Mouse.MouseWheelDeltaForOneLine,
+                0d, viewer.ScrollableHeight));
+            return;
+        }
+
+        var down = delta < 0;
         var lines = SystemParameters.WheelScrollLines;
         if (lines < 0)
         {

@@ -26,6 +26,26 @@ public sealed partial class GameProfile : ObservableObject
     /// <summary>Preset sẽ áp dụng khi rule khớp. Bỏ qua nếu <see cref="Behavior"/> là HideOverlay.</summary>
     [ObservableProperty] private Guid _presetId;
 
+    // Optional weapon slots. Empty means that key keeps the current preset.
+    [ObservableProperty] private Guid _weapon1PresetId;
+    [ObservableProperty] private Guid _weapon2PresetId;
+    [ObservableProperty] private Guid _weapon3PresetId;
+    [ObservableProperty] private Guid _weapon4PresetId;
+    [ObservableProperty] private Guid _weaponQPresetId;
+    [ObservableProperty] private Guid _weaponEPresetId;
+
+    public bool HasWeaponPresets => Weapon1PresetId != Guid.Empty || Weapon2PresetId != Guid.Empty
+        || Weapon3PresetId != Guid.Empty || Weapon4PresetId != Guid.Empty
+        || WeaponQPresetId != Guid.Empty || WeaponEPresetId != Guid.Empty;
+
+    public Guid WeaponPresetForKey(uint virtualKey) => virtualKey switch
+    {
+        0x31 => Weapon1PresetId, 0x32 => Weapon2PresetId,
+        0x33 => Weapon3PresetId, 0x34 => Weapon4PresetId,
+        0x51 => WeaponQPresetId, 0x45 => WeaponEPresetId,
+        _ => Guid.Empty,
+    };
+
     [ObservableProperty] private GameProfileBehavior _behavior = GameProfileBehavior.ShowPreset;
 
     [ObservableProperty] private bool _enabled = true;
@@ -49,6 +69,12 @@ public sealed partial class GameProfile : ObservableObject
         MatchMode = MatchMode,
         Pattern = Pattern,
         PresetId = PresetId,
+        Weapon1PresetId = Weapon1PresetId,
+        Weapon2PresetId = Weapon2PresetId,
+        Weapon3PresetId = Weapon3PresetId,
+        Weapon4PresetId = Weapon4PresetId,
+        WeaponQPresetId = WeaponQPresetId,
+        WeaponEPresetId = WeaponEPresetId,
         Behavior = Behavior,
         Enabled = Enabled,
         Priority = Priority,

@@ -51,6 +51,17 @@ public partial class SliderField : UserControl
         set => SetValue(SmallChangeProperty, value);
     }
 
+    public static readonly DependencyProperty UnitSuffixProperty = DependencyProperty.Register(
+        nameof(UnitSuffix), typeof(string), typeof(SliderField),
+        new PropertyMetadata(string.Empty, (d, _) => ((SliderField)d).SyncTextFromValue()));
+
+    /// <summary>Optional text shown in the numeric box, such as % or px.</summary>
+    public string UnitSuffix
+    {
+        get => (string)GetValue(UnitSuffixProperty);
+        set => SetValue(UnitSuffixProperty, value);
+    }
+
     private static void OnSmallChangeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) =>
         ((SliderField)d).UpdateSliderStep();
 
@@ -203,6 +214,10 @@ public partial class SliderField : UserControl
 
         // Chấp nhận cả dấu chấm lẫn dấu phẩy: người dùng Việt Nam thường gõ dấu phẩy thập phân
         // trong khi bố cục bàn phím số lại cho dấu chấm.
+        text = text.Trim();
+        if (!string.IsNullOrEmpty(field.UnitSuffix)
+            && text.EndsWith(field.UnitSuffix, StringComparison.OrdinalIgnoreCase))
+            text = text[..^field.UnitSuffix.Length].TrimEnd();
         var normalized = text.Replace(',', '.');
 
         if (!double.TryParse(
@@ -245,9 +260,9 @@ public partial class SliderField : UserControl
         var decimals = IsFineGrained ? 2 : 1;
 
         if (Math.Abs(value - Math.Round(value)) < 0.005d)
-            return Math.Round(value).ToString("0", CultureInfo.CurrentCulture);
+            return Math.Round(value).ToString("0", CultureInfo.CurrentCulture) + UnitSuffix;
 
-        return value.ToString(decimals == 2 ? "0.##" : "0.#", CultureInfo.CurrentCulture);
+        return value.ToString(decimals == 2 ? "0.##" : "0.#", CultureInfo.CurrentCulture) + UnitSuffix;
     }
 
     /// <summary>

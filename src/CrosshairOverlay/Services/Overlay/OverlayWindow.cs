@@ -68,6 +68,13 @@ internal sealed class OverlayWindow : Window
     /// <summary>HWND của cửa sổ. Bằng 0 trước khi handle được tạo.</summary>
     public nint Handle { get; private set; }
 
+    public bool SetCaptureExclusion(bool enabled) => Handle != 0 &&
+        SetWindowDisplayAffinity(Handle, enabled ? 0x11u : 0u);
+
+    [global::System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true)]
+    [return: global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.Bool)]
+    private static extern bool SetWindowDisplayAffinity(nint hwnd, uint affinity);
+
     protected override void OnSourceInitialized(EventArgs e)
     {
         base.OnSourceInitialized(e);
@@ -96,6 +103,15 @@ internal sealed class OverlayWindow : Window
             0, 0, 0, 0,
             Win32Constants.SWP_NOMOVE | Win32Constants.SWP_NOSIZE
                 | Win32Constants.SWP_NOACTIVATE | Win32Constants.SWP_NOOWNERZORDER);
+    }
+
+    /// <summary>Repair click-through flags after a WPF hide/show transition if needed.</summary>
+    public void EnsureClickThroughStyles()
+    {
+        if (Handle == 0) return;
+        var style = (long)NativeMethods.GetWindowLongPtr(Handle, Win32Constants.GWL_EXSTYLE);
+        const long required = Win32Constants.WS_EX_LAYERED | Win32Constants.WS_EX_TRANSPARENT;
+        if ((style & required) != required) ApplyOverlayExtendedStyles(Handle);
     }
 
     private static void ApplyOverlayExtendedStyles(nint hwnd)

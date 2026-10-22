@@ -207,14 +207,7 @@ public sealed partial class CrosshairEditorViewModel : ObservableObject, IDispos
         SavePreviewOptions();
     }
 
-    /// <summary>
-    /// Ghi settings.json NGAY, không qua debounce của <see cref="IAppSettingsService.RequestSave"/>.
-    /// </summary>
-    /// <remarks>
-    /// Người dùng chỉ bấm ô này thỉnh thoảng, nên ghi ngay không tốn gì mà không mất lựa chọn nếu
-    /// app bị tắt đột ngột trong khoảng chờ. Ghi chạy nền (ghi file nguyên tử, có khoá chống ghi
-    /// chồng) và tự nuốt lỗi I/O, nên không chặn UI.
-    /// </remarks>
+    /// <summary>Persist the infrequent preview choice immediately via the atomic writer.</summary>
     private void SavePreviewOptions() => _ = _settings.SaveAsync();
 
     partial void OnProfileChanged(CrosshairProfile? oldValue, CrosshairProfile? newValue)

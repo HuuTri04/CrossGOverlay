@@ -62,7 +62,8 @@ public static class CatalogCategories
     public const string Crosses = "Crosses";
     public const string Circles = "Circles";
     public const string Tactical = "Tactical";
+    public const string Accessibility = "Accessibility";
 
     /// <summary>Thứ tự hiển thị của các chip lọc; "Tất cả" luôn đứng đầu.</summary>
-    public static IReadOnlyList<string> Ordered { get; } = [All, ProPlayers, Dots, Crosses, Circles, Tactical];
+    public static IReadOnlyList<string> Ordered { get; } = [All, ProPlayers, Dots, Crosses, Circles, Tactical, Accessibility];
 }

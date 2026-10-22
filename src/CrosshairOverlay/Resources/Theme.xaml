@@ -1,5 +1,7 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:ctl="clr-namespace:CrosshairOverlay.Controls"
+                    xmlns:po="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options">
 
     <!--
         Bảng màu theo MongoDB LeafyGreen (dark mode).
@@ -25,37 +27,37 @@
     <Color x:Key="LG.Yellow.Base">#FFFFC010</Color>
 
     <!-- ================= Vai trò ================= -->
-    <SolidColorBrush x:Key="WindowBg" Color="{StaticResource LG.Black}"/>
-    <SolidColorBrush x:Key="PanelBg" Color="{StaticResource LG.Gray.Dark4}"/>
-    <SolidColorBrush x:Key="CardBg" Color="{StaticResource LG.Gray.Dark3}"/>
-    <SolidColorBrush x:Key="BorderBrushSoft" Color="{StaticResource LG.Gray.Dark2}"/>
-    <SolidColorBrush x:Key="TrackBg" Color="{StaticResource LG.Gray.Dark2}"/>
+    <SolidColorBrush po:Freeze="True" x:Key="WindowBg" Color="{StaticResource LG.Black}"/>
+    <SolidColorBrush po:Freeze="True" x:Key="PanelBg" Color="{StaticResource LG.Gray.Dark4}"/>
+    <SolidColorBrush po:Freeze="True" x:Key="CardBg" Color="{StaticResource LG.Gray.Dark3}"/>
+    <SolidColorBrush po:Freeze="True" x:Key="BorderBrushSoft" Color="{StaticResource LG.Gray.Dark2}"/>
+    <SolidColorBrush po:Freeze="True" x:Key="TrackBg" Color="{StaticResource LG.Gray.Dark2}"/>
 
-    <SolidColorBrush x:Key="Accent" Color="{StaticResource LG.Green.Dark1}"/>
-    <SolidColorBrush x:Key="AccentHover" Color="{StaticResource LG.Green.Base}"/>
-    <SolidColorBrush x:Key="AccentBright" Color="{StaticResource LG.Green.Base}"/>
+    <SolidColorBrush po:Freeze="True" x:Key="Accent" Color="{StaticResource LG.Green.Dark1}"/>
+    <SolidColorBrush po:Freeze="True" x:Key="AccentHover" Color="{StaticResource LG.Green.Base}"/>
+    <SolidColorBrush po:Freeze="True" x:Key="AccentBright" Color="{StaticResource LG.Green.Base}"/>
 
     <!-- Chữ trên nền xanh sáng phải là màu TỐI: xanh LeafyGreen quá chói để đặt chữ trắng lên. -->
-    <SolidColorBrush x:Key="OnAccent" Color="{StaticResource LG.Black}"/>
+    <SolidColorBrush po:Freeze="True" x:Key="OnAccent" Color="{StaticResource LG.Black}"/>
 
-    <SolidColorBrush x:Key="TextPrimary" Color="{StaticResource LG.Gray.Light2}"/>
-    <SolidColorBrush x:Key="TextDim" Color="{StaticResource LG.Gray.Base}"/>
-    <SolidColorBrush x:Key="TextMuted" Color="{StaticResource LG.Gray.Dark1}"/>
+    <SolidColorBrush po:Freeze="True" x:Key="TextPrimary" Color="{StaticResource LG.Gray.Light2}"/>
+    <SolidColorBrush po:Freeze="True" x:Key="TextDim" Color="{StaticResource LG.Gray.Base}"/>
+    <SolidColorBrush po:Freeze="True" x:Key="TextMuted" Color="{StaticResource LG.Gray.Dark1}"/>
     <!-- Tiêu đề nhóm (MÀN HÌNH, ỨNG DỤNG, CHI TIẾT…): sáng hơn TextDim để đọc rõ trên nền Card tối. -->
-    <SolidColorBrush x:Key="TextSubheader" Color="#FFA3B1C6"/>
+    <SolidColorBrush po:Freeze="True" x:Key="TextSubheader" Color="#FFA3B1C6"/>
 
-    <SolidColorBrush x:Key="Danger" Color="{StaticResource LG.Red.Light1}"/>
-    <SolidColorBrush x:Key="Warning" Color="{StaticResource LG.Yellow.Base}"/>
+    <SolidColorBrush po:Freeze="True" x:Key="Danger" Color="{StaticResource LG.Red.Light1}"/>
+    <SolidColorBrush po:Freeze="True" x:Key="Warning" Color="{StaticResource LG.Yellow.Base}"/>
     <!--
         Lớp phủ sau hộp thoại: đen thuần, alpha 0x80 (50%). Cố tình KHÔNG pha màu nhấn của theme —
         pha xanh vào thì toàn bộ app phía sau bị nhuộm xanh thay vì chỉ tối đi.
     -->
-    <SolidColorBrush x:Key="Backdrop" Color="#80000000"/>
+    <SolidColorBrush po:Freeze="True" x:Key="Backdrop" Color="#80000000"/>
 
     <!-- StaticResource chỉ nhìn thấy tài nguyên khai báo TRƯỚC nó, nên hai brush dưới đây
          phải nằm ở đây chứ không phải cạnh chỗ dùng. -->
-    <SolidColorBrush x:Key="LG.Gray.Dark1Brush" Color="{StaticResource LG.Gray.Dark1}"/>
-    <SolidColorBrush x:Key="LG.Green.Light2Brush" Color="{StaticResource LG.Green.Light2}"/>
+    <SolidColorBrush po:Freeze="True" x:Key="LG.Gray.Dark1Brush" Color="{StaticResource LG.Gray.Dark1}"/>
+    <SolidColorBrush po:Freeze="True" x:Key="LG.Green.Light2Brush" Color="{StaticResource LG.Green.Light2}"/>
 
     <!-- ================= Hình khối ================= -->
     <CornerRadius x:Key="RadiusInput">4</CornerRadius>
@@ -317,13 +319,15 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Thumb">
-                    <Grid Width="16" Height="16">
-                        <Ellipse x:Name="Knob" Fill="{StaticResource AccentBright}"
-                                 Stroke="{StaticResource WindowBg}" StrokeThickness="2"/>
-                    </Grid>
+                    <Ellipse x:Name="Knob" Width="16" Height="16"
+                             Fill="{StaticResource AccentBright}"
+                             Stroke="{StaticResource WindowBg}" StrokeThickness="2"/>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Knob" Property="Fill" Value="{StaticResource LG.Green.Light2Brush}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Knob" Property="Fill" Value="{StaticResource TextMuted}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -335,6 +339,9 @@
         <Setter Property="Height" Value="22"/>
         <Setter Property="Focusable" Value="True"/>
         <Setter Property="IsTabStop" Value="True"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="UseLayoutRounding" Value="True"/>
+        <Setter Property="IsSnapToTickEnabled" Value="False"/>
         <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
         <Setter Property="IsMoveToPointEnabled" Value="True"/>
         <Setter Property="Template">
@@ -342,7 +349,7 @@
                 <ControlTemplate TargetType="Slider">
                     <Grid VerticalAlignment="Center" Background="Transparent">
                           <Border x:Name="FocusRing" CornerRadius="5" Margin="1,0"
-                                  BorderBrush="#5500ED64" BorderThickness="1"
+                                  BorderBrush="{StaticResource AccentBright}" BorderThickness="1"
                                   Visibility="Collapsed" IsHitTestVisible="False"/>
                         <Border Height="4" CornerRadius="2" VerticalAlignment="Center"
                                 Background="{StaticResource TrackBg}"/>
@@ -362,9 +369,6 @@
                           <Trigger Property="IsKeyboardFocused" Value="True">
                               <Setter TargetName="FocusRing" Property="Visibility" Value="Visible"/>
                           </Trigger>
-                        <Trigger Property="IsEnabled" Value="False">
-                            <Setter Property="Opacity" Value="0.45"/>
-                        </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
@@ -467,6 +471,9 @@
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
+        <Setter Property="ScrollViewer.CanContentScroll" Value="True"/>
+        <Setter Property="VirtualizingStackPanel.IsVirtualizing" Value="True"/>
+        <Setter Property="VirtualizingStackPanel.VirtualizationMode" Value="Recycling"/>
     </Style>
 
     <Style TargetType="ListBoxItem">
@@ -507,9 +514,9 @@
         bên trong (#1C2D38) — ba lớp nền tạo chiều sâu. Nền ĐẶC, không mờ: tab đang chọn phải che được
         đúng 1px viền trên của khung, nền trong suốt thì viền vẫn lộ qua và ảo giác "một khối" bị gãy.
     -->
-    <SolidColorBrush x:Key="TabContentBg" Color="{StaticResource LG.Gray.Dark4}"/>
+    <SolidColorBrush po:Freeze="True" x:Key="TabContentBg" Color="{StaticResource LG.Gray.Dark4}"/>
     <!-- Viền mảnh: trắng 10% (#1AFFFFFF), đủ tách khung khỏi nền mà không thành đường kẻ gắt. -->
-    <SolidColorBrush x:Key="TabContentBorder" Color="#1AFFFFFF"/>
+    <SolidColorBrush po:Freeze="True" x:Key="TabContentBorder" Color="#1AFFFFFF"/>
     <CornerRadius x:Key="TabContentRadius">8</CornerRadius>
 
     <!--
@@ -556,10 +563,16 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding DataContext.General.HasAppBackground, RelativeSource={RelativeSource AncestorType=Window}}"
+                         Value="True">
+                <Setter Property="Background" Value="Transparent"/>
+            </DataTrigger>
+        </Style.Triggers>
     </Style>
 
     <!-- Nền tab khi rê chuột: sáng hơn nền cửa sổ một chút. -->
-    <SolidColorBrush x:Key="TabHoverBg" Color="#FF1A2B35"/>
+    <SolidColorBrush po:Freeze="True" x:Key="TabHoverBg" Color="#FF1A2B35"/>
 
     <!--
         Thanh tab: chữ 15px SemiBold, vùng bấm rộng (Padding 14,8).
@@ -648,6 +661,18 @@
         <Setter Property="Background" Value="Transparent"/>
     </Style>
 
+    <!-- Apply only to page-level scrollers; text boxes and combo popups keep their own scrolling rules. -->
+    <Style x:Key="PanelScrollViewer" TargetType="ScrollViewer" BasedOn="{StaticResource {x:Type ScrollViewer}}">
+        <Setter Property="CanContentScroll" Value="False"/>
+        <Setter Property="Focusable" Value="False"/>
+        <Setter Property="ctl:WheelScrollAssist.FixedPixelWheel" Value="True"/>
+        <Setter Property="HorizontalScrollBarVisibility" Value="Disabled"/>
+        <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+        <Setter Property="IsDeferredScrollingEnabled" Value="False"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="UseLayoutRounding" Value="True"/>
+    </Style>
+
     <Style TargetType="ScrollBar">
         <Setter Property="Width" Value="10"/>
         <Setter Property="Background" Value="Transparent"/>
@@ -686,7 +711,7 @@
         bật), xám khi false. Nhờ vậy thu gọn nhóm lại vẫn thấy ngay nhánh ngoài có đang hiện hay
         không, khỏi phải mở ra xem.
     -->
-    <SolidColorBrush x:Key="ExpanderHoverBg" Color="#0FFFFFFF"/>
+    <SolidColorBrush po:Freeze="True" x:Key="ExpanderHoverBg" Color="#0FFFFFFF"/>
 
     <Style x:Key="SettingsExpander" TargetType="Expander">
         <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
@@ -963,6 +988,12 @@
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="{StaticResource RadiusCard}"/>
         <Setter Property="Padding" Value="16"/>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding DataContext.General.HasAppBackground, RelativeSource={RelativeSource AncestorType=Window}}"
+                         Value="True">
+                <Setter Property="Background" Value="#D9111B22"/>
+            </DataTrigger>
+        </Style.Triggers>
     </Style>
 
     <!-- Nút hành động chính cỡ lớn, kéo hết chiều ngang cột (vd "Tạo mới" trên đầu danh sách preset). -->
@@ -980,11 +1011,17 @@
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="{StaticResource RadiusCard}"/>
         <Setter Property="Padding" Value="14"/>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding DataContext.General.HasAppBackground, RelativeSource={RelativeSource AncestorType=Window}}"
+                         Value="True">
+                <Setter Property="Background" Value="Transparent"/>
+            </DataTrigger>
+        </Style.Triggers>
     </Style>
 
     <!-- ================= Thư viện mẫu ================= -->
     <!-- Nền cửa sổ thư viện: xanh đen đậm hơn khung tab một bậc, để lưới thẻ nổi lên. -->
-    <SolidColorBrush x:Key="LibraryWindowBg" Color="#FF0A1922"/>
+    <SolidColorBrush po:Freeze="True" x:Key="LibraryWindowBg" Color="#FF0A1922"/>
 
     <!--
         Ô tìm kiếm: kính lúp bên trái, chữ gợi ý (lấy từ Tag) hiện khi ô trống. Chữ gợi ý không nhận chuột nên bấm
@@ -1138,20 +1175,20 @@
         Bảng màu riêng của hộp thoại cập nhật: tối hơn cửa sổ chính một bậc để nó nổi lên như một lớp trước, và
         dùng đúng sắc xanh LeafyGreen đậm (#13AA52) cho nút hành động chính.
     -->
-    <SolidColorBrush x:Key="UpdSurface" Color="#FF11222C"/>
-    <SolidColorBrush x:Key="UpdBorder" Color="#FF243847"/>
-    <SolidColorBrush x:Key="UpdHeaderText" Color="#FF8899A6"/>
-    <SolidColorBrush x:Key="UpdLabel" Color="#FF5C7280"/>
-    <SolidColorBrush x:Key="UpdNotesBg" Color="#FF07131B"/>
-    <SolidColorBrush x:Key="UpdNotesBorder" Color="#FF1B2D3A"/>
-    <SolidColorBrush x:Key="UpdNotesText" Color="#FFC1CED6"/>
-    <SolidColorBrush x:Key="UpdBadgeBg" Color="#FF002D1E"/>
-    <SolidColorBrush x:Key="UpdGreen" Color="#FF13AA52"/>
-    <SolidColorBrush x:Key="UpdGreenHover" Color="#FF16C962"/>
-    <SolidColorBrush x:Key="UpdGhostBg" Color="#FF1C2D38"/>
-    <SolidColorBrush x:Key="UpdGhostBorder" Color="#FF2D4454"/>
-    <SolidColorBrush x:Key="UpdGhostText" Color="#FF9FB1BD"/>
-    <SolidColorBrush x:Key="UpdGhostHover" Color="#FF243847"/>
+    <SolidColorBrush po:Freeze="True" x:Key="UpdSurface" Color="#FF11222C"/>
+    <SolidColorBrush po:Freeze="True" x:Key="UpdBorder" Color="#FF243847"/>
+    <SolidColorBrush po:Freeze="True" x:Key="UpdHeaderText" Color="#FF8899A6"/>
+    <SolidColorBrush po:Freeze="True" x:Key="UpdLabel" Color="#FF5C7280"/>
+    <SolidColorBrush po:Freeze="True" x:Key="UpdNotesBg" Color="#FF07131B"/>
+    <SolidColorBrush po:Freeze="True" x:Key="UpdNotesBorder" Color="#FF1B2D3A"/>
+    <SolidColorBrush po:Freeze="True" x:Key="UpdNotesText" Color="#FFC1CED6"/>
+    <SolidColorBrush po:Freeze="True" x:Key="UpdBadgeBg" Color="#FF002D1E"/>
+    <SolidColorBrush po:Freeze="True" x:Key="UpdGreen" Color="#FF13AA52"/>
+    <SolidColorBrush po:Freeze="True" x:Key="UpdGreenHover" Color="#FF16C962"/>
+    <SolidColorBrush po:Freeze="True" x:Key="UpdGhostBg" Color="#FF1C2D38"/>
+    <SolidColorBrush po:Freeze="True" x:Key="UpdGhostBorder" Color="#FF2D4454"/>
+    <SolidColorBrush po:Freeze="True" x:Key="UpdGhostText" Color="#FF9FB1BD"/>
+    <SolidColorBrush po:Freeze="True" x:Key="UpdGhostHover" Color="#FF243847"/>
 
     <!-- Huy hiệu phiên bản, kiểu viên thuốc như huy hiệu phiên bản ở header cửa sổ chính. -->
     <Style x:Key="VersionBadge" TargetType="Border">

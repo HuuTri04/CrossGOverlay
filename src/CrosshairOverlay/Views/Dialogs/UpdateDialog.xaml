@@ -76,7 +76,7 @@
                            Foreground="{StaticResource UpdLabel}" Margin="0,0,0,6"/>
                 <Border Background="{StaticResource UpdNotesBg}" BorderBrush="{StaticResource UpdNotesBorder}"
                         BorderThickness="1" CornerRadius="6" Padding="12" Height="120">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ScrollViewer Style="{StaticResource PanelScrollViewer}">
                         <TextBlock Text="{Binding Changelog}" TextWrapping="Wrap" FontSize="12" LineHeight="18"
                                    Foreground="{StaticResource UpdNotesText}">
                             <TextBlock.Style>

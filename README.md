@@ -4,19 +4,19 @@
 
 [🇻🇳 Tiếng Việt](docs/README.vi.md)
 
-> An ultra-lightweight, high-performance, and anti-cheat safe custom crosshair overlay designed for Windows desktop environments.
+> A lightweight Windows desktop crosshair overlay with transparent window rendering and no game-process injection.
 
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011%20(x64)-0078D6?logo=windows&logoColor=white)](#5-installation)
 [![Runtime: .NET 8](https://img.shields.io/badge/Runtime-.NET%208.0-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/download/dotnet/8.0)
 [![Architecture: MVVM](https://img.shields.io/badge/Architecture-MVVM%20%2B%20WPF-brightgreen)](#4-overall-architecture)
-[![Safety: Anti--Cheat Safe](https://img.shields.io/badge/Anti--Cheat-100%25%20Passive%20%26%20Safe-success)](#anti-cheat-safety-guarantee)
+[![Safety: External Window](https://img.shields.io/badge/Design-External%20Window-informational)](#anti-cheat-compatibility)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ---
 
 ## 1. Title & Description
 
-**CrossGOverlay** is a professional-grade, hardware-accelerated Windows crosshair overlay engineered for competitive precision and maximum performance. Built from the ground up on modern **.NET 8** and **WPF**, it delivers pixel-perfect reticle rendering over borderless windowed games without triggering intrusive anti-cheat telemetry or adding measurable input latency.
+**CrossGOverlay** is a Windows crosshair overlay built with **.NET 8** and **WPF**. It renders over borderless windowed games and provides customizable presets, game profiles, and optional weapon-key mappings.
 
 Designed as an open, clean-room alternative to proprietary utilities like Crosshair X, CrossGOverlay couples low-overhead OS-level hooks with real-time profile switching, extensive procedural reticle customization, and full crosshair share-code portability between mainstream titles (such as Counter-Strike 2 and Valorant).
 
@@ -26,18 +26,18 @@ Designed as an open, clean-room alternative to proprietary utilities like Crossh
 
 Competitive gaming demands visual consistency. However, native in-game crosshairs often suffer from dynamic spread jitter, low visibility against shifting background palettes, or restrictive engine customization limits. Hardware monitors offering built-in overlay crosshairs provide poor alignment, rigid shapes, and clunky on-screen display (OSD) button controls.
 
-**CrossGOverlay** solves this by establishing a zero-interference, borderless transparent overlay window that floats over your target application. Utilizing standard Win32 desktop composition primitives (`WS_EX_TRANSPARENT`, `WS_EX_LAYERED`, `WS_EX_NOACTIVATE`), CrossGOverlay guarantees that mouse inputs pass cleanly through to the game loop. The application runs strictly in unprivileged user mode (`asInvoker`), never hooks game APIs, never inspects game process memory, and operates cleanly alongside aggressive kernel-level anti-cheat platforms such as Riot Vanguard, Easy Anti-Cheat (EAC), and BattlEye.
+**CrossGOverlay** uses a borderless transparent overlay window with `WS_EX_TRANSPARENT`, `WS_EX_LAYERED`, and `WS_EX_NOACTIVATE` to avoid taking focus or mouse clicks from the game. It normally runs as an unprivileged user process (`asInvoker`), does not inject code into games, and does not read game memory. Anti-cheat compatibility depends on each game's rules and cannot be guaranteed.
 
 ---
 
 ## 3. Key Features
 
-- **Anti-Cheat Safe by Design**: Operates purely as an external OS window. Strictly no DLL injection, no kernel drivers, no synthetic input simulation, and no memory reads/writes.
+- **External Window Design**: No DLL injection, kernel driver, synthetic input, or game-memory reads/writes. Optional weapon-key mappings use a temporary low-level keyboard observer while a mapped game is foreground.
 - **Bi-directional Share-Code Engine**:
   - **Counter-Strike 2**: Full base64-encoded procedural bitpack parsing (`CSGO-xxxxx-xxxxx-...`).
   - **Valorant**: Native 1:1 format serialization and deserialization (`0;P;c;...`).
   - **Validation & Sanity Previews**: Immediate visual verification dialog preventing malformed shares.
-- **High-Performance Rendering**: WPF DirectX hardware-accelerated composition with sub-millisecond redraw intervals and fluid high-refresh-rate rendering (144Hz, 240Hz, 360Hz+).
+- **On-Demand Rendering**: Small WPF layered overlay surface; static crosshairs redraw on changes, while animated content follows the configured frame-rate limit.
 - **Per-Monitor V2 DPI Awareness**: Seamless dynamic scaling across multi-monitor setups with disparate scale factors (e.g., 100% vs. 150% scaling) and hot-plug display recovery.
 - **Automatic Game Profile Matching**: Dynamically switches reticle presets when specified game processes or window titles enter the foreground via low-overhead `SetWinEventHook` notifications.
 - **Passive Global Hotkeys & Raw Input**: Global shortcuts using `RegisterHotKey` and auxiliary mouse buttons (Mouse 3, 4, 5) mapped via `WM_INPUT` (`RIDEV_INPUTSINK`).
@@ -73,10 +73,10 @@ flowchart TD
         SettingsVM[Settings & Editor ViewModel]
     end
 
-    subgraph View_Tier [Hardware-Accelerated UI]
+    subgraph View_Tier [WPF UI]
         SettingsView[Settings Dashboard Window]
         OverlayWindow[Transparent Layered Window\nWS_EX_TRANSPARENT]
-        ReticleCanvas[DirectX Reticle Surface]
+        ReticleCanvas[WPF Reticle Visual]
     end
 
     %% OS Event Dispatching
@@ -101,13 +101,14 @@ flowchart TD
     ReticleCanvas -.->|Renders Floating Above| GameWindow
 ```
 
-### Architectural Directives & Safety Guarantees
+### Architectural Directives
 
-#### Anti-Cheat Safety Guarantee
+#### Anti-Cheat Compatibility
 CrossGOverlay uses only standard, documented Windows User APIs:
 - Process introspection is limited strictly to `GetWindowThreadProcessId` and `QueryFullProcessImageNameW` to match window profile names.
 - The overlay is marked with `WS_EX_TRANSPARENT | WS_EX_LAYERED | WS_EX_NOACTIVATE`, which instructs the Desktop Window Manager (DWM) to route all mouse and pointer clicks directly through the window to the underlying application.
-- Hook operations never employ invasive `WH_KEYBOARD_LL` or `WH_MOUSE_LL` intercepts that anti-cheat heuristics track.
+- The normal global shortcuts use `RegisterHotKey` and mouse Raw Input. When weapon-key presets are configured, a `WH_KEYBOARD_LL` observer is active only while the matched game is foreground; it never suppresses the game's keys. No `WH_MOUSE_LL` hook is used.
+- The optional `anticheat_audit.log` records selected window-API transitions. It is diagnostic output, not proof of approval by Vanguard, EAC, BattlEye, or any other anti-cheat.
 
 #### Single-Instance Mutex
 Process deduplication is managed via an operating-system-level `System.Threading.Mutex`. Attempting to launch a secondary instance signals the primary instance's system tray handler and brings the active Settings window to the foreground.

@@ -42,6 +42,9 @@ public sealed partial class AppSettings : ObservableObject
     /// <summary>Chỉ hiện overlay khi foreground khớp một game profile; ngoài ra thì ẩn.</summary>
     [ObservableProperty] private bool _showOnlyInMatchedGames;
 
+    /// <summary>Observe OBS output activity and request Windows capture exclusion while enabled.</summary>
+    [ObservableProperty] private bool _streamModeEnabled;
+
     [ObservableProperty] private MonitorSelectionMode _monitorSelectionMode = MonitorSelectionMode.FollowForegroundWindow;
 
     /// <summary>DeviceName của màn hình khi <see cref="MonitorSelectionMode"/> là Specific.</summary>
@@ -107,6 +110,30 @@ public sealed partial class AppSettings : ObservableObject
 
     /// <summary>Ảnh nền xem trước do người dùng chọn; null hoặc file không còn tồn tại dùng nền mặc định.</summary>
     [ObservableProperty] private string? _customPreviewBgPath;
+
+    public const double DefaultAppBgOpacity = 0.18d;
+    public const double DefaultAppBgBlurRadius = 10d;
+    public static readonly ValueRange AppBgOpacityPercentRange = new(0d, 100d);
+    public static readonly ValueRange AppBgBlurRadiusRange = new(0d, 30d);
+
+    /// <summary>Local image chosen for the Settings window; null uses the original dark background.</summary>
+    [ObservableProperty] private string? _customAppBgPath;
+
+    private double _appBgOpacity = DefaultAppBgOpacity;
+    public double AppBgOpacity
+    {
+        get => _appBgOpacity;
+        set => SetProperty(ref _appBgOpacity,
+            double.IsFinite(value) ? Math.Clamp(value, 0d, 1d) : DefaultAppBgOpacity);
+    }
+
+    private double _appBgBlurRadius = DefaultAppBgBlurRadius;
+    public double AppBgBlurRadius
+    {
+        get => _appBgBlurRadius;
+        set => SetProperty(ref _appBgBlurRadius,
+            double.IsFinite(value) ? AppBgBlurRadiusRange.Clamp(value) : DefaultAppBgBlurRadius);
+    }
 
     public ObservableCollection<HotkeyBinding> Hotkeys { get; set; } = [];
 

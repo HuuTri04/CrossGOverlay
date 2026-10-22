@@ -10,6 +10,15 @@ namespace CrosshairOverlay.Views;
 /// <summary>Short-lived, nonactivating hint; no timer or HWND survives its four-second display.</summary>
 internal sealed class FullscreenHintWindow : Window
 {
+    private static readonly Brush CardBackground = CreateCardBackground();
+
+    private static Brush CreateCardBackground()
+    {
+        var brush = new SolidColorBrush(Color.FromArgb(235, 24, 28, 38));
+        brush.Freeze();
+        return brush;
+    }
+
     private readonly DispatcherTimer _dismiss = new(DispatcherPriority.Background)
     {
         Interval = TimeSpan.FromSeconds(4),
@@ -33,7 +42,7 @@ internal sealed class FullscreenHintWindow : Window
         Top = -32000;
         Content = new Border
         {
-            Background = new SolidColorBrush(Color.FromArgb(235, 24, 28, 38)),
+            Background = CardBackground,
             CornerRadius = new CornerRadius(8),
             Padding = new Thickness(16, 12, 16, 12),
             Child = new TextBlock

@@ -52,7 +52,7 @@ public sealed class TrayIconController : ITrayIconController
         // Tooltip của icon cũng phải đổi ngôn ngữ; nhãn menu thì ViewModel tự lo.
         TranslationSource.Instance.PropertyChanged += OnLanguageChanged;
 
-        _currentIcon = TrayIconFactory.Create(enabled: true);
+        _currentIcon = TrayIconFactory.Create(enabled: _overlayEnabled);
 
         _icon = new TaskbarIcon
         {
@@ -87,10 +87,16 @@ public sealed class TrayIconController : ITrayIconController
 
         _icon.ToolTipText = Tooltip(overlayEnabled, overlayVisible, activePresetName);
 
-        var previous = _currentIcon;
-        _currentIcon = TrayIconFactory.Create(overlayEnabled);
-        _icon.Icon = _currentIcon;
-        previous?.Dispose();
+        // Tooltip and active-preset changes are common; the GDI icon only has two visual
+        // states. Recreate its HICON only when that state actually changes.
+        if (_currentIcon is null || _menu?.IsOverlayEnabled != overlayEnabled)
+        {
+            var next = TrayIconFactory.Create(overlayEnabled);
+            var previous = _currentIcon;
+            _icon.Icon = next;
+            _currentIcon = next;
+            previous?.Dispose();
+        }
 
         // Binding đẩy nhãn mới ("Bật overlay"/"Tắt overlay") lên menu ngay, kể cả khi menu đang mở.
         if (_menu is not null) _menu.IsOverlayEnabled = overlayEnabled;
@@ -163,8 +169,6 @@ public sealed class TrayIconController : ITrayIconController
 
         CleanupTrayIcon();
 
-        _currentIcon?.Dispose();
-        _currentIcon = null;
     }
 
     private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e) => CleanupTrayIcon();
@@ -175,15 +179,17 @@ public sealed class TrayIconController : ITrayIconController
     {
         if (Interlocked.Exchange(ref _iconCleanupStarted, 1) != 0) return;
 
-        var icon = _icon;
-        _icon = null;
-        if (icon is null) return;
+        var icon = Interlocked.Exchange(ref _icon, null);
+        if (icon is not null)
+        {
+            // H.NotifyIcon uses Visibility rather than NotifyIcon.Visible. Dispose sends
+            // NIM_DELETE even when ProcessExit arrives on a background thread.
+            try { icon.Visibility = Visibility.Collapsed; }
+            catch (Exception) { /* The dispatcher may already have stopped. */ }
+            try { icon.Dispose(); }
+            catch (Exception) { /* Do not interrupt shutdown. */ }
+        }
 
-        // H.NotifyIcon dùng Visibility thay cho NotifyIcon.Visible. Dispose gửi NIM_DELETE
-        // đến Explorer; cố gắng gọi cả hai kể cả khi quá trình thoát đang ở luồng nền.
-        try { icon.Visibility = Visibility.Collapsed; }
-        catch (Exception) { /* Dispatcher có thể đã dừng khi ProcessExit chạy. */ }
-        try { icon.Dispose(); }
-        catch (Exception) { /* Không để lỗi dọn icon cản quá trình thoát. */ }
+        Interlocked.Exchange(ref _currentIcon, null)?.Dispose();
     }
 }

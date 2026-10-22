@@ -237,6 +237,7 @@ public sealed partial class PresetLibraryViewModel : ObservableObject, IDisposab
         CatalogCategories.Dots => Tr.Get("Library_CatDots"),
         CatalogCategories.Crosses => Tr.Get("Library_CatCrosses"),
         CatalogCategories.Circles => Tr.Get("Library_CatCircles"),
+        CatalogCategories.Accessibility => Tr.Get("Library_CatAccessibility"),
         _ => Tr.Get("Library_CatOther"),
     };
 

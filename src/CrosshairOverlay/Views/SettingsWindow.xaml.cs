@@ -1,7 +1,9 @@
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Threading;
 using CrosshairOverlay.Core.Abstractions;
+using CrosshairOverlay.Core.Models;
 using CrosshairOverlay.Localization;
 using CrosshairOverlay.Services.System;
 using CrosshairOverlay.ViewModels;
@@ -12,10 +14,16 @@ namespace CrosshairOverlay.Views;
 /// <summary>Cửa sổ Settings — editor crosshair, thư viện preset và tuỳ chọn chung.</summary>
 public partial class SettingsWindow : Window
 {
+    private void OnApplyObsPassword(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is SettingsViewModel vm)
+            vm.General.SetObsPassword(ObsPasswordBox.Password);
+    }
     private readonly SettingsViewModel _viewModel;
     private readonly ITrayIconController _tray;
     private readonly Microsoft.Extensions.Logging.ILogger<SettingsWindow> _logger;
     private readonly PerformanceMonitorService _performanceMonitor;
+    private readonly DispatcherTimer _statsTimer;
 
     /// <summary>Chỉ nhắc "app vẫn đang chạy" một lần mỗi phiên, không nhắc mỗi lần ẩn.</summary>
     private bool _hintShown;
@@ -33,9 +41,15 @@ public partial class SettingsWindow : Window
         _logger = logger;
         DataContext = viewModel;
         _performanceMonitor = new PerformanceMonitorService(Dispatcher);
+        _statsTimer = new DispatcherTimer(DispatcherPriority.Background, Dispatcher)
+        {
+            Interval = TimeSpan.FromSeconds(3),
+        };
+        _statsTimer.Tick += OnStatsTick;
         PerformanceBadge.DataContext = _performanceMonitor;
-        Loaded += (_, _) => UpdatePerformanceMonitor();
-        IsVisibleChanged += (_, _) => UpdatePerformanceMonitor();
+        Loaded += (_, _) => UpdateVisibleTabServices();
+        IsVisibleChanged += (_, _) => UpdateVisibleTabServices();
+        StateChanged += (_, _) => UpdateVisibleTabServices();
 
         // ViewModel đăng ký sự kiện lên các service singleton (thư viện preset, màn hình,
         // theo dõi foreground). Cửa sổ này được tạo mới mỗi lần mở, nên không giải phóng thì
@@ -43,6 +57,8 @@ public partial class SettingsWindow : Window
         Closed += (_, _) =>
         {
             _performanceMonitor.Dispose();
+            _statsTimer.Stop();
+            _statsTimer.Tick -= OnStatsTick;
             (DataContext as IDisposable)?.Dispose();
         };
     }
@@ -107,6 +123,7 @@ public partial class SettingsWindow : Window
         // TabControl phát sự kiện này cả khi ComboBox/ListBox bên trong đổi lựa chọn.
         if (!ReferenceEquals(e.OriginalSource, sender)) return;
         UpdatePerformanceMonitor();
+        UpdateStatsTimer();
         if (_libraryStarted || !LibraryTab.IsSelected) return;
 
         _libraryStarted = true;
@@ -121,9 +138,29 @@ public partial class SettingsWindow : Window
     private void UpdatePerformanceMonitor()
     {
         if (_performanceMonitor is null) return;
-        if (IsVisible && ShortcutsTab?.IsSelected == true) _performanceMonitor.Start();
+        if (IsVisible && WindowState != WindowState.Minimized && ShortcutsTab?.IsSelected == true)
+            _performanceMonitor.Start();
         else _performanceMonitor.Stop();
     }
+
+    private void UpdateVisibleTabServices()
+    {
+        UpdatePerformanceMonitor();
+        UpdateStatsTimer();
+    }
+
+    private void UpdateStatsTimer()
+    {
+        if (_statsTimer is null) return;
+        if (IsVisible && WindowState != WindowState.Minimized && StatsNavigationTab?.IsSelected == true)
+        {
+            _viewModel.Stats.Refresh();
+            _statsTimer.Start();
+        }
+        else _statsTimer.Stop();
+    }
+
+    private void OnStatsTick(object? sender, EventArgs e) => _viewModel.Stats.Refresh();
 
     private static T? FindChild<T>(DependencyObject root) where T : DependencyObject
     {

@@ -9,12 +9,61 @@
         Title="{x:Static core:AppInfo.DisplayName}"
         Icon="pack://application:,,,/images/app.ico"
         Width="1180" Height="760" MinWidth="960" MinHeight="620"
+        UseLayoutRounding="True" SnapsToDevicePixels="True"
         Background="{StaticResource WindowBg}"
         ctl:WheelScrollAssist.IsEnabled="True"
         WindowStartupLocation="CenterScreen"
         TextOptions.TextFormattingMode="Ideal">
 
     <Window.Resources>
+        <DataTemplate x:Key="WeaponPresetEditor" DataType="{x:Type lim:GameProfile}">
+            <StackPanel Margin="0,14,0,0">
+                <TextBlock Text="{loc:Loc Games_WeaponPresets}" Style="{StaticResource FieldLabel}" Margin="0,0,0,4"/>
+                <TextBlock Text="{loc:Loc Games_WeaponHint}" TextWrapping="Wrap" FontSize="11" Foreground="{StaticResource TextMuted}"/>
+                <Grid Margin="0,4,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition Width="*"/><ColumnDefinition Width="28"/></Grid.ColumnDefinitions>
+                    <TextBlock Text="1" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}"/>
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding DataContext.Games.Presets, RelativeSource={RelativeSource AncestorType=Window}}"
+                              DisplayMemberPath="Name" SelectedValuePath="Id" SelectedValue="{Binding Weapon1PresetId, Mode=TwoWay}"/>
+                    <Button Grid.Column="2" Content="&#x00D7;" ToolTip="Clear mapping"
+                            Command="{Binding DataContext.Games.ClearWeapon1PresetCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                </Grid>
+                <Grid Margin="0,4,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition Width="*"/><ColumnDefinition Width="28"/></Grid.ColumnDefinitions>
+                    <TextBlock Text="2" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}"/>
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding DataContext.Games.Presets, RelativeSource={RelativeSource AncestorType=Window}}"
+                              DisplayMemberPath="Name" SelectedValuePath="Id" SelectedValue="{Binding Weapon2PresetId, Mode=TwoWay}"/>
+                    <Button Grid.Column="2" Content="&#x00D7;" ToolTip="Clear mapping"
+                            Command="{Binding DataContext.Games.ClearWeapon2PresetCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                </Grid>
+                <Grid Margin="0,4,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition Width="*"/><ColumnDefinition Width="28"/></Grid.ColumnDefinitions>
+                    <TextBlock Text="3" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}"/>
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding DataContext.Games.Presets, RelativeSource={RelativeSource AncestorType=Window}}"
+                              DisplayMemberPath="Name" SelectedValuePath="Id" SelectedValue="{Binding Weapon3PresetId, Mode=TwoWay}"/>
+                    <Button Grid.Column="2" Content="&#x00D7;" ToolTip="Clear mapping"
+                            Command="{Binding DataContext.Games.ClearWeapon3PresetCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                </Grid>
+                <Grid Margin="0,4,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition Width="*"/><ColumnDefinition Width="28"/></Grid.ColumnDefinitions>
+                    <TextBlock Text="4" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}"/>
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding DataContext.Games.Presets, RelativeSource={RelativeSource AncestorType=Window}}"
+                              DisplayMemberPath="Name" SelectedValuePath="Id" SelectedValue="{Binding Weapon4PresetId, Mode=TwoWay}"/>
+                    <Button Grid.Column="2" Content="&#x00D7;" ToolTip="Clear mapping"
+                            Command="{Binding DataContext.Games.ClearWeapon4PresetCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                </Grid>
+                <Grid Margin="0,4,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition Width="*"/><ColumnDefinition Width="28"/></Grid.ColumnDefinitions>
+                    <TextBlock Text="Q" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}"/>
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding DataContext.Games.Presets, RelativeSource={RelativeSource AncestorType=Window}}"
+                              DisplayMemberPath="Name" SelectedValuePath="Id" SelectedValue="{Binding WeaponQPresetId, Mode=TwoWay}"/>
+                    <Button Grid.Column="2" Content="&#x00D7;" ToolTip="Clear mapping"
+                            Command="{Binding DataContext.Games.ClearWeaponQPresetCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                </Grid>
+                <Grid Margin="0,4,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition Width="*"/><ColumnDefinition Width="28"/></Grid.ColumnDefinitions>
+                    <TextBlock Text="E" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}"/>
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding DataContext.Games.Presets, RelativeSource={RelativeSource AncestorType=Window}}"
+                              DisplayMemberPath="Name" SelectedValuePath="Id" SelectedValue="{Binding WeaponEPresetId, Mode=TwoWay}"/>
+                    <Button Grid.Column="2" Content="&#x00D7;" ToolTip="Clear mapping"
+                            Command="{Binding DataContext.Games.ClearWeaponEPresetCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                </Grid>
+            </StackPanel>
+        </DataTemplate>
         <!--
             Bộ điều khiển cho MỘT lớp nhánh. Nhánh trong và nhánh ngoài dùng chung template này,
             chỉ khác object được gán vào Content — nên hai nhóm không thể lệch nhau về bộ điều
@@ -48,6 +97,12 @@
                                               Converter={StaticResource BoolToVisibility}, Mode=OneWay}"/>
                 <ctl:SliderField Label="{loc:Loc Editor_Thickness}" Range="{x:Static lim:CrosshairLimits.LineThickness}"
                                  Value="{Binding Thickness, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                <CheckBox Content="{loc:Loc Editor_SeparateVerticalThickness}" Margin="0,4,0,4"
+                          IsChecked="{Binding SeparateVerticalThickness, Mode=TwoWay}"/>
+                <ctl:SliderField Label="{loc:Loc Editor_VerticalThickness}" Range="{x:Static lim:CrosshairLimits.LineThickness}"
+                                 Value="{Binding VerticalThickness, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 Visibility="{Binding SeparateVerticalThickness,
+                                              Converter={StaticResource BoolToVisibility}, Mode=OneWay}"/>
                 <ctl:SliderField Label="{loc:Loc Editor_Offset}" Range="{x:Static lim:CrosshairLimits.LineOffset}"
                                  Value="{Binding Offset, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                 <CheckBox Content="{loc:Loc Editor_RoundedCaps}" Margin="0,8,0,4"
@@ -88,7 +143,7 @@
         <!-- Nội dung cột trình chỉnh sửa; dựng trễ một nhịp sau khi cửa sổ đã hiện. -->
         <DataTemplate x:Key="EditorPanel">
                         <Border Style="{StaticResource Card}" Padding="6,0,6,0">
-                            <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="10,0">
+                            <ScrollViewer Style="{StaticResource PanelScrollViewer}" Padding="10,0">
                                 <StackPanel Margin="0,4,8,16">
 
                                     <!-- Chế độ đứng TRÊN CÙNG: nó quyết định mọi thứ bên dưới hiện hay ẩn. -->
@@ -188,6 +243,22 @@
                                             SelectedColor="{Binding Editor.Profile.Outline.Color, Mode=TwoWay}"/>
                                     </StackPanel>
 
+                                    <StackPanel Visibility="{Binding Editor.IsStandardMode,
+                                                Converter={StaticResource BoolToVisibility}, Mode=OneWay}">
+                                        <TextBlock Text="{loc:Loc Editor_Shadow}" Style="{StaticResource SectionHeader}"
+                                                   Margin="0,12,0,4"/>
+                                        <CheckBox Content="{loc:Loc Editor_ShowShadow}" Margin="0,0,0,6"
+                                                  IsChecked="{Binding Editor.Profile.Shadow.Enabled, Mode=TwoWay}"/>
+                                        <ctl:SliderField Label="{loc:Loc Editor_ShadowBlur}"
+                                                         Range="{x:Static lim:CrosshairLimits.ShadowBlur}"
+                                                         Value="{Binding Editor.Profile.Shadow.BlurRadius, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                        <ctl:SliderField Label="{loc:Loc Editor_Opacity}"
+                                                         Range="{x:Static lim:CrosshairLimits.Opacity}"
+                                                         Value="{Binding Editor.Profile.Shadow.Opacity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                        <ctl:ColorPickerButton Margin="0,6,0,0"
+                                            SelectedColor="{Binding Editor.Profile.Shadow.Color, Mode=TwoWay}"/>
+                                    </StackPanel>
+
                                     <!-- ===== Chế độ ảnh: thay thế toàn bộ nhóm vẽ tay ===== -->
                                     <Expander Header="{loc:Loc Editor_Image}" Style="{StaticResource SettingsExpander}"
                                               Margin="0,16,0,0"
@@ -248,6 +319,15 @@
         </DataTemplate>
     </Window.Resources>
 
+    <Grid ClipToBounds="True">
+        <!-- The source is pre-blurred and frozen off-thread; no effect or extra bitmap cache in the visual tree. -->
+        <Grid x:Name="BackgroundLayer" IsHitTestVisible="False" Focusable="False"
+              Visibility="{Binding General.HasAppBackground, Converter={StaticResource BoolToVisibility}}">
+            <Image Source="{Binding General.AppBackgroundImage, Mode=OneWay}"
+                   IsHitTestVisible="False" Focusable="False"
+                   Opacity="{Binding General.Settings.AppBgOpacity, Mode=OneWay}"
+                   Stretch="UniformToFill" RenderOptions.BitmapScalingMode="LowQuality"/>
+        </Grid>
     <Grid Margin="18">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -348,7 +428,7 @@
                             <ContentControl DockPanel.Dock="Bottom" Style="{StaticResource Hint}" Margin="2,8,0,0"
                                             Content="{loc:Loc Preset_DragToReorder}"/>
 
-                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <ScrollViewer Style="{StaticResource PanelScrollViewer}">
                                 <!--
                                     Phím Delete gọi ĐÚNG lệnh của nút "Xoá", nên vẫn qua hộp thoại
                                     xác nhận — không có đường xoá tắt nào bỏ qua bước hỏi lại.
@@ -431,7 +511,7 @@
             <!-- ============================================ TAB CHUNG -->
             <!-- Hai cột bằng nhau: màn hình bên trái, ứng dụng + cập nhật bên phải — dàn đều hết cửa sổ. -->
             <TabItem Header="{loc:Loc Tab_General}">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ScrollViewer Style="{StaticResource PanelScrollViewer}">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -538,6 +618,20 @@
                                                 Content="{loc:Loc SmartContrast_Hint}"/>
                             </StackPanel>
                         </Border>
+                        <Border Style="{StaticResource Card}" Margin="0,14,0,0">
+                            <StackPanel>
+                                <TextBlock Text="{loc:Loc Stream_Header}" Style="{StaticResource SectionHeader}" Margin="0,0,0,8"/>
+                                <CheckBox Style="{StaticResource ToggleSwitch}" Content="{loc:Loc Stream_Enable}"
+                                          IsChecked="{Binding General.Settings.StreamModeEnabled, Mode=TwoWay}"
+                                          Command="{Binding General.PersistSettingsCommand}"/>
+                                <ContentControl Style="{StaticResource Hint}" Margin="0,6,0,8"
+                                                Content="{loc:Loc Stream_Hint}"/>
+                                <TextBlock Text="{loc:Loc Stream_Password}" Style="{StaticResource FieldLabel}"/>
+                                <PasswordBox x:Name="ObsPasswordBox" Margin="0,4,0,6"/>
+                                <Button Content="{loc:Loc Stream_Connect}" Click="OnApplyObsPassword"
+                                        HorizontalAlignment="Left"/>
+                            </StackPanel>
+                        </Border>
                         </StackPanel>
 
                         <!-- ======== Cột phải: ỨNG DỤNG (gồm cập nhật) + DỮ LIỆU & BẢO TRÌ -->
@@ -608,6 +702,43 @@
                                 </StackPanel>
                             </Border>
 
+                            <!-- A single backdrop image stays behind all controls; these sliders affect only that image. -->
+                            <Border Style="{StaticResource Card}" Margin="0,14,0,0">
+                                <StackPanel>
+                                    <TextBlock Text="{loc:Loc AppBg_Header}" Style="{StaticResource SectionHeader}"
+                                               Margin="0,0,0,10"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                                            <TextBlock Text="{loc:Loc AppBg_Label}" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{loc:Loc AppBg_Hint}" FontSize="11"
+                                                       Foreground="#8A9CA8" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+                                            <Button Content="{loc:Loc AppBg_Choose}" Margin="0,0,8,0"
+                                                    Command="{Binding General.ChooseAppBackgroundCommand}"/>
+                                            <Button Content="{loc:Loc AppBg_Reset}"
+                                                    Command="{Binding General.ResetAppBackgroundCommand}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                    <UniformGrid Columns="2" Margin="0,14,0,0">
+                                        <ctl:SliderField Label="{loc:Loc AppBg_Opacity}"
+                                                         LabelColumnWidth="116" SmallChange="1" UnitSuffix="%"
+                                                         Range="{x:Static lim:AppSettings.AppBgOpacityPercentRange}"
+                                                         Margin="0,0,8,0"
+                                                         Value="{Binding General.AppBgOpacityPercent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                        <ctl:SliderField Label="{loc:Loc AppBg_Blur}"
+                                                         LabelColumnWidth="116" SmallChange="1" UnitSuffix="px"
+                                                         Range="{x:Static lim:AppSettings.AppBgBlurRadiusRange}"
+                                                         Margin="8,0,0,0"
+                                                         Value="{Binding General.AppBgBlurRadius, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                    </UniformGrid>
+                                </StackPanel>
+                            </Border>
+
                             <!-- DỮ LIỆU & BẢO TRÌ: nút nguy hiểm dùng màu đỏ và luôn qua hộp thoại xác nhận. -->
                             <Border Style="{StaticResource Card}" Margin="0,14,0,0">
                                 <StackPanel>
@@ -663,7 +794,7 @@
                 chỉ là lưới an toàn khi người dùng thu cửa sổ thấp hơn nội dung (thanh cuộn chỉ hiện lúc đó).
             -->
             <TabItem x:Name="ShortcutsTab" Header="{loc:Loc Tab_Hotkeys}">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ScrollViewer Style="{StaticResource PanelScrollViewer}">
                     <!-- MinHeight = vùng nhìn thấy: đủ chỗ thì hàng trên lấp phần dư, thiếu chỗ thì cuộn. -->
                     <Grid MinHeight="{Binding ViewportHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}, Mode=OneWay}">
                         <Grid.ColumnDefinitions>
@@ -945,15 +1076,14 @@
                                         Command="{Binding Games.RemoveProfileCommand}"/>
                             </StackPanel>
 
-                            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                <ListBox ItemsSource="{Binding Games.Profiles}"
-                                         SelectedItem="{Binding Games.SelectedProfile, Mode=TwoWay}"
-                                         DisplayMemberPath="Name"/>
-                            </ScrollViewer>
+                            <ListBox ItemsSource="{Binding Games.Profiles}"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                     SelectedItem="{Binding Games.SelectedProfile, Mode=TwoWay}"
+                                     DisplayMemberPath="Name"/>
                         </DockPanel>
                     </Border>
 
-                    <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
+                    <ScrollViewer Grid.Column="2" Style="{StaticResource PanelScrollViewer}">
                         <StackPanel Margin="0,0,8,16">
 
                             <Border Style="{StaticResource Card}">
@@ -987,11 +1117,10 @@
                                                Foreground="{StaticResource TextMuted}"/>
 
                                     <Border Style="{StaticResource InnerCard}" Padding="6" Height="180">
-                                        <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                            <ListBox ItemsSource="{Binding Games.RunningApps}"
-                                                     SelectedItem="{Binding Games.SelectedRunningApp, Mode=TwoWay}"
-                                                     DisplayMemberPath="Display"/>
-                                        </ScrollViewer>
+                                        <ListBox ItemsSource="{Binding Games.RunningApps}"
+                                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                                 SelectedItem="{Binding Games.SelectedRunningApp, Mode=TwoWay}"
+                                                 DisplayMemberPath="Display"/>
                                     </Border>
 
                                     <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
@@ -1035,6 +1164,7 @@
                                                                 RelativeSource={RelativeSource AncestorType=Window}}"
                                                   DisplayMemberPath="Name" SelectedValuePath="Id"
                                                   SelectedValue="{Binding PresetId, Mode=TwoWay}"/>
+                                        <ContentControl Content="{Binding}" ContentTemplate="{StaticResource WeaponPresetEditor}"/>
                                     </StackPanel>
 
                                     <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
@@ -1165,6 +1295,7 @@
                                                             RelativeSource={RelativeSource AncestorType=Window}}"
                                               DisplayMemberPath="Name" SelectedValuePath="Id"
                                               SelectedValue="{Binding PresetId, Mode=TwoWay}"/>
+                                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource WeaponPresetEditor}"/>
 
                                     <CheckBox Style="{StaticResource ToggleSwitch}" HorizontalAlignment="Left"
                                               Content="{loc:Loc Games_EnableProfile}" Margin="0,14,0,0"
@@ -1183,6 +1314,10 @@
                 <ContentControl x:Name="LibraryHost" Content="{Binding}"/>
             </TabItem>
 
+            <TabItem x:Name="StatsNavigationTab" Header="{loc:Loc Tab_Stats}">
+                <views:StatsTab DataContext="{Binding Stats}"/>
+            </TabItem>
+
         </TabControl>
 
         <!--
@@ -1194,5 +1329,6 @@
                 Visibility="{Binding Toast.IsVisible, Converter={StaticResource BoolToVisibility}}">
             <TextBlock Text="{Binding Toast.Text}" FontSize="13" TextWrapping="Wrap" MaxWidth="460"/>
         </Border>
+    </Grid>
     </Grid>
 </Window>

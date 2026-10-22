@@ -145,6 +145,7 @@ public sealed partial class CrosshairProfile : ObservableObject
     [JsonPropertyOrder(13)] public OutlineSettings Outline { get; set; } = new();
     [JsonPropertyOrder(14)] public RingSettings Ring { get; set; } = new();
     [JsonPropertyOrder(15)] public CustomImageSettings Image { get; set; } = new();
+    [JsonPropertyOrder(16)] public CrosshairShadowSettings Shadow { get; set; } = new();
 
     /// <summary>
     /// Khối <c>Lines</c> của file phiên bản 1, chỉ để ĐỌC.
@@ -201,6 +202,7 @@ public sealed partial class CrosshairProfile : ObservableObject
         Outline = Outline.Clone(),
         Ring = Ring.Clone(),
         Image = Image.Clone(),
+        Shadow = Shadow.Clone(),
         CreatedUtc = newIdentity ? DateTimeOffset.UtcNow : CreatedUtc,
         ModifiedUtc = DateTimeOffset.UtcNow,
     };

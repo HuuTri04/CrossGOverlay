@@ -5,6 +5,7 @@ using CrosshairOverlay.Core.Abstractions;
 using CrosshairOverlay.Core.Models;
 using CrosshairOverlay.Localization;
 using CrosshairOverlay.Services.Display;
+using CrosshairOverlay.Services.System;
 using Microsoft.Extensions.Logging;
 
 namespace CrosshairOverlay.ViewModels;
@@ -50,7 +51,9 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
         IDisplayModeReader displayModes,
         ICrosshairTranslator translator,
         PresetLibraryViewModel catalogTab,
-        ILogger<SettingsViewModel> logger)
+        ILogger<SettingsViewModel> logger,
+        StatsService? usageStats = null,
+        ObsWebSocketService? obs = null)
     {
         _library = library;
         _overlay = overlay;
@@ -63,10 +66,11 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
         _logger = logger;
 
         Editor = new CrosshairEditorViewModel(renderer, dialogs, images, settings);
-        General = new GeneralSettingsViewModel(settings, monitors, displayAnalyzer, tray, overlay, startup, updates, dialogs, paths, launcher, restart, storage, Toast, library);
+        General = new GeneralSettingsViewModel(settings, monitors, displayAnalyzer, tray, overlay, startup, updates, dialogs, paths, launcher, restart, storage, Toast, obs, library);
         Hotkeys = new HotkeysViewModel(settings, hotkeys);
         Games = new GameProfilesViewModel(settings, library, watcher, matcher, scanner);
         SystemInfo = new SystemInfoViewModel(hardware, monitors, displayModes);
+        Stats = new StatsViewModel(usageStats, dialogs);
 
         // Ô "Bật overlay" là lựa chọn của người dùng, không phải overlay có đang hiện hay không —
         // xem App.ToggleOverlay. Đồng bộ hai chiều với menu khay và phím tắt qua cài đặt.
@@ -88,6 +92,8 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
     public GameProfilesViewModel Games { get; }
 
     public SystemInfoViewModel SystemInfo { get; }
+
+    public StatsViewModel Stats { get; }
 
     /// <summary>Tab "Thư viện": dữ liệu chỉ được nạp khi người dùng mở tab đó lần đầu.</summary>
     public PresetLibraryViewModel Library { get; }

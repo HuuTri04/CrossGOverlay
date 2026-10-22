@@ -58,6 +58,7 @@ public static class CrosshairLimits
     public static readonly ValueRange RingRadius = new(1d, 120d);
     public static readonly ValueRange RingThickness = new(1d, 20d);
     public static readonly ValueRange OutlineThickness = new(1d, 10d);
+    public static readonly ValueRange ShadowBlur = new(0d, 20d);
     public static readonly ValueRange ImageScale = new(0.1d, 8d);
 
     /// <summary>

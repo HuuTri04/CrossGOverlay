@@ -39,7 +39,7 @@
                        TextTrimming="CharacterEllipsis"/>
         </StackPanel>
 
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+        <ScrollViewer Grid.Row="1" Style="{StaticResource PanelScrollViewer}">
             <StackPanel>
                 <!-- VALORANT -->
                 <Border Style="{StaticResource Card}">

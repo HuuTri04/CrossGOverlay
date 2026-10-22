@@ -40,6 +40,9 @@ public interface IProfileAutoSwitcher : IDisposable
     /// </remarks>
     void ApplyVisibility();
 
+    /// <summary>Temporarily hide the overlay while OBS reports recording or streaming.</summary>
+    void SetStreamSuppressed(bool suppressed);
+
     /// <summary>
     /// Bắt đầu phiên "Test tâm ngắm" cho một ứng dụng (vd <c>notepad.exe</c>): khi cửa sổ của nó ở
     /// foreground, overlay hiện ĐÚNG preset đang chọn — bỏ qua game profile (kể cả profile trỏ tới

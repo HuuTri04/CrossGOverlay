@@ -27,6 +27,9 @@ public interface IOverlayController : IDisposable
 
     void SetVisible(bool visible);
 
+    /// <summary>Ask Windows to exclude this HWND from supported screen-capture APIs.</summary>
+    bool SetCaptureExclusion(bool enabled);
+
     void Toggle();
 
     /// <summary>Đặt overlay lên màn hình chỉ định và canh lại tâm.</summary>

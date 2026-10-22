@@ -161,6 +161,7 @@ public sealed class PresetCatalogService : IPresetCatalogService
             CatalogCategories.Dots => "dot chấm nhỏ",
             CatalogCategories.Crosses => "cross chữ thập",
             CatalogCategories.Circles => "circle vòng tròn",
+            CatalogCategories.Accessibility => "accessibility high contrast large dễ nhìn tương phản",
             _ => "tactical khác chiến thuật",
         };
 

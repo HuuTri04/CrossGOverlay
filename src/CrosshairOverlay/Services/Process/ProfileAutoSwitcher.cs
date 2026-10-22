@@ -43,6 +43,7 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
     private bool _inTestWindow;
 
     private bool _started;
+    private bool _streamSuppressed;
     private bool _disposed;
 
     public ProfileAutoSwitcher(
@@ -270,13 +271,20 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
         ApplyVisibility();
     }
 
+    public void SetStreamSuppressed(bool suppressed)
+    {
+        if (_streamSuppressed == suppressed) return;
+        _streamSuppressed = suppressed;
+        ApplyVisibility();
+    }
+
     public void ApplyVisibility() =>
         _overlay.SetVisible(ShouldShowOverlay(
             _settings.Current.OverlayEnabled,
             IsEnabled,
             _settings.Current.ShowOnlyInMatchedGames,
             ActiveGameProfile,
-            _inTestWindow));
+            _inTestWindow) && !_streamSuppressed);
 
     public void BeginCrosshairTest(string processName)
     {

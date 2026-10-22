@@ -12,7 +12,7 @@ public sealed class AppSettingsService : IAppSettingsService
     /// Độ trễ gom các thay đổi liên tiếp. Người dùng kéo một slider có thể bắn hàng trăm
     /// thay đổi mỗi giây — ghi đĩa từng lần là vô nghĩa và bào SSD.
     /// </summary>
-    private static readonly TimeSpan SaveDebounce = TimeSpan.FromMilliseconds(750);
+    private static readonly TimeSpan SaveDebounce = TimeSpan.FromMilliseconds(300);
 
     private readonly IAppPathProvider _paths;
     private readonly ILogger<AppSettingsService> _logger;

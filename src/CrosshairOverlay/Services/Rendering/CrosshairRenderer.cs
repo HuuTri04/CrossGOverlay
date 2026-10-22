@@ -192,6 +192,8 @@ public sealed class CrosshairRenderer : ICrosshairRenderer
         if (dotWanted) reach = Math.Max(reach, dotDiameter / 2d);
 
         reach += outlinePx;
+        if (profile.Shadow.Enabled)
+            reach += Math.Ceiling(profile.Shadow.BlurRadius * dpi);
 
         // Hình xoay quét ra tới đường chéo của vùng bao gốc.
         if (Math.Abs(profile.Rotation) > 0.01d) reach *= Math.Sqrt(2d);
@@ -266,6 +268,8 @@ public sealed class CrosshairRenderer : ICrosshairRenderer
         if (!(showLeft || showRight || showTop || showBottom)) return default;
 
         var thickness = Math.Max(snap ? 1d : 0.1d, snapPx(toPx(layer.Thickness)));
+        var verticalThickness = diagonal ? thickness
+            : Math.Max(snap ? 1d : 0.1d, snapPx(toPx(layer.EffectiveVerticalThickness)));
         var start = Math.Max(0d, snapPx(toPx(layer.Offset)));
 
         double End(double length)
@@ -278,19 +282,19 @@ public sealed class CrosshairRenderer : ICrosshairRenderer
         var horizontalEnd = End(horizontalLength);
         var verticalEnd = End(verticalLength);
 
-        var farthest = Math.Max(
-            showLeft || showRight ? horizontalEnd : 0d,
-            showTop || showBottom ? verticalEnd : 0d);
-
         return new LineLayerPlan
         {
             Show = true,
             StartPx = start,
             EndPx = horizontalEnd,
             VerticalEndPx = verticalEnd,
-            ReachPx = farthest + (thickness / 2d),
+            ReachPx = Math.Max(
+                showLeft || showRight ? horizontalEnd + thickness / 2d : 0d,
+                showTop || showBottom ? verticalEnd + verticalThickness / 2d : 0d),
             CoreThicknessPx = thickness,
+            VerticalThicknessPx = verticalThickness,
             Align = AlignFor(thickness, snap),
+            VerticalAlign = AlignFor(verticalThickness, snap),
             Opacity = Clamp01(layer.Opacity),
             ShowTop = showTop,
             ShowBottom = showBottom,
@@ -412,26 +416,35 @@ public sealed class CrosshairRenderer : ICrosshairRenderer
             plan.ToDip(thickness),
             layer.RoundedCaps);
 
+        var verticalThickness = outlinePass
+            ? layer.VerticalThicknessPx + (plan.OutlineThicknessPx * 2d)
+            : layer.VerticalThicknessPx;
+        var verticalPen = Math.Abs(verticalThickness - thickness) < 0.001d
+            ? pen
+            : CreatePen(outlinePass ? plan.OutlineColor : plan.CoreColor, 1d,
+                plan.ToDip(verticalThickness), layer.RoundedCaps);
+
         var faded = opacity < 0.999d;
         if (faded) dc.PushOpacity(opacity);
 
         if (plan.ArmsDiagonal)
             DrawDiagonalLines(dc, plan, layer, pen);
         else
-            DrawStraightLines(dc, plan, layer, pen);
+            DrawStraightLines(dc, plan, layer, pen, verticalPen);
 
         if (faded) dc.Pop();
     }
 
-    private static void DrawStraightLines(DrawingContext dc, RenderPlan plan, LineLayerPlan layer, Pen pen)
+    private static void DrawStraightLines(DrawingContext dc, RenderPlan plan, LineLayerPlan layer, Pen pen, Pen verticalPen)
     {
         var align = plan.ToDip(layer.Align);
+        var verticalAlign = plan.ToDip(layer.VerticalAlign);
         var start = plan.ToDip(layer.StartPx);
         var end = plan.ToDip(layer.EndPx);
         var verticalEnd = plan.ToDip(layer.VerticalEndPx);
 
-        if (layer.ShowTop) dc.DrawLine(pen, new Point(align, -start), new Point(align, -verticalEnd));
-        if (layer.ShowBottom) dc.DrawLine(pen, new Point(align, start), new Point(align, verticalEnd));
+        if (layer.ShowTop) dc.DrawLine(verticalPen, new Point(verticalAlign, -start), new Point(verticalAlign, -verticalEnd));
+        if (layer.ShowBottom) dc.DrawLine(verticalPen, new Point(verticalAlign, start), new Point(verticalAlign, verticalEnd));
         if (layer.ShowLeft) dc.DrawLine(pen, new Point(-start, align), new Point(-end, align));
         if (layer.ShowRight) dc.DrawLine(pen, new Point(start, align), new Point(end, align));
     }

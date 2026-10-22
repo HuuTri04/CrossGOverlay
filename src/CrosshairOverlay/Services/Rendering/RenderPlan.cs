@@ -116,8 +116,12 @@ internal readonly record struct LineLayerPlan
 
     public double CoreThicknessPx { get; init; }
 
+    public double VerticalThicknessPx { get; init; }
+
     /// <summary>Lệch nửa pixel theo trục vuông góc khi nét dày lẻ pixel. 0 hoặc 0.5.</summary>
     public double Align { get; init; }
+
+    public double VerticalAlign { get; init; }
 
     public double Opacity { get; init; }
 

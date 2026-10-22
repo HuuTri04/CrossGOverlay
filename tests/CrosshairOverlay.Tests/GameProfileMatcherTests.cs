@@ -143,6 +143,28 @@ public class GameProfileMatcherTests
 public sealed class GameProfileActivationTests
 {
     [Fact]
+    public void StreamSuppression_HidesAndRestoresMatchedGameOverlay()
+    {
+        var watcher = new Watcher();
+        var preset = CrosshairProfile.CreateDefault();
+        var overlay = new Overlay();
+        var settings = new Settings();
+        settings.Current.ShowOnlyInMatchedGames = true;
+        settings.Current.GameProfiles.Add(new GameProfile { Pattern = "game.exe", PresetId = preset.Id });
+        using var switcher = new ProfileAutoSwitcher(watcher, new GameProfileMatcher(),
+            new Library(preset), overlay, settings, NullLogger<ProfileAutoSwitcher>.Instance);
+        switcher.Start();
+        watcher.Publish(new ForegroundWindowInfo(1234, 9999, "game.exe", @"C:\Games\game.exe", "Game",
+            new Rect(0, 0, 1280, 720), FullscreenKind.None));
+
+        Assert.True(overlay.IsVisible);
+        switcher.SetStreamSuppressed(true);
+        Assert.False(overlay.IsVisible);
+        switcher.SetStreamSuppressed(false);
+        Assert.True(overlay.IsVisible);
+    }
+
+    [Fact]
     public void MetadataArrivesLate_ShowsPresetAndRaisesOverlayWithoutAltTab()
     {
         var watcher = new Watcher();
@@ -238,6 +260,7 @@ public sealed class GameProfileActivationTests
             VisibilityChanged?.Invoke(this, new OverlayVisibilityChangedEventArgs(visible));
         }
         public void ReassertTopmost() => TopmostCalls++;
+        public bool SetCaptureExclusion(bool enabled) => true;
         public void SetProfile(CrosshairProfile profile) => CurrentProfile = profile;
         public void Initialize() { }
         public void Toggle() => SetVisible(!IsVisible);

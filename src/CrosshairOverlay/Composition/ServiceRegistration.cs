@@ -3,6 +3,7 @@ using CrosshairOverlay.Services.Display;
 using CrosshairOverlay.Services.Export;
 using CrosshairOverlay.Services.Hardware;
 using CrosshairOverlay.Services.Input;
+using CrosshairOverlay.Services.Logging;
 using CrosshairOverlay.Services.Overlay;
 using CrosshairOverlay.Services.Presets;
 using CrosshairOverlay.Services.Process;
@@ -35,6 +36,7 @@ internal static class ServiceRegistration
 
         // ---- hạ tầng ----
         services.AddSingleton(paths);
+        services.AddSingleton<AuditLoggerService>();
         services.AddSingleton<IAppSettingsService, AppSettingsService>();
         services.AddSingleton<IStorageLocationService, StorageLocationService>();
         services.AddSingleton<IPresetRepository, PresetRepository>();
@@ -56,6 +58,7 @@ internal static class ServiceRegistration
         services.AddSingleton<IGameProfileMatcher, GameProfileMatcher>();
         services.AddSingleton<IRunningApplicationScanner, RunningApplicationScanner>();
         services.AddSingleton<IProfileAutoSwitcher, ProfileAutoSwitcher>();
+        services.AddSingleton<WeaponAutoSwitchService>();
 
         // ---- hệ thống ----
         services.AddSingleton<IStartupService, StartupService>();
@@ -69,6 +72,8 @@ internal static class ServiceRegistration
         services.AddSingleton<IHardwareInfoService, HardwareInfoService>();
         services.AddSingleton<RgbSyncService>();
         services.AddSingleton<AudioFeedbackService>();
+        services.AddSingleton<StatsService>();
+        services.AddSingleton<ObsWebSocketService>();
         services.AddSingleton<ICursorVisibilityMonitor, CursorVisibilityMonitor>();
         services.AddSingleton<ICrosshairTranslator, CrosshairTranslatorService>();
         services.AddSingleton<OverlayBehaviorController>();

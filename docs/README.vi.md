@@ -4,19 +4,19 @@
 
 [🇬🇧 English](README.md)
 
-> Ứng dụng tâm ngắm tùy chỉnh siêu nhẹ, hiệu năng cao và an toàn tuyệt đối với Anti-cheat dành cho môi trường Windows.
+> Ứng dụng tâm ngắm Windows nhẹ, vẽ bằng cửa sổ trong suốt và không inject vào tiến trình game.
 
 [![Platform: Windows](https://img.shields.io/badge/Nền%20tảng-Windows%2010%20%7C%2011%20(x64)-0078D6?logo=windows&logoColor=white)](#yêu-cầu-hệ-thống)
 [![Runtime: .NET 8](https://img.shields.io/badge/Runtime-.NET%208.0-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/download/dotnet/8.0)
 [![Architecture: MVVM](https://img.shields.io/badge/Kiến%20trúc-MVVM%20%2B%20WPF-brightgreen)](#4-kiến-trúc-tổng-thể)
-[![Safety: Anti--Cheat Safe](https://img.shields.io/badge/Anti--Cheat-100%25%20Bị%20động%20%26%20An%20toàn-success)](#cam-kết-an-toàn-với-anti-cheat)
+[![Design: External Window](https://img.shields.io/badge/Thiết%20kế-Cửa%20sổ%20độc%20lập-informational)](#tương-thích-anti-cheat)
 [![License: MIT](https://img.shields.io/badge/Giấy%20phép-MIT-blue.svg)](LICENSE)
 
 ---
 
 ## 1. Tiêu đề & Giới thiệu chung
 
-**CrossGOverlay** là giải pháp tâm ngắm máy tính chuyên nghiệp được tối ưu hóa phần cứng, phát triển chuyên biệt cho môi trường gaming cạnh tranh đòi hỏi độ chuẩn xác cao và độ trễ tối thiểu. Được xây dựng trên nền tảng **.NET 8** và **WPF**, ứng dụng kết xuất tâm ngắm sắc nét đến từng pixel đè lên các tựa game chạy chế độ Borderless Windowed mà không kích hoạt hệ thống cảnh báo chống gian lận (Anti-cheat) hay gây giật/trễ khung hình.
+**CrossGOverlay** là ứng dụng tâm ngắm Windows xây dựng trên **.NET 8** và **WPF**, hiển thị trên game chạy chế độ Borderless Windowed. Ứng dụng hỗ trợ preset, profile game và gán preset tùy chọn theo phím vũ khí; chính sách anti-cheat của từng game vẫn cần được kiểm tra riêng.
 
 Được thiết kế như một giải pháp mã nguồn mở, độc lập thay thế cho các phần mềm thương mại như Crosshair X, CrossGOverlay kết hợp các Win32 hook tầng hệ điều hành tiêu tốn ít tài nguyên cùng khả năng tự động chuyển đổi hồ sơ game theo thời gian thực, tùy biến tâm linh hoạt và hỗ trợ đồng bộ mã chia sẻ tâm đa tựa game (Counter-Strike 2 và Valorant).
 
@@ -26,18 +26,18 @@
 
 Trong thi đấu thể thao điện tử, tính nhất quán về mặt thị giác là yếu tố quyết định phản xạ. Tuy nhiên, tâm ngắm mặc định trong game thường gặp các hạn chế: bị co giãn/giật rung khi di chuyển, khả năng tương phản kém trước các bối cảnh bản đồ phức tạp, hoặc bị giới hạn bởi engine đồ họa của từng game. Giải pháp tâm ngắm tích hợp sẵn trên màn hình phần cứng thì thường bị lệch tâm, hình dạng thô sơ và thao tác nút bấm vật lý (OSD) rất bất tiện.
 
-**CrossGOverlay** giải quyết triệt để vấn đề này bằng cách thiết lập một cửa sổ overlay không viền, trong suốt nổi trên màn hình. Thông qua việc áp dụng các thuộc tính composition chuẩn của Windows (`WS_EX_TRANSPARENT`, `WS_EX_LAYERED`, `WS_EX_NOACTIVATE`), CrossGOverlay đảm bảo toàn bộ thao tác chuột và phím được chuyển thẳng trực tiếp xuống game mà không bị chặn lại. Ứng dụng chạy hoàn toàn ở quyền người dùng thông thường (`asInvoker`), tuyệt đối không can thiệp bộ nhớ hay hàm API của game, hoạt động an toàn bên cạnh các hệ thống anti-cheat cấp kernel như Riot Vanguard, Easy Anti-Cheat (EAC) hay BattlEye.
+**CrossGOverlay** dùng cửa sổ overlay không viền, trong suốt với `WS_EX_TRANSPARENT`, `WS_EX_LAYERED` và `WS_EX_NOACTIVATE` để không lấy focus hoặc chặn click chuột của game. Ứng dụng mặc định chạy ở quyền người dùng thường (`asInvoker`), không inject code và không đọc bộ nhớ game. Khả năng tương thích anti-cheat phụ thuộc luật của từng game và không thể bảo đảm tuyệt đối.
 
 ---
 
 ## 3. Tính năng cốt lõi
 
-- **An toàn tuyệt đối với Anti-cheat**: Hoạt động hoàn toàn thụ động như một cửa sổ desktop thông thường. Cam kết 100% không inject DLL, không nạp kernel driver, không mô phỏng thao tác phần cứng (`SendInput`) và không đọc/ghi bộ nhớ game.
+- **Cửa sổ độc lập:** Không inject DLL, không nạp driver kernel, không mô phỏng input hoặc đọc/ghi bộ nhớ game. Tùy chọn preset theo phím vũ khí dùng hook bàn phím quan sát tạm thời khi game đang foreground.
 - **Bộ chuyển đổi mã tâm hai chiều (Bi-directional Share Code)**:
   - **Counter-Strike 2**: Giải mã luồng bitpack chuẩn Base64 (`CSGO-xxxxx-xxxxx-...`).
   - **Valorant**: Khởi tạo và dịch ngược chuỗi định dạng chuẩn 1:1 (`0;P;c;...`).
   - **Xem trước trực quan**: Dialog kiểm tra hình dạng, độ mờ, viền và chấm tâm trước khi áp dụng nhằm loại bỏ lỗi sai cú pháp.
-- **Hiển thị hiệu năng cao**: Tận dụng khả năng tăng tốc phần cứng DirectX của WPF với tần suất vẽ dưới mili-giây, mượt mà trên các màn hình tần số quét cao (144Hz, 240Hz, 360Hz+).
+- **Vẽ khi cần**: Overlay WPF nhỏ chỉ dựng lại tâm ngắm tĩnh khi cấu hình đổi; nội dung động tuân theo giới hạn FPS đã chọn.
 - **Nhận diện Per-Monitor V2 DPI**: Tự động cân chỉnh tỷ lệ và giữ tâm chuẩn xác tuyệt đối khi kéo thả qua các màn hình có tỉ lệ thu phóng khác nhau (100% vs 150%) hoặc khi cắm/rút màn hình.
 - **Tự động kích hoạt Profile Game**: Tự nhận diện và đổi tâm ngắm ngay khi cửa sổ game được focus nhờ cơ chế lắng nghe sự kiện WinEvent nhẹ nhàng.
 - **Phím tắt toàn cục & Raw Input an toàn**: Quản lý phím tắt qua `RegisterHotKey` và hỗ trợ gán nút chuột phụ (Mouse 3, 4, 5) bằng cơ chế `WM_INPUT` (`RIDEV_INPUTSINK`) chỉ đọc, không nuốt sự kiện click.
@@ -103,11 +103,11 @@ flowchart TD
 
 ### Nguyên tắc kiến trúc & An toàn hệ thống
 
-#### Cam kết an toàn với Anti-cheat
+#### Tương thích Anti-cheat
 CrossGOverlay chỉ sử dụng các Win32 User API công khai được Microsoft tài liệu hóa:
 - Quá trình quét thông tin tiến trình chỉ dừng ở mức gọi `GetWindowThreadProcessId` và `QueryFullProcessImageNameW` để so khớp tên profile.
 - Cửa sổ tâm ngắm được định danh cờ `WS_EX_TRANSPARENT | WS_EX_LAYERED | WS_EX_NOACTIVATE`. Windows DWM sẽ tự động chuyển tiếp toàn bộ thao tác click chuột xuyên thẳng xuống game.
-- Tuyệt đối không cài hook cấp thấp (`WH_KEYBOARD_LL`, `WH_MOUSE_LL`) – các kỹ thuật luôn bị thuật toán Heuristic của Anti-cheat giám sát chặt chẽ.
+- Phím tắt thông thường dùng `RegisterHotKey` và Raw Input. Preset theo phím vũ khí dùng `WH_KEYBOARD_LL` chỉ khi profile có gán phím và game đang foreground; không chặn phím của game. Không dùng `WH_MOUSE_LL`. Không thể bảo đảm anti-cheat nào cũng chấp nhận tính năng này.
 
 #### Cơ chế Single-Instance Mutex
 Quản lý tiến trình đơn nhất thông qua `System.Threading.Mutex` cấp hệ thống. Khi người dùng mở shortcut lần 2, instance cũ sẽ tự động nhận tín hiệu và đưa cửa sổ Settings hiện tại lên trên cùng.

@@ -77,6 +77,20 @@ public sealed partial class LineLayerSettings : ObservableObject
 
     private double _thickness = 2d;
 
+    [ObservableProperty] private bool _separateVerticalThickness;
+
+    /// <summary>Bề dày nhánh dọc; chỉ có hiệu lực khi SeparateVerticalThickness bật.</summary>
+    public double VerticalThickness
+    {
+        get => _verticalThickness;
+        set => SetProperty(ref _verticalThickness, CrosshairLimits.LineThickness.Clamp(value));
+    }
+
+    private double _verticalThickness = 2d;
+
+    [JsonIgnore]
+    public double EffectiveVerticalThickness => SeparateVerticalThickness ? VerticalThickness : Thickness;
+
     /// <summary>Khoảng cách từ TÂM crosshair tới điểm bắt đầu của vạch.</summary>
     public double Offset
     {
@@ -121,6 +135,8 @@ public sealed partial class LineLayerSettings : ObservableObject
         SeparateVerticalLength = SeparateVerticalLength,
         VerticalLength = VerticalLength,
         Thickness = Thickness,
+        SeparateVerticalThickness = SeparateVerticalThickness,
+        VerticalThickness = VerticalThickness,
         Offset = Offset,
         ShowTop = ShowTop,
         ShowBottom = ShowBottom,
@@ -220,6 +236,34 @@ public sealed partial class OutlineSettings : ObservableObject
         Thickness = Thickness,
         Color = Color,
         Opacity = Opacity,
+    };
+}
+
+/// <summary>Đổ bóng tùy chọn cho overlay; mặc định tắt để không tốn GPU nền.</summary>
+public sealed partial class CrosshairShadowSettings : ObservableObject
+{
+    [ObservableProperty] private bool _enabled;
+    [ObservableProperty] private Color _color = Colors.Black;
+
+    public double BlurRadius
+    {
+        get => _blurRadius;
+        set => SetProperty(ref _blurRadius, Math.Clamp(value, 0d, 20d));
+    }
+
+    private double _blurRadius = 4d;
+
+    public double Opacity
+    {
+        get => _opacity;
+        set => SetProperty(ref _opacity, CrosshairLimits.Opacity.Clamp(value));
+    }
+
+    private double _opacity = 0.7d;
+
+    public CrosshairShadowSettings Clone() => new()
+    {
+        Enabled = Enabled, Color = Color, BlurRadius = BlurRadius, Opacity = Opacity,
     };
 }
 
