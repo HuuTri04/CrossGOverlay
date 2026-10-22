@@ -515,6 +515,7 @@ The app will restart to apply the change.</value></data>
   <data name="Stream_Enable"><value>Enable Stream Mode</value></data>
   <data name="Stream_Hint"><value>Overlay hides while OBS reports streaming or recording. Windows capture exclusion is also requested; Discord and Game Capture may still capture it.</value></data>
   <data name="Stream_Password"><value>OBS WebSocket password (session only)</value></data>
+  <data name="Stream_ShowHidePassword"><value>Show or hide OBS password</value></data>
   <data name="Stream_Connect"><value>Connect OBS</value></data>
   <data name="AppBg_Header"><value>PERSONALIZATION</value></data>
   <data name="AppBg_Label"><value>Application background</value></data>

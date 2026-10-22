@@ -79,6 +79,9 @@
       khung hình đầu 640–1121 ms so với 642–1158 ms bản thường — không nhanh hơn, nặng thêm 85 MB.
     -->
     <PublishReadyToRun>true</PublishReadyToRun>
+    <!-- R2R giảm JIT lúc mở app; tiering/PGO tối ưu các phương thức nóng sau khi chạy. -->
+    <TieredCompilation>true</TieredCompilation>
+    <TieredPGO>true</TieredPGO>
 
     <!--
       PublishTrimmed CỐ TÌNH không bật.

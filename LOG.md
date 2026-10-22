@@ -546,3 +546,32 @@ Khi hoàn thành một tính năng hoặc bản sửa lỗi tiếp theo, thêm m
 
 - Bỏ `TextOptions.TextFormattingMode="Display"` và `TextOptions.TextHintingMode="Fixed"` khỏi cửa sổ Settings; `App.xaml` không có thiết lập `TextOptions` cấp ứng dụng cần gỡ. Đưa style `TextBlock` dùng chung trong `Theme.xaml` về `TextFormattingMode="Ideal"` như trước đợt tối ưu tab.
 - Giữ nguyên toàn bộ FontFamily, FontSize, FontWeight và màu chữ của các tab. Build Release thành công với 0 cảnh báo và 0 lỗi.
+
+### 2026-10-22 — Giảm polling nhận diện game và chi phí callback phím vũ khí
+
+- Renderer Overlay đã dùng một `CrosshairVisualHost` vẽ `Drawing` đóng băng qua `DrawingContext`; Preview đã dùng `DrawingVisual` để chụp tâm. Không chuyển sang cây Visual mới vì hiện không có Canvas/Line/Ellipse UI để loại bỏ. Giữ phép dịch tâm tạo theo lần vẽ lại hiếm hoi để tránh đổi một `Freezable` đang được WPF dùng trong lệnh vẽ trước đó.
+- `ForegroundWindowWatcher` tiếp tục bắt `EVENT_SYSTEM_FOREGROUND`, bổ sung hook `EVENT_OBJECT_LOCATIONCHANGE` và `EVENT_OBJECT_NAMECHANGE` cho cửa sổ đang active. Timer quét mỗi giây chỉ bật nếu không cài đủ hook; vẫn giữ lần đọc ban đầu và nhịp thử lại ngắn khi tên/tiến trình game chưa sẵn sàng. Các hook mới được gỡ khi dừng hoặc dispose.
+- `WeaponAutoSwitchService` chỉ ghi nhận phím vũ khí mới nhất trong callback hook, gom nhiều phím liên tiếp vào một tác vụ Dispatcher dùng lại delegate, rồi trả `CallNextHookEx`; việc tìm và kích hoạt Preset chạy sau callback. `HotkeyService` vốn dùng `RegisterHotKey` và Raw Input, không dùng low-level hook nên không chuyển sang `Task.Run` cho mỗi gói chuột.
+- Cấu hình JSON dùng chung được đóng băng bằng `MakeReadOnly` để tái sử dụng metadata cache. Chưa bật `JsonSerializerContext`: các property do CommunityToolkit.Mvvm sinh ra không được generator JSON nhìn thấy trong cùng lượt biên dịch, từng gây mất dữ liệu Preset khi thử trước đây.
+- Build Release 0 cảnh báo/lỗi; 749 kiểm thử đạt (loại một bài Raw Input cần chuột thật). Chưa đo CPU, input latency hoặc draw calls trên phần cứng thực tế; không cam kết 0.0% CPU/0 ms lag.
+
+### 2026-10-22 — Giảm cập nhật thừa ở slider khi dùng ảnh nền
+
+- Rà soát các tab trong `SettingsWindow` và `StatsTab`: Card ngoài đã dùng một lớp nền ARGB khi có ảnh nền; `InnerCard` giữ viền nhưng chuyển nền sang trong suốt. Các vùng cuộn cấp trang đã dùng pixel scroll, template Slider đã gọn và 37 brush tĩnh trong Theme đã được freeze. Giữ nguyên cấu trúc panel, vùng bắt chuột và toàn bộ thiết lập chữ gốc.
+- Thêm `Delay=10` cho binding `Value` bên trong `SliderField`, bổ sung cho độ trễ đã có ở các binding slider của tab. Ô nhập số chỉ được gán lại khi chuỗi hiển thị thực sự đổi, giảm thông báo binding và lần vẽ chữ không cần thiết khi kéo.
+- Chuyển style cố định của nhãn slider, ô số và nhãn RGB sang `StaticResource` để tránh theo dõi thay đổi tài nguyên động trong mỗi control; giao diện và typography giữ nguyên. Slider RGB không có binding `Value`, tiếp tục phản hồi màu trực tiếp.
+- Build Release thành công với 1 cảnh báo analyzer xUnit2029 có sẵn trong test; 587 kiểm thử đạt khi lọc nhóm Raw Input cần phần cứng. Chưa đo FPS/độ trễ kéo slider trên máy có ảnh nền nên không khẳng định đã loại bỏ hoàn toàn lag.
+
+### 2026-10-22 — Ô mật khẩu OBS đồng bộ theme và có nút hiện/ẩn
+
+- Thay `PasswordBox` mặc định trong Tab Chung của `SettingsWindow` bằng khung nhập tối dùng cùng brush nền, viền và bo góc với ComboBox “Mức độ ưu tiên”. `PasswordBox` và `TextBox` trong khung có nền trong suốt, không còn ô trắng mặc định; viền khung đổi màu khi focus.
+- Thêm nút mắt dạng vector có hover/focus và nhãn trợ năng song ngữ. Mật khẩu được đồng bộ giữa ô ẩn, ô hiện và `GeneralSettingsViewModel` khi gõ hoặc đổi chế độ; nút “Kết nối OBS” gửi giá trị đang hiển thị. Giá trị chỉ nằm trong phiên và được xóa khỏi ViewModel khi đóng cửa sổ, không lưu vào `settings.json`.
+- Build Release thành công với 1 cảnh báo analyzer xUnit2029 có sẵn trong test; 587 kiểm thử đạt khi lọc nhóm Raw Input cần phần cứng. Chưa kiểm tra trực quan trên desktop thật.
+
+### 2026-10-22 — Hoãn tạo tab phụ và giảm chi phí khởi động nền
+
+- `SettingsViewModel` chỉ tạo ViewModel của tab Phím tắt, Game và Thống kê khi tab tương ứng được truy cập lần đầu; khi đóng cửa sổ chỉ giải phóng những ViewModel đã tạo. Bộ đo CPU/RAM và timer làm mới thống kê cũng chỉ được dựng khi mở tab liên quan, và tiếp tục dừng khi tab/cửa sổ không hiển thị.
+- `AppBootstrapper` bỏ các lần resolve lặp dịch vụ update, RGB và âm thanh trong bước khởi động nền; RGB/âm thanh được lấy khi áp dụng preset, còn RGB vẫn được ngắt trước khi giải phóng container. `UpdateService` vẫn có thể được tạo khi dựng ViewModel của cửa sổ Settings, nhưng không gọi mạng trước bước kiểm tra cập nhật. Hook phím và nhận diện game vẫn khởi chạy ngay sau khung hình đầu để không làm trễ việc hiện overlay.
+- Giữ `PublishReadyToRun` đã có và khai báo rõ `TieredCompilation`/`TieredPGO` cho bản phát hành. Xác nhận bằng MSBuild cả ba thuộc tính là `true`. Không ép `SetProcessWorkingSetSize`: thu gọn working set không giải phóng VRAM và có thể gây page fault/khựng khi khôi phục cửa sổ.
+- Rà soát: ảnh nền đã tự ẩn và nhả bitmap khi thu nhỏ; card dùng ARGB, panel con giữ nền trong suốt, slider có `Delay=10`, vùng cuộn cấp trang theo pixel, brush tĩnh đã frozen. Không đổi `TextOptions`, phông hay màu chữ; không gán `Background=Transparent` hàng loạt vì có thể đổi vùng bắt chuột mà không giảm draw call.
+- Build Release thành công (1 cảnh báo xUnit2029 có sẵn); 594 kiểm thử đạt, loại một bài Raw Input cần chuột thật. Một bài đo thời gian lệch 1 ms ở lượt đầu và đạt khi chạy lại. Chưa đo cold/warm startup hay FPS trên phần cứng thật, nên chưa kết luận đạt “instant startup”, 60 FPS hoặc 0% CPU.

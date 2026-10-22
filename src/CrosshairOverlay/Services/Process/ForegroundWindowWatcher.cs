@@ -55,6 +55,7 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
     private volatile bool _started;
 
     private nint _hook;
+    private nint _metadataHook;
 
     /// <summary>
     /// Hai hook chỉ nghe TIẾN TRÌNH của cửa sổ đang <see cref="Track"/>: một cho thu nhỏ/khôi phục,
@@ -123,16 +124,21 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
             // sổ của mình qua ForegroundWindowInfo.IsOwnProcess.
             Win32Constants.WINEVENT_OUTOFCONTEXT);
 
-        if (_hook == 0)
+        // Title and bounds can change without a new foreground event (game launch/fullscreen).
+        _metadataHook = NativeMethods.SetWinEventHook(
+            Win32Constants.EVENT_OBJECT_LOCATIONCHANGE,
+            Win32Constants.EVENT_OBJECT_NAMECHANGE,
+            0, _callback, 0, 0, Win32Constants.WINEVENT_OUTOFCONTEXT);
+
+        if (_hook == 0 || _metadataHook == 0)
         {
-            _logger.LogWarning("SetWinEventHook thất bại — dùng kiểm tra foreground dự phòng mỗi giây.");
+            _logger.LogWarning("Không cài đủ WinEventHook — dùng kiểm tra foreground dự phòng mỗi giây.");
+            _fallbackTimer.Change(FallbackInterval, FallbackInterval);
         }
         else
         {
             _logger.LogInformation("Đã bắt đầu theo dõi cửa sổ foreground.");
         }
-
-        _fallbackTimer.Change(FallbackInterval, FallbackInterval);
 
         // Đọc trạng thái hiện tại: hook chỉ báo khi CÓ THAY ĐỔI, mà game có thể đã chạy sẵn.
         Refresh();
@@ -145,16 +151,16 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
         _settleTimer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
         Untrack();
 
-        if (_hook == 0) return;
-
-        NativeMethods.UnhookWinEvent(_hook);
+        if (_hook != 0) NativeMethods.UnhookWinEvent(_hook);
+        if (_metadataHook != 0) NativeMethods.UnhookWinEvent(_metadataHook);
         _hook = 0;
+        _metadataHook = 0;
         _logger.LogInformation("Đã dừng theo dõi cửa sổ foreground.");
     }
 
     public void Track(ForegroundWindowInfo window)
     {
-        if (_disposed || _hook == 0) return;
+        if (_disposed || !_started) return;
 
         if (!window.IsValid || window.ProcessId == 0)
         {
@@ -251,6 +257,12 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
             // Không dùng hwnd của sự kiện: đọc lại foreground lúc xử lý để luôn lấy trạng thái mới
             // nhất, và coi cửa sổ đã ẩn/thu nhỏ là "không có foreground".
             QueueRefresh();
+            return;
+        }
+
+        if (eventType is Win32Constants.EVENT_OBJECT_LOCATIONCHANGE or Win32Constants.EVENT_OBJECT_NAMECHANGE)
+        {
+            if (hwnd != 0 && hwnd == Current.Handle) QueueRefresh();
             return;
         }
 
@@ -371,7 +383,7 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
     }
 
     /// <summary>
-    /// The thread-pool fallback does only cheap Win32 reads. An unchanged foreground
+    /// Used only when a WinEvent hook could not be installed. An unchanged foreground
     /// does not wake WPF; a newly created window or updated title is sent to the UI thread.
     /// </summary>
     private void OnFallbackTick(object? state)

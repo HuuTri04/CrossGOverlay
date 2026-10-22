@@ -652,9 +652,103 @@
                                 <ContentControl Style="{StaticResource Hint}" Margin="0,6,0,8"
                                                 Content="{loc:Loc Stream_Hint}"/>
                                 <TextBlock Text="{loc:Loc Stream_Password}" Style="{StaticResource FieldLabel}"/>
-                                <PasswordBox x:Name="ObsPasswordBox" Margin="0,4,0,6"/>
+                                <Border Height="36" Margin="0,4,0,6" Padding="8,0,4,0"
+                                        BorderThickness="1" CornerRadius="{StaticResource RadiusInput}">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="{StaticResource WindowBg}"/>
+                                            <Setter Property="BorderBrush" Value="{StaticResource BorderBrushSoft}"/>
+                                            <Style.Triggers>
+                                                <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                                    <Setter Property="BorderBrush" Value="{StaticResource AccentBright}"/>
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <PasswordBox x:Name="ObsPasswordBox" Grid.Column="0"
+                                                     Background="Transparent" BorderThickness="0" Padding="0"
+                                                     Foreground="{StaticResource TextPrimary}"
+                                                     CaretBrush="{StaticResource AccentBright}"
+                                                     FontFamily="{StaticResource UiFont}" FontSize="12.5"
+                                                     VerticalAlignment="Center" PasswordChanged="OnObsPasswordChanged">
+                                            <PasswordBox.Style>
+                                                <Style TargetType="PasswordBox">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding General.IsPasswordVisible}" Value="True">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </PasswordBox.Style>
+                                            <PasswordBox.Template>
+                                                <ControlTemplate TargetType="PasswordBox">
+                                                    <ScrollViewer x:Name="PART_ContentHost" Background="Transparent"/>
+                                                </ControlTemplate>
+                                            </PasswordBox.Template>
+                                        </PasswordBox>
+                                        <TextBox Grid.Column="0" Background="Transparent" BorderThickness="0" Padding="0"
+                                                 Text="{Binding General.ObsPassword, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                 VerticalAlignment="Center">
+                                            <TextBox.Style>
+                                                <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding General.IsPasswordVisible}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBox.Style>
+                                            <TextBox.Template>
+                                                <ControlTemplate TargetType="TextBox">
+                                                    <ScrollViewer x:Name="PART_ContentHost" Background="Transparent"/>
+                                                </ControlTemplate>
+                                            </TextBox.Template>
+                                        </TextBox>
+                                        <ToggleButton Grid.Column="1" Width="28" Height="28" Margin="4,0,0,0"
+                                                      Cursor="Hand" IsTabStop="True"
+                                                      ToolTip="{loc:Loc Stream_ShowHidePassword}"
+                                                      AutomationProperties.Name="{loc:Loc Stream_ShowHidePassword}"
+                                                      IsChecked="{Binding General.IsPasswordVisible, Mode=TwoWay}"
+                                                      Tag="{Binding ElementName=ObsPasswordBox}"
+                                                      Checked="OnObsPasswordVisibilityChanged"
+                                                      Unchecked="OnObsPasswordVisibilityChanged">
+                                            <ToggleButton.Template>
+                                                <ControlTemplate TargetType="ToggleButton">
+                                                    <Border x:Name="EyeButton" Background="Transparent" CornerRadius="4">
+                                                        <Grid Width="16" Height="16" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                            <Path x:Name="EyeOutline" Data="M 1,8 C 4,3 12,3 15,8 C 12,13 4,13 1,8 Z"
+                                                                  Stroke="{StaticResource TextDim}" StrokeThickness="1.3"/>
+                                                            <Ellipse Width="4" Height="4" Stroke="{StaticResource TextDim}"
+                                                                     StrokeThickness="1.3"/>
+                                                            <Path x:Name="EyeSlash" Data="M 2,14 L 14,2"
+                                                                  Stroke="{StaticResource TextDim}" StrokeThickness="1.5"/>
+                                                        </Grid>
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsChecked" Value="True">
+                                                            <Setter TargetName="EyeOutline" Property="Stroke" Value="{StaticResource AccentBright}"/>
+                                                            <Setter TargetName="EyeSlash" Property="Visibility" Value="Collapsed"/>
+                                                            <Setter TargetName="EyeSlash" Property="Stroke" Value="{StaticResource AccentBright}"/>
+                                                        </Trigger>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="EyeButton" Property="Background" Value="#2D2D2D"/>
+                                                        </Trigger>
+                                                        <Trigger Property="IsKeyboardFocused" Value="True">
+                                                            <Setter TargetName="EyeButton" Property="Background" Value="#2D2D2D"/>
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </ToggleButton.Template>
+                                        </ToggleButton>
+                                    </Grid>
+                                </Border>
                                 <Button Content="{loc:Loc Stream_Connect}" Click="OnApplyObsPassword"
-                                        Tag="{Binding ElementName=ObsPasswordBox}"
                                         HorizontalAlignment="Left"/>
                             </StackPanel>
                         </Border>

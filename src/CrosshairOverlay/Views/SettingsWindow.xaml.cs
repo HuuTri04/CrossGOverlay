@@ -17,16 +17,36 @@ public partial class SettingsWindow : Window
 {
     private void OnApplyObsPassword(object sender, RoutedEventArgs e)
     {
-        if (DataContext is SettingsViewModel vm && sender is Button { Tag: PasswordBox passwordBox })
-            vm.General.SetObsPassword(passwordBox.Password);
+        if (DataContext is SettingsViewModel vm)
+            vm.General.ApplyObsPassword();
+    }
+
+    private void OnObsPasswordChanged(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is SettingsViewModel vm && sender is PasswordBox passwordBox)
+            vm.General.ObsPassword = passwordBox.Password;
+    }
+
+    private void OnObsPasswordVisibilityChanged(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not SettingsViewModel vm ||
+            sender is not System.Windows.Controls.Primitives.ToggleButton toggle ||
+            toggle.Tag is not PasswordBox passwordBox)
+            return;
+
+        if (toggle.IsChecked == true)
+            vm.General.ObsPassword = passwordBox.Password;
+        else if (passwordBox.Password != vm.General.ObsPassword)
+            passwordBox.Password = vm.General.ObsPassword;
     }
     private readonly SettingsViewModel _viewModel;
     private readonly ITrayIconController _tray;
     private readonly Microsoft.Extensions.Logging.ILogger<SettingsWindow> _logger;
-    private readonly PerformanceMonitorService _performanceMonitor;
-    private readonly DispatcherTimer _statsTimer;
+    private PerformanceMonitorService? _performanceMonitor;
+    private DispatcherTimer? _statsTimer;
 
-    public PerformanceMonitorService PerformanceMonitor => _performanceMonitor;
+    public PerformanceMonitorService PerformanceMonitor =>
+        _performanceMonitor ??= new PerformanceMonitorService(Dispatcher);
 
     /// <summary>Chỉ nhắc "app vẫn đang chạy" một lần mỗi phiên, không nhắc mỗi lần ẩn.</summary>
     private bool _hintShown;
@@ -43,12 +63,6 @@ public partial class SettingsWindow : Window
         _tray = tray;
         _logger = logger;
         DataContext = viewModel;
-        _performanceMonitor = new PerformanceMonitorService(Dispatcher);
-        _statsTimer = new DispatcherTimer(DispatcherPriority.Background, Dispatcher)
-        {
-            Interval = TimeSpan.FromSeconds(3),
-        };
-        _statsTimer.Tick += OnStatsTick;
         Loaded += (_, _) => UpdateVisibleTabServices();
         IsVisibleChanged += (_, _) => UpdateVisibleTabServices();
         StateChanged += (_, _) => UpdateVisibleTabServices();
@@ -58,9 +72,12 @@ public partial class SettingsWindow : Window
         // mỗi lần mở lại là một ViewModel nữa bị giữ sống mãi.
         Closed += (_, _) =>
         {
-            _performanceMonitor.Dispose();
-            _statsTimer.Stop();
-            _statsTimer.Tick -= OnStatsTick;
+            _performanceMonitor?.Dispose();
+            if (_statsTimer is not null)
+            {
+                _statsTimer.Stop();
+                _statsTimer.Tick -= OnStatsTick;
+            }
             (DataContext as IDisposable)?.Dispose();
         };
     }
@@ -139,10 +156,9 @@ public partial class SettingsWindow : Window
 
     private void UpdatePerformanceMonitor()
     {
-        if (_performanceMonitor is null) return;
         if (IsVisible && WindowState != WindowState.Minimized && ShortcutsTab?.IsSelected == true)
-            _performanceMonitor.Start();
-        else _performanceMonitor.Stop();
+            PerformanceMonitor.Start();
+        else _performanceMonitor?.Stop();
     }
 
     private void UpdateVisibleTabServices()
@@ -154,13 +170,20 @@ public partial class SettingsWindow : Window
 
     private void UpdateStatsTimer()
     {
-        if (_statsTimer is null) return;
         if (IsVisible && WindowState != WindowState.Minimized && StatsNavigationTab?.IsSelected == true)
         {
+            if (_statsTimer is null)
+            {
+                _statsTimer = new DispatcherTimer(DispatcherPriority.Background, Dispatcher)
+                {
+                    Interval = TimeSpan.FromSeconds(3),
+                };
+                _statsTimer.Tick += OnStatsTick;
+            }
             _viewModel.Stats.Refresh();
             _statsTimer.Start();
         }
-        else _statsTimer.Stop();
+        else _statsTimer?.Stop();
     }
 
     private void OnStatsTick(object? sender, EventArgs e) => _viewModel.Stats.Refresh();

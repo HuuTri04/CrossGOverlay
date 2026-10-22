@@ -528,6 +528,7 @@ Dữ liệu ở thư mục cũ luôn được giữ nguyên.</value></data>
   <data name="Stream_Enable"><value>Kích hoạt Chế độ Streamer</value></data>
   <data name="Stream_Hint"><value>Khi OBS báo đang phát hoặc ghi, tâm ngắm sẽ tạm ẩn. Windows cũng được yêu cầu loại overlay khỏi các API chụp hỗ trợ; Discord và Game Capture có thể vẫn ghi lại.</value></data>
   <data name="Stream_Password"><value>Mật khẩu OBS WebSocket (chỉ giữ trong phiên)</value></data>
+  <data name="Stream_ShowHidePassword"><value>Hiện hoặc ẩn mật khẩu OBS</value></data>
   <data name="Stream_Connect"><value>Kết nối OBS</value></data>
   <data name="AppBg_Header"><value>CÁ NHÂN HÓA</value></data>
   <data name="AppBg_Label"><value>Ảnh nền ứng dụng</value></data>

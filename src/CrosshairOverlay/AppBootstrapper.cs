@@ -33,6 +33,7 @@ internal sealed class AppBootstrapper
     private bool _backgroundServicesStarted;
     private bool _shutdownStarted;
     private string? _restoreError;
+    private RgbSyncService? _rgbSyncService;
 
     /// <summary>Từ hàm dựng tới OnStartup: đọc App.xaml (gồm các ResourceDictionary gộp) và khởi động vòng lặp.</summary>
     private double _appXamlMs;
@@ -261,10 +262,7 @@ internal sealed class AppBootstrapper
         obs.Start();
         ApplyStreamCapturePolicy();
         _backgroundServicesStarted = true;
-        // The update service is resolved here; its network check remains scheduled after UI startup.
-        _provider!.GetRequiredService<IUpdateService>();
-        _provider!.GetRequiredService<RgbSyncService>();
-        _provider!.GetRequiredService<AudioFeedbackService>();
+        // Update checks are scheduled later; optional RGB/audio services are resolved on first use.
     }
 
     /// <summary>
@@ -589,7 +587,7 @@ internal sealed class AppBootstrapper
         if (library.Active is not { } active) return;
 
         _provider.GetRequiredService<IOverlayController>().SetProfile(active);
-        _provider.GetRequiredService<RgbSyncService>().SetColor(active.Color);
+        (_rgbSyncService ??= _provider.GetRequiredService<RgbSyncService>()).SetColor(active.Color);
         _provider.GetRequiredService<AudioFeedbackService>().Play();
 
         var settings = _provider.GetRequiredService<IAppSettingsService>();
@@ -711,7 +709,8 @@ internal sealed class AppBootstrapper
             TryDuringExit("ghi thống kê", () => provider.GetRequiredService<StatsService>().SaveNow());
             TryDuringExit("ghi nhật ký API cửa sổ", () => provider.GetRequiredService<AuditLoggerService>().Flush());
 
-            TryDuringExit("đóng RGB", () => provider.GetRequiredService<RgbSyncService>().Disconnect());
+            if (_rgbSyncService is not null)
+                TryDuringExit("đóng RGB", _rgbSyncService.Disconnect);
 
             TryDuringExit("gỡ đăng ký sự kiện", () =>
             {

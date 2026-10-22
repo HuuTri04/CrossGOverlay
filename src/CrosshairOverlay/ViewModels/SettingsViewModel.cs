@@ -23,6 +23,9 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
     private readonly ICrosshairTranslator _translator;
     private readonly ILogger<SettingsViewModel> _logger;
     private readonly Lazy<SystemInfoViewModel> _systemInfo;
+    private readonly Lazy<HotkeysViewModel> _hotkeysTab;
+    private readonly Lazy<GameProfilesViewModel> _gamesTab;
+    private readonly Lazy<StatsViewModel> _statsTab;
 
     private bool _syncingSelection;
     private bool _disposed;
@@ -68,10 +71,10 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
 
         Editor = new CrosshairEditorViewModel(renderer, dialogs, images, settings);
         General = new GeneralSettingsViewModel(settings, monitors, displayAnalyzer, tray, overlay, startup, updates, dialogs, paths, launcher, restart, storage, Toast, obs, library);
-        Hotkeys = new HotkeysViewModel(settings, hotkeys);
-        Games = new GameProfilesViewModel(settings, library, watcher, matcher, scanner);
+        _hotkeysTab = new Lazy<HotkeysViewModel>(() => new HotkeysViewModel(settings, hotkeys));
+        _gamesTab = new Lazy<GameProfilesViewModel>(() => new GameProfilesViewModel(settings, library, watcher, matcher, scanner));
         _systemInfo = new Lazy<SystemInfoViewModel>(() => new SystemInfoViewModel(hardware, monitors, displayModes));
-        Stats = new StatsViewModel(usageStats, dialogs);
+        _statsTab = new Lazy<StatsViewModel>(() => new StatsViewModel(usageStats, dialogs));
 
         // Ô "Bật overlay" là lựa chọn của người dùng, không phải overlay có đang hiện hay không —
         // xem App.ToggleOverlay. Đồng bộ hai chiều với menu khay và phím tắt qua cài đặt.
@@ -88,13 +91,13 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
 
     public GeneralSettingsViewModel General { get; }
 
-    public HotkeysViewModel Hotkeys { get; }
+    public HotkeysViewModel Hotkeys => _hotkeysTab.Value;
 
-    public GameProfilesViewModel Games { get; }
+    public GameProfilesViewModel Games => _gamesTab.Value;
 
     public SystemInfoViewModel SystemInfo => _systemInfo.Value;
 
-    public StatsViewModel Stats { get; }
+    public StatsViewModel Stats => _statsTab.Value;
 
     /// <summary>Tab "Thư viện": dữ liệu chỉ được nạp khi người dùng mở tab đó lần đầu.</summary>
     public PresetLibraryViewModel Library { get; }
@@ -528,8 +531,8 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
 
         Editor.Dispose();
         General.Dispose();
-        Hotkeys.Dispose();
-        Games.Dispose();
+        if (_hotkeysTab.IsValueCreated) _hotkeysTab.Value.Dispose();
+        if (_gamesTab.IsValueCreated) _gamesTab.Value.Dispose();
         if (_systemInfo.IsValueCreated) _systemInfo.Value.Dispose();
     }
 

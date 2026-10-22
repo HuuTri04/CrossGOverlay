@@ -240,10 +240,13 @@ public partial class SliderField : UserControl
 
     private void SyncTextFromValue()
     {
+        var formatted = Format(Value);
+        if (Text == formatted) return;
+
         _syncing = true;
         try
         {
-            Text = Format(Value);
+            Text = formatted;
         }
         finally
         {

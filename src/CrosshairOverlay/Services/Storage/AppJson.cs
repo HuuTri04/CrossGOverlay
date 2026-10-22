@@ -47,6 +47,10 @@ internal static class AppJson
         // Enum ghi bằng tên ("TShape") thay vì số — sửa tay và diff git đều dễ hơn.
         options.Converters.Add(new JsonStringEnumConverter());
 
+        // Share one immutable resolver/cache across settings and preset files. A generated
+        // context would miss properties emitted by CommunityToolkit.Mvvm for these models.
+        options.MakeReadOnly(populateMissingResolver: true);
+
         return options;
     }
 }

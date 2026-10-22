@@ -9,7 +9,7 @@
             <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
 
-        <TextBlock Grid.Column="0" Style="{DynamicResource FieldLabel}"
+        <TextBlock Grid.Column="0" Style="{StaticResource FieldLabel}"
                    Text="{Binding Label, ElementName=Root, Mode=OneWay}"
                    Background="Transparent" Cursor="Hand"
                    PreviewMouseDown="OnLabelPreviewMouseDown"
@@ -21,7 +21,7 @@
                 PreviewKeyDown="OnSliderPreviewKeyDown"
                 Minimum="{Binding Minimum, ElementName=Root, Mode=OneWay}"
                 Maximum="{Binding Maximum, ElementName=Root, Mode=OneWay}"
-                Value="{Binding Value, ElementName=Root, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                Value="{Binding Value, ElementName=Root, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=10}"/>
 
         <!--
             Ô nhập số. Bind vào Text chứ không bind thẳng vào Value — bind số kèm định dạng sẽ
@@ -32,7 +32,7 @@
             ngừng gõ 300ms. Không có Delay thì gõ "35" sẽ vẽ lại một lần ở "3" — một crosshair
             bé xíu nhấp nháy giữa chừng — rồi mới tới "35".
         -->
-        <TextBox x:Name="Box" Grid.Column="2" Style="{DynamicResource NumericBox}"
+        <TextBox x:Name="Box" Grid.Column="2" Style="{StaticResource NumericBox}"
                  Text="{Binding Text, ElementName=Root, Mode=TwoWay,
                         UpdateSourceTrigger=PropertyChanged, Delay=300}"
                  LostFocus="OnBoxLostFocus"

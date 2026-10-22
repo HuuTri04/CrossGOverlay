@@ -238,7 +238,12 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
         Interlocked.Exchange(ref _backgroundRenderCancellation, null)?.Cancel();
     }
 
-    public void SetObsPassword(string password) => _obs?.SetPassword(password);
+    /// <summary>OBS credential entered for this window/session; never persisted to AppSettings.</summary>
+    [ObservableProperty] private string _obsPassword = string.Empty;
+
+    [ObservableProperty] private bool _isPasswordVisible;
+
+    public void ApplyObsPassword() => _obs?.SetPassword(ObsPassword);
 
     public bool IsAdminRunning { get; }
 
@@ -670,6 +675,8 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
         CancelBackgroundRender();
         _sourceBackgroundImage = null;
         AppBackgroundImage = null;
+        ObsPassword = string.Empty;
+        IsPasswordVisible = false;
 
         _monitors.DisplayConfigurationChanged -= OnDisplayConfigurationChanged;
         TranslationSource.Instance.PropertyChanged -= OnLanguageChanged;

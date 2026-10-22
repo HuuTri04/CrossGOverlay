@@ -22,7 +22,12 @@ public sealed class WeaponAutoSwitchService : IDisposable
     private readonly ILogger<WeaponAutoSwitchService> _logger;
     private readonly Dispatcher _dispatcher;
     private readonly HookProc _callback;
+    private readonly Action _applyPendingPreset;
     private readonly HashSet<GameProfile> _subscribedProfiles = [];
+    private Guid _pendingPresetId;
+    private GameProfile? _pendingProfile;
+    private nint _pendingWindow;
+    private int _dispatchQueued;
     private nint _hook;
     private GameProfile? _active;
     private nint _activeWindow;
@@ -38,6 +43,7 @@ public sealed class WeaponAutoSwitchService : IDisposable
         _logger = logger;
         _dispatcher = Dispatcher.CurrentDispatcher;
         _callback = OnKey;
+        _applyPendingPreset = ApplyPendingPreset;
     }
 
     public void Start()
@@ -118,16 +124,32 @@ public sealed class WeaponAutoSwitchService : IDisposable
             var presetId = injected ? Guid.Empty : profile.WeaponPresetForKey(key);
             if (presetId != Guid.Empty)
             {
-                // Never block input or suppress the game's key. The UI dispatcher owns the library.
-                _dispatcher.BeginInvoke(DispatcherPriority.Input, () =>
+                // Only copy the latest key mapping here. Preset lookup and notifications run
+                // after CallNextHookEx, without allocating one closure per keypress.
+                _pendingPresetId = presetId;
+                _pendingProfile = profile;
+                _pendingWindow = _activeWindow;
+                if (Interlocked.Exchange(ref _dispatchQueued, 1) == 0)
                 {
-                    if (!ReferenceEquals(_active, profile) || GetForegroundWindow() != _activeWindow) return;
-                    var preset = _library.Presets.FirstOrDefault(p => p.Id == presetId);
-                    if (preset is not null) _library.SetActive(preset);
-                });
+                    try { _dispatcher.BeginInvoke(DispatcherPriority.Input, _applyPendingPreset); }
+                    catch (InvalidOperationException) { Interlocked.Exchange(ref _dispatchQueued, 0); }
+                }
             }
         }
         return CallNextHookEx(_hook, code, message, data);
+    }
+
+    private void ApplyPendingPreset()
+    {
+        Interlocked.Exchange(ref _dispatchQueued, 0);
+        var profile = _pendingProfile;
+        var presetId = _pendingPresetId;
+        var window = _pendingWindow;
+        if (!_started || profile is null || !ReferenceEquals(_active, profile)
+            || window == 0 || GetForegroundWindow() != window) return;
+
+        var preset = _library.Presets.FirstOrDefault(p => p.Id == presetId);
+        if (preset is not null) _library.SetActive(preset);
     }
 
     public void Dispose()
@@ -142,6 +164,9 @@ public sealed class WeaponAutoSwitchService : IDisposable
         if (_hook != 0) UnhookWindowsHookEx(_hook);
         _hook = 0;
         _active = null;
+        _pendingProfile = null;
+        _pendingPresetId = Guid.Empty;
+        _pendingWindow = 0;
     }
 
     private delegate nint HookProc(int code, nint message, nint data);
