@@ -134,6 +134,19 @@ public sealed class DialogService : IDialogService
         return dialog.ShowDialog(Owner()) == true ? dialog.FileName : null;
     }
 
+    public string? PickFileToSave(string filter, string defaultFileName)
+    {
+        var dialog = new SaveFileDialog
+        {
+            Filter = filter,
+            FileName = defaultFileName,
+            DefaultExt = ".zip",
+            AddExtension = true,
+            OverwritePrompt = true,
+        };
+        return dialog.ShowDialog(Owner()) == true ? dialog.FileName : null;
+    }
+
     /// <summary>
     /// Cửa sổ chủ cho hộp thoại. Nếu Settings đang đóng thì trả null — hộp thoại vẫn hiện,
     /// chỉ là không có owner, còn hơn ném exception.

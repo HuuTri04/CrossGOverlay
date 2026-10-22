@@ -380,8 +380,11 @@
                                     </Grid.ColumnDefinitions>
 
                                     <TextBlock Grid.Column="0" Text="{loc:Loc Preview_Zoom}"
-                                               Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
-                                    <Slider Grid.Column="1" Margin="12,0" Minimum="1" Maximum="16"
+                                               Style="{StaticResource FieldLabel}" VerticalAlignment="Center"
+                                               Background="Transparent" Cursor="Hand"
+                                               PreviewMouseDown="OnPreviewZoomLabelMouseDown"/>
+                                    <Slider x:Name="PreviewZoomSlider" Grid.Column="1" Margin="12,0"
+                                            Minimum="1" Maximum="16" SmallChange="1"
                                             VerticalAlignment="Center"
                                             Value="{Binding Editor.PreviewZoom, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
 
@@ -394,12 +397,23 @@
                                 </Grid>
                             </Border>
 
+                            <StackPanel DockPanel.Dock="Top" Orientation="Horizontal"
+                                        HorizontalAlignment="Right" Margin="0,8,10,6">
+                                <Button Content="{loc:Loc Preview_CustomBackground}"
+                                        Command="{Binding Editor.ChoosePreviewBackgroundCommand}"
+                                        Margin="0,0,6,0"/>
+                                <Button Content="{loc:Loc Preview_ResetBackground}"
+                                        Command="{Binding Editor.ResetPreviewBackgroundCommand}"
+                                        IsEnabled="{Binding Editor.HasCustomPreviewBackground}"/>
+                            </StackPanel>
+
                             <ctl:CrosshairPreview
                                 Profile="{Binding Editor.Profile, Mode=OneWay}"
                                 Renderer="{Binding Editor.Renderer, Mode=OneWay}"
                                 Zoom="{Binding Editor.PreviewZoom, Mode=OneWay}"
                                 ShowCheckerboard="{Binding Editor.ShowCheckerboard, Mode=OneWay}"
-                                UseDarkBackground="{Binding Editor.UseDarkPreviewBackground, Mode=OneWay}"/>
+                                UseDarkBackground="{Binding Editor.UseDarkPreviewBackground, Mode=OneWay}"
+                                CustomBackgroundImage="{Binding Editor.CustomPreviewBackgroundImage, Mode=OneWay}"/>
                         </DockPanel>
                     </Border>
 
@@ -459,7 +473,7 @@
                                 </Border>
 
                                 <Button Content="{loc:Loc General_RefreshMonitors}" HorizontalAlignment="Left"
-                                        Margin="0,12,0,0" Command="{Binding General.RefreshMonitorsCommand}"/>
+                                        Margin="0,12,0,0" Command="{Binding General.RefreshMonitorsAndOptimizeCommand}"/>
                             </StackPanel>
                         </Border>
 
@@ -478,10 +492,21 @@
                                           DisplayMemberPath="Label" SelectedValuePath="Value"
                                           SelectedValue="{Binding General.OverlayFpsLimit, Mode=TwoWay}"/>
 
-                                <CheckBox Style="{StaticResource ToggleSwitch}" Margin="0,16,0,2"
-                                          Content="{loc:Loc Perf_HardwareAcceleration}"
-                                          ToolTip="{loc:Loc Perf_HardwareAccelerationTip}"
-                                          IsChecked="{Binding General.UseHardwareAcceleration, Mode=TwoWay}"/>
+                                <ctl:SliderField Label="{loc:Loc Perf_GlobalScale}"
+                                                 Range="{x:Static lim:CrosshairLimits.Scale}"
+                                                 LabelColumnWidth="170" SmallChange="0.01"
+                                                 Margin="0,12,0,0"
+                                                 Value="{Binding General.GlobalScale, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+
+                                <StackPanel Orientation="Horizontal" Margin="0,16,0,2">
+                                    <CheckBox Style="{StaticResource ToggleSwitch}"
+                                              Content="{loc:Loc Perf_HardwareAcceleration}"
+                                              ToolTip="{loc:Loc Perf_HardwareAccelerationTip}"
+                                              IsChecked="{Binding General.UseHardwareAcceleration, Mode=TwoWay}"/>
+                                    <TextBlock Text="?" Margin="8,2,0,0" FontWeight="SemiBold"
+                                               Foreground="{StaticResource TextMuted}"
+                                               ToolTip="{loc:Loc Perf_HardwareAccelerationTip}"/>
+                                </StackPanel>
 
                                 <TextBlock Text="{loc:Loc Perf_Priority}" Style="{StaticResource FieldLabel}"
                                            Margin="0,16,0,4"/>
@@ -506,6 +531,11 @@
                                           IsChecked="{Binding General.EnableOledPixelShift, Mode=TwoWay}"/>
                                 <ContentControl Style="{StaticResource Hint}" Margin="0,2,0,0"
                                                 Content="{loc:Loc Oled_PixelShiftHint}"/>
+                                <CheckBox Style="{StaticResource ToggleSwitch}" Margin="0,6,0,4"
+                                          Content="{loc:Loc SmartContrast_Enable}"
+                                          IsChecked="{Binding General.EnableSmartContrast, Mode=TwoWay}"/>
+                                <ContentControl Style="{StaticResource Hint}" Margin="0,2,0,0"
+                                                Content="{loc:Loc SmartContrast_Hint}"/>
                             </StackPanel>
                         </Border>
                         </StackPanel>
@@ -536,6 +566,23 @@
                                     <CheckBox Content="{loc:Loc General_WarnExclusive}" Margin="0,6"
                                               IsChecked="{Binding General.Settings.WarnOnExclusiveFullscreen, Mode=TwoWay}"
                                               Command="{Binding General.PersistSettingsCommand}"/>
+
+                                    <Grid Margin="0,12,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <CheckBox Grid.Column="0" Style="{StaticResource ToggleSwitch}"
+                                                  IsChecked="{Binding General.IsAdminRunning, Mode=OneWay}"
+                                                  IsHitTestVisible="False" Focusable="False" IsTabStop="False"
+                                                  VerticalAlignment="Top" Margin="0,2,0,0"/>
+                                        <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                            <TextBlock Text="{loc:Loc General_AdminLabel}" FontWeight="SemiBold"
+                                                       TextWrapping="Wrap" FontSize="12.5"/>
+                                            <ContentControl Style="{StaticResource Hint}" Margin="0,3,0,0"
+                                                            Content="{loc:Loc General_AdminDescription}"/>
+                                        </StackPanel>
+                                    </Grid>
 
                                     <!--
                                         Cập nhật nằm CHUNG thẻ với ứng dụng, không tách riêng: cột này cao
@@ -587,6 +634,12 @@
                                                Visibility="{Binding General.IsChangingStorage,
                                                             Converter={StaticResource BoolToVisibility}, Mode=OneWay}"/>
                                     <Border Height="12"/>
+                                    <UniformGrid Columns="2" Margin="0,0,0,8">
+                                        <Button Content="{loc:Loc Data_Backup}" Margin="0,0,5,0"
+                                                Command="{Binding General.BackupDataCommand}"/>
+                                        <Button Content="{loc:Loc Data_Restore}" Margin="5,0,0,0"
+                                                Command="{Binding General.RestoreDataCommand}"/>
+                                    </UniformGrid>
                                     <UniformGrid Columns="2">
                                         <Button Content="{loc:Loc Data_OpenFolder}" Margin="0,0,5,0"
                                                 ToolTip="{loc:Loc Data_OpenFolderTip}"
@@ -609,7 +662,7 @@
                 NÂNG CAO trải hết chiều ngang. Ở kích thước mặc định vừa khít, không có thanh cuộn. ScrollViewer
                 chỉ là lưới an toàn khi người dùng thu cửa sổ thấp hơn nội dung (thanh cuộn chỉ hiện lúc đó).
             -->
-            <TabItem Header="{loc:Loc Tab_Hotkeys}">
+            <TabItem x:Name="ShortcutsTab" Header="{loc:Loc Tab_Hotkeys}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <!-- MinHeight = vùng nhìn thấy: đủ chỗ thì hàng trên lấp phần dư, thiếu chỗ thì cuộn. -->
                     <Grid MinHeight="{Binding ViewportHeight, RelativeSource={RelativeSource AncestorType=ScrollViewer}, Mode=OneWay}">
@@ -650,6 +703,7 @@
                                                     <Grid.RowDefinitions>
                                                         <RowDefinition Height="Auto"/>
                                                         <RowDefinition Height="Auto"/>
+                                                        <RowDefinition Height="Auto"/>
                                                     </Grid.RowDefinitions>
 
                                                     <TextBlock Grid.Column="0" Text="{Binding Label, Mode=OneWay}" Margin="0,0,16,0"
@@ -680,6 +734,20 @@
                                                                     <Trigger Property="Text" Value="{x:Null}">
                                                                         <Setter Property="Visibility" Value="Collapsed"/>
                                                                     </Trigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                    <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3"
+                                                               Text="{loc:Loc Hotkeys_ExitMouseWarning}" TextWrapping="Wrap"
+                                                               FontSize="11" Foreground="#BFA763" Margin="0,4,0,2">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding Binding.Action}" Value="{x:Static lim:HotkeyAction.ExitApplication}">
+                                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                                    </DataTrigger>
                                                                 </Style.Triggers>
                                                             </Style>
                                                         </TextBlock.Style>
@@ -812,10 +880,36 @@
                                         <TextBlock Text="{Binding SystemInfo.RamInfo, Mode=OneWay}" Style="{StaticResource HwValue}"/>
                                     </StackPanel>
                                 </Border>
-                                <Border Style="{StaticResource InnerCard}" Padding="12,10">
+                                <Border Style="{StaticResource InnerCard}" Padding="12,10" Margin="0,0,0,8">
                                     <StackPanel>
                                         <TextBlock Text="{loc:Loc Hw_Display}" Style="{StaticResource HwLabel}"/>
                                         <TextBlock Text="{Binding SystemInfo.DisplayInfo, Mode=OneWay}" Style="{StaticResource HwValue}"/>
+                                    </StackPanel>
+                                </Border>
+                                <!-- Thẻ thứ sáu dùng cùng style và khoảng cách với năm thẻ thông tin hệ thống. -->
+                                <Border x:Name="PerformanceBadge" Style="{StaticResource InnerCard}" Padding="12,10">
+                                    <StackPanel>
+                                        <TextBlock Text="{loc:Loc Hw_AppResources}" Style="{StaticResource HwLabel}"/>
+                                        <Grid Margin="0,4,0,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Ellipse Width="7" Height="7" Fill="#00ED64" Margin="0,0,6,0"/>
+                                                <TextBlock Text="CPU: " Foreground="#8A9CA8" FontSize="12"
+                                                           VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding CpuValue}" Foreground="White" FontSize="12"
+                                                           FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Ellipse Width="7" Height="7" Fill="#00ED64" Margin="0,0,6,0"/>
+                                                <TextBlock Text="RAM: " Foreground="#8A9CA8" FontSize="12"
+                                                           VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding MemoryValue}" Foreground="White" FontSize="12"
+                                                           FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Grid>
                                     </StackPanel>
                                 </Border>
                             </StackPanel>
@@ -955,8 +1049,38 @@
                             <!-- ===== Bảng chẩn đoán ===== -->
                             <Border Style="{StaticResource InnerCard}" Margin="0,14,0,0">
                                 <StackPanel>
-                                    <TextBlock Text="{loc:Loc Games_Diagnostics}"
-                                               Style="{StaticResource SectionHeader}" Margin="0,0,0,8"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                        <TextBlock Text="{loc:Loc Games_Diagnostics}"
+                                                   Style="{StaticResource SectionHeader}"/>
+                                        <Ellipse Width="5" Height="5" Fill="{StaticResource AccentBright}"
+                                                 VerticalAlignment="Center" Margin="8,0,0,0">
+                                            <Ellipse.Style>
+                                                <Style TargetType="Ellipse">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <MultiDataTrigger>
+                                                            <MultiDataTrigger.Conditions>
+                                                                <Condition Binding="{Binding Games.IsWaitingForGame}" Value="True"/>
+                                                                <Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=TabItem}}" Value="True"/>
+                                                            </MultiDataTrigger.Conditions>
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                            <MultiDataTrigger.EnterActions>
+                                                                <BeginStoryboard Name="WaitingPulse">
+                                                                    <Storyboard>
+                                                                        <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0.35" To="1"
+                                                                                         Duration="0:0:1" AutoReverse="True" RepeatBehavior="Forever"/>
+                                                                    </Storyboard>
+                                                                </BeginStoryboard>
+                                                            </MultiDataTrigger.EnterActions>
+                                                            <MultiDataTrigger.ExitActions>
+                                                                <RemoveStoryboard BeginStoryboardName="WaitingPulse"/>
+                                                            </MultiDataTrigger.ExitActions>
+                                                        </MultiDataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Ellipse.Style>
+                                        </Ellipse>
+                                    </StackPanel>
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="140"/>

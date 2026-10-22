@@ -17,8 +17,8 @@ namespace CrosshairOverlay.Services.System;
 /// </remarks>
 public sealed class SingleInstanceGuard : ISingleInstanceGuard
 {
-    private const string MutexName = @"Local\CrosshairOverlay.SingleInstance";
-    private const string SignalName = @"Local\CrosshairOverlay.Activate";
+    private const string MutexName = @"Global\CrossGOverlay_SingleInstance_Mutex";
+    private const string SignalName = @"Global\CrossGOverlay_Activate";
 
     private readonly ILogger<SingleInstanceGuard> _logger;
     private readonly Dispatcher _dispatcher;
@@ -59,10 +59,9 @@ public sealed class SingleInstanceGuard : ISingleInstanceGuard
         }
         catch (Exception ex)
         {
-            // Không tạo được mutex (môi trường bị hạn chế) thì cho chạy tiếp — thà có nguy cơ
-            // hai instance còn hơn không khởi động được.
-            _logger.LogWarning(ex, "Không kiểm tra được instance trùng, vẫn khởi động.");
-            return true;
+            // Nếu không tạo được khóa/tín hiệu, dừng khởi động để tránh hai overlay cùng chạy.
+            _logger.LogError(ex, "Không tạo được khóa single instance; dừng khởi động.");
+            return false;
         }
     }
 

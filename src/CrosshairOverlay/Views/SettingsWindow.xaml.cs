@@ -1,7 +1,9 @@
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Input;
 using CrosshairOverlay.Core.Abstractions;
 using CrosshairOverlay.Localization;
+using CrosshairOverlay.Services.System;
 using CrosshairOverlay.ViewModels;
 using CrosshairOverlay.Views.Dialogs;
 
@@ -13,6 +15,7 @@ public partial class SettingsWindow : Window
     private readonly SettingsViewModel _viewModel;
     private readonly ITrayIconController _tray;
     private readonly Microsoft.Extensions.Logging.ILogger<SettingsWindow> _logger;
+    private readonly PerformanceMonitorService _performanceMonitor;
 
     /// <summary>Chỉ nhắc "app vẫn đang chạy" một lần mỗi phiên, không nhắc mỗi lần ẩn.</summary>
     private bool _hintShown;
@@ -29,11 +32,26 @@ public partial class SettingsWindow : Window
         _tray = tray;
         _logger = logger;
         DataContext = viewModel;
+        _performanceMonitor = new PerformanceMonitorService(Dispatcher);
+        PerformanceBadge.DataContext = _performanceMonitor;
+        Loaded += (_, _) => UpdatePerformanceMonitor();
+        IsVisibleChanged += (_, _) => UpdatePerformanceMonitor();
 
         // ViewModel đăng ký sự kiện lên các service singleton (thư viện preset, màn hình,
         // theo dõi foreground). Cửa sổ này được tạo mới mỗi lần mở, nên không giải phóng thì
         // mỗi lần mở lại là một ViewModel nữa bị giữ sống mãi.
-        Closed += (_, _) => (DataContext as IDisposable)?.Dispose();
+        Closed += (_, _) =>
+        {
+            _performanceMonitor.Dispose();
+            (DataContext as IDisposable)?.Dispose();
+        };
+    }
+
+    private void OnPreviewZoomLabelMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Left) return;
+        PreviewZoomSlider.Focus();
+        e.Handled = true;
     }
 
     /// <summary>
@@ -87,7 +105,9 @@ public partial class SettingsWindow : Window
     private async void OnTabChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
     {
         // TabControl phát sự kiện này cả khi ComboBox/ListBox bên trong đổi lựa chọn.
-        if (!ReferenceEquals(e.OriginalSource, sender) || _libraryStarted || !LibraryTab.IsSelected) return;
+        if (!ReferenceEquals(e.OriginalSource, sender)) return;
+        UpdatePerformanceMonitor();
+        if (_libraryStarted || !LibraryTab.IsSelected) return;
 
         _libraryStarted = true;
         LibraryHost.ContentTemplate = (DataTemplate)FindResource("LibraryPanel");
@@ -96,6 +116,13 @@ public partial class SettingsWindow : Window
         FindChild<PresetLibraryView>(LibraryHost)?.FocusSearch();
 
         await _viewModel.Library.LoadAsync();
+    }
+
+    private void UpdatePerformanceMonitor()
+    {
+        if (_performanceMonitor is null) return;
+        if (IsVisible && ShortcutsTab?.IsSelected == true) _performanceMonitor.Start();
+        else _performanceMonitor.Stop();
     }
 
     private static T? FindChild<T>(DependencyObject root) where T : DependencyObject

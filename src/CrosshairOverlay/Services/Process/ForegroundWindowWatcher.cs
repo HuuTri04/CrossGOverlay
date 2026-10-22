@@ -13,6 +13,9 @@ namespace CrosshairOverlay.Services.Process;
 public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
 {
     private const int MaxPathLength = 1024;
+    private static readonly TimeSpan FallbackInterval = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan MetadataSettlePeriod = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan InitialMetadataRetry = TimeSpan.FromMilliseconds(200);
 
     private readonly IMonitorService _monitors;
     private readonly ILogger<ForegroundWindowWatcher> _logger;
@@ -38,6 +41,16 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
     private readonly Action _refresh;
     private readonly Action _trackedWindowDestroyed;
     private readonly WaitOrTimerCallback _processExitCallback;
+    private readonly Timer _fallbackTimer;
+    private readonly Timer _settleTimer;
+
+    // Published by the UI thread; the fallback timer only reads these immutable snapshots.
+    private long _publishedHandle;
+    private string _publishedTitle = string.Empty;
+    private int _publishedLeft, _publishedTop, _publishedRight, _publishedBottom;
+    private long _retryMetadataUntilTicks;
+    private int _refreshQueued;
+    private volatile bool _started;
 
     private nint _hook;
 
@@ -61,7 +74,7 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
     private ProcessExitWaitHandle? _exitHandle;
     private RegisteredWaitHandle? _exitRegistration;
 
-    private bool _disposed;
+    private volatile bool _disposed;
 
     public ForegroundWindowWatcher(IMonitorService monitors, ILogger<ForegroundWindowWatcher> logger)
     {
@@ -72,6 +85,8 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
         _refresh = Refresh;
         _trackedWindowDestroyed = OnTrackedWindowDestroyed;
         _processExitCallback = OnTrackedProcessExitSignaled;
+        _fallbackTimer = new Timer(OnFallbackTick, null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+        _settleTimer = new Timer(_ => QueueRefresh(), null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
         Current = ForegroundWindowInfo.Empty;
         LastExternal = ForegroundWindowInfo.Empty;
     }
@@ -87,7 +102,8 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
     public void Start()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        if (_hook != 0) return;
+        if (_started) return;
+        _started = true;
 
         _hook = NativeMethods.SetWinEventHook(
             Win32Constants.EVENT_SYSTEM_FOREGROUND,
@@ -106,11 +122,14 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
 
         if (_hook == 0)
         {
-            _logger.LogError("SetWinEventHook thất bại — sẽ không tự đổi preset theo game được.");
-            return;
+            _logger.LogWarning("SetWinEventHook thất bại — dùng kiểm tra foreground dự phòng mỗi giây.");
+        }
+        else
+        {
+            _logger.LogInformation("Đã bắt đầu theo dõi cửa sổ foreground.");
         }
 
-        _logger.LogInformation("Đã bắt đầu theo dõi cửa sổ foreground.");
+        _fallbackTimer.Change(FallbackInterval, FallbackInterval);
 
         // Đọc trạng thái hiện tại: hook chỉ báo khi CÓ THAY ĐỔI, mà game có thể đã chạy sẵn.
         Refresh();
@@ -118,6 +137,9 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
 
     public void Stop()
     {
+        _started = false;
+        _fallbackTimer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+        _settleTimer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
         Untrack();
 
         if (_hook == 0) return;
@@ -182,6 +204,7 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
     /// <summary>Chạy trên thread pool khi tiến trình thoát.</summary>
     private void OnTrackedProcessExitSignaled(object? state, bool timedOut)
     {
+        if (!_started || _dispatcher.HasShutdownStarted) return;
         var processId = (int)state!;
         _dispatcher.BeginInvoke(() => OnTrackedProcessExited(processId));
     }
@@ -189,7 +212,7 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
     private void OnTrackedProcessExited(int processId)
     {
         // Có thể đã chuyển sang theo dõi tiến trình khác trong lúc chờ lên UI thread.
-        if (_disposed || _tracked.ProcessId != processId) return;
+        if (_disposed || !_started || _tracked.ProcessId != processId) return;
 
         CloseTracked("tiến trình đã thoát");
     }
@@ -214,6 +237,7 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
     private void OnWinEvent(
         nint hook, uint eventType, nint hwnd, int idObject, int idChild, uint thread, uint time)
     {
+        if (!_started) return;
         // Sự kiện của một phần tử bên trong cửa sổ (con trỏ, caret, control con), không phải cửa sổ.
         if (idObject != Win32Constants.OBJID_WINDOW || idChild != Win32Constants.CHILDID_SELF) return;
 
@@ -223,7 +247,7 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
         {
             // Không dùng hwnd của sự kiện: đọc lại foreground lúc xử lý để luôn lấy trạng thái mới
             // nhất, và coi cửa sổ đã ẩn/thu nhỏ là "không có foreground".
-            _dispatcher.BeginInvoke(_refresh);
+            QueueRefresh();
             return;
         }
 
@@ -232,14 +256,15 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
         // _tracked ở đây là an toàn.
         if (hwnd == 0 || hwnd != _tracked.Handle) return;
 
-        _dispatcher.BeginInvoke(eventType == Win32Constants.EVENT_OBJECT_DESTROY
-            ? _trackedWindowDestroyed
-            : _refresh);
+        if (eventType == Win32Constants.EVENT_OBJECT_DESTROY)
+            _dispatcher.BeginInvoke(_trackedWindowDestroyed);
+        else
+            QueueRefresh();
     }
 
     private void OnTrackedWindowDestroyed()
     {
-        if (_disposed) return;
+        if (_disposed || !_started) return;
 
         if (!_tracked.IsValid || NativeMethods.IsWindow(_tracked.Handle)) return;
 
@@ -264,7 +289,7 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
     /// </summary>
     private void Refresh()
     {
-        if (_disposed) return;
+        if (_disposed || !_started) return;
 
         var hwnd = NativeMethods.GetForegroundWindow();
         Update(IsOnScreen(hwnd) ? hwnd : 0);
@@ -283,7 +308,22 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
         try
         {
             var info = Describe(hwnd);
-            if (info.Handle == Current.Handle && info.ProcessId == Current.ProcessId) return;
+            Volatile.Write(ref _publishedHandle, (long)info.Handle);
+            Volatile.Write(ref _publishedTitle, info.WindowTitle);
+            Volatile.Write(ref _publishedLeft, (int)info.Bounds.Left);
+            Volatile.Write(ref _publishedTop, (int)info.Bounds.Top);
+            Volatile.Write(ref _publishedRight, (int)info.Bounds.Right);
+            Volatile.Write(ref _publishedBottom, (int)info.Bounds.Bottom);
+            if (!info.IsValid || (!info.ProcessNameUnavailable && !string.IsNullOrEmpty(info.WindowTitle)))
+                Volatile.Write(ref _retryMetadataUntilTicks, 0);
+            else if (info.Handle != Current.Handle)
+            {
+                Volatile.Write(ref _retryMetadataUntilTicks, DateTime.UtcNow.Add(MetadataSettlePeriod).Ticks);
+                _settleTimer.Change(InitialMetadataRetry, Timeout.InfiniteTimeSpan);
+            }
+
+            // The same HWND can gain its process path/title after the foreground event.
+            if (!HasChanged(Current, info)) return;
 
             var previous = Current;
             Current = info;
@@ -301,6 +341,83 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
             // Cửa sổ có thể biến mất ngay giữa lúc ta đang đọc thông tin về nó.
             _logger.LogDebug(ex, "Không đọc được thông tin cửa sổ foreground.");
         }
+    }
+
+    internal static bool HasChanged(ForegroundWindowInfo previous, ForegroundWindowInfo current) =>
+        previous != current;
+
+    private void QueueRefresh()
+    {
+        if (!_started || _dispatcher.HasShutdownStarted) return;
+        if (Interlocked.Exchange(ref _refreshQueued, 1) != 0) return;
+
+        try
+        {
+            _dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+            {
+                Interlocked.Exchange(ref _refreshQueued, 0);
+                if (_started) _refresh();
+            }));
+        }
+        catch (InvalidOperationException)
+        {
+            Interlocked.Exchange(ref _refreshQueued, 0);
+        }
+    }
+
+    /// <summary>
+    /// The thread-pool fallback does only cheap Win32 reads. An unchanged foreground
+    /// does not wake WPF; a newly created window or updated title is sent to the UI thread.
+    /// </summary>
+    private void OnFallbackTick(object? state)
+    {
+        if (!_started) return;
+
+        try
+        {
+            var hwnd = NativeMethods.GetForegroundWindow();
+            if (!IsOnScreen(hwnd)) hwnd = 0;
+
+            if ((long)hwnd != Volatile.Read(ref _publishedHandle))
+            {
+                QueueRefresh();
+                return;
+            }
+
+            if (hwnd == 0) return;
+
+            // A game can switch windowed -> fullscreen without changing HWND or title.
+            // Reuse this existing fallback tick; only a changed rect wakes WPF.
+            if (NativeMethods.GetWindowRect(hwnd, out var bounds)
+                && (bounds.Left != Volatile.Read(ref _publishedLeft)
+                    || bounds.Top != Volatile.Read(ref _publishedTop)
+                    || bounds.Right != Volatile.Read(ref _publishedRight)
+                    || bounds.Bottom != Volatile.Read(ref _publishedBottom)))
+            {
+                QueueRefresh();
+                return;
+            }
+
+            if (DateTime.UtcNow.Ticks < Volatile.Read(ref _retryMetadataUntilTicks)
+                || !string.Equals(ReadTitleForFallback(hwnd), Volatile.Read(ref _publishedTitle),
+                    StringComparison.Ordinal))
+            {
+                QueueRefresh();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Kiểm tra foreground dự phòng thất bại.");
+        }
+    }
+
+    private static string ReadTitleForFallback(nint hwnd)
+    {
+        var length = NativeMethods.GetWindowTextLength(hwnd);
+        if (length <= 0) return string.Empty;
+        var title = new StringBuilder(Math.Min(length + 1, 1024));
+        NativeMethods.GetWindowText(hwnd, title, title.Capacity);
+        return title.ToString();
     }
 
     private ForegroundWindowInfo Describe(nint hwnd)
@@ -337,7 +454,7 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
         if (length <= 0) return string.Empty;
 
         _titleBuffer.Clear();
-        _titleBuffer.EnsureCapacity(length + 1);
+        _titleBuffer.EnsureCapacity(Math.Min(length + 1, 1024));
         NativeMethods.GetWindowText(hwnd, _titleBuffer, _titleBuffer.Capacity);
         return _titleBuffer.ToString();
     }
@@ -379,6 +496,8 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
         if (_disposed) return;
         _disposed = true;
         Stop();
+        _fallbackTimer.Dispose();
+        _settleTimer.Dispose();
     }
 
     /// <summary>Bọc handle tiến trình (chỉ quyền SYNCHRONIZE) để thread pool chờ được.</summary>

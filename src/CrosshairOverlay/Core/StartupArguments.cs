@@ -5,10 +5,11 @@ namespace CrosshairOverlay.Core;
 /// <summary>Tham số dòng lệnh ứng dụng tự truyền cho chính nó khi khởi động lại.</summary>
 /// <param name="FactoryReset">Xoá cài đặt, preset và ảnh trước khi nạp gì cả.</param>
 /// <param name="WaitForProcessId">PID của instance cũ phải thoát hẳn trước khi instance này làm gì.</param>
-public sealed record StartupArguments(bool FactoryReset, int? WaitForProcessId)
+public sealed record StartupArguments(bool FactoryReset, int? WaitForProcessId, string? RestoreArchive = null)
 {
     public const string FactoryResetSwitch = "--factory-reset";
     public const string WaitPidSwitch = "--wait-pid";
+    public const string RestoreArchiveSwitch = "--restore-archive";
 
     public static StartupArguments None { get; } = new(false, null);
 
@@ -18,6 +19,7 @@ public sealed record StartupArguments(bool FactoryReset, int? WaitForProcessId)
 
         var reset = false;
         int? waitPid = null;
+        string? restoreArchive = null;
 
         for (var i = 0; i < args.Count; i++)
         {
@@ -33,8 +35,13 @@ public sealed record StartupArguments(bool FactoryReset, int? WaitForProcessId)
                 waitPid = pid;
                 i++;
             }
+            else if (string.Equals(args[i], RestoreArchiveSwitch, StringComparison.OrdinalIgnoreCase)
+                     && i + 1 < args.Count)
+            {
+                restoreArchive = args[++i];
+            }
         }
 
-        return new StartupArguments(reset, waitPid);
+        return new StartupArguments(reset, waitPid, restoreArchive);
     }
 }

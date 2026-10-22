@@ -50,10 +50,20 @@ internal sealed class OverlayWindow : Window
         Height = 1;
 
         Host = new CrosshairVisualHost();
+        // Pixel-aligned vector profiles select Aliased at the host. Inheriting it from the
+        // Window would also alias circles, rotated lines and imported images.
         Content = Host;
     }
 
     public CrosshairVisualHost Host { get; }
+
+    public void SetAliasedVectorEdges(bool aliased)
+    {
+        var mode = aliased ? EdgeMode.Aliased : EdgeMode.Unspecified;
+        if (RenderOptions.GetEdgeMode(this) != mode)
+            RenderOptions.SetEdgeMode(this, mode);
+        Host.SetAliasing(aliased);
+    }
 
     /// <summary>HWND của cửa sổ. Bằng 0 trước khi handle được tạo.</summary>
     public nint Handle { get; private set; }
@@ -75,6 +85,17 @@ internal sealed class OverlayWindow : Window
             Handle = new WindowInteropHelper(this).EnsureHandle();
 
         return Handle;
+    }
+
+    /// <summary>Reasserts z-order only while visible; never activates or shows a hidden overlay.</summary>
+    public bool ReassertTopmost()
+    {
+        if (Handle == 0 || !IsVisible) return false;
+        return NativeMethods.SetWindowPos(
+            Handle, Win32Constants.HWND_TOPMOST,
+            0, 0, 0, 0,
+            Win32Constants.SWP_NOMOVE | Win32Constants.SWP_NOSIZE
+                | Win32Constants.SWP_NOACTIVATE | Win32Constants.SWP_NOOWNERZORDER);
     }
 
     private static void ApplyOverlayExtendedStyles(nint hwnd)

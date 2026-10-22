@@ -1,5 +1,4 @@
 using System.IO;
-using System.Text.Json;
 using CrosshairOverlay.Core.Abstractions;
 using CrosshairOverlay.Core.Models;
 using Microsoft.Extensions.Logging;
@@ -19,8 +18,11 @@ public sealed class AppSettingsService : IAppSettingsService
     private readonly ILogger<AppSettingsService> _logger;
     private readonly SemaphoreSlim _writeLock = new(1, 1);
     private readonly Timer _debounceTimer;
+    private readonly object _saveGate = new();
+    private Task _backgroundSave = Task.CompletedTask;
 
     private int _savePending;
+    private bool _flushing;
     private bool _disposed;
 
     public AppSettingsService(IAppPathProvider paths, ILogger<AppSettingsService> logger)
@@ -38,12 +40,15 @@ public sealed class AppSettingsService : IAppSettingsService
     {
         try
         {
-            var loaded = await AtomicFile.ReadJsonAsync<AppSettings>(_paths.SettingsFilePath, cancellationToken)
+            var loaded = await AtomicFile.LoadJsonAsync<AppSettings>(_paths.SettingsFilePath, cancellationToken)
                 .ConfigureAwait(false);
 
             if (loaded is null)
             {
-                _logger.LogInformation("Chưa có settings.json, dùng cấu hình mặc định.");
+                if (File.Exists(_paths.SettingsFilePath) || File.Exists(_paths.SettingsFilePath + ".bak"))
+                    _logger.LogWarning("Không đọc được settings.json hoặc bản .bak, dùng cấu hình mặc định.");
+                else
+                    _logger.LogInformation("Chưa có settings.json, dùng cấu hình mặc định.");
                 Current = AppSettings.CreateDefault();
                 return;
             }
@@ -52,14 +57,6 @@ public sealed class AppSettingsService : IAppSettingsService
             _logger.LogInformation(
                 "Đã nạp cấu hình: {Hotkeys} hotkey, {Profiles} game profile.",
                 Current.Hotkeys.Count, Current.GameProfiles.Count);
-        }
-        catch (JsonException ex)
-        {
-            // File hỏng: giữ lại làm bằng chứng để debug rồi chạy tiếp với mặc định, thay vì
-            // chặn người dùng ở màn hình lỗi.
-            _logger.LogError(ex, "settings.json hỏng, đổi tên thành .corrupt và dùng mặc định.");
-            TryQuarantine();
-            Current = AppSettings.CreateDefault();
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -77,7 +74,7 @@ public sealed class AppSettingsService : IAppSettingsService
         await _writeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            await AtomicFile.WriteJsonAsync(_paths.SettingsFilePath, Current, cancellationToken)
+            await AtomicFile.WriteJsonAtomicAsync(_paths.SettingsFilePath, Current, cancellationToken)
                 .ConfigureAwait(false);
 
             _logger.LogDebug("Đã lưu settings.json.");
@@ -95,35 +92,66 @@ public sealed class AppSettingsService : IAppSettingsService
 
     public void RequestSave()
     {
-        if (_disposed) return;
-
-        Interlocked.Exchange(ref _savePending, 1);
-        _debounceTimer.Change(SaveDebounce, Timeout.InfiniteTimeSpan);
+        lock (_saveGate)
+        {
+            if (_disposed) return;
+            Interlocked.Exchange(ref _savePending, 1);
+            if (!_flushing) _debounceTimer.Change(SaveDebounce, Timeout.InfiniteTimeSpan);
+        }
     }
 
     public async Task FlushAsync(CancellationToken cancellationToken = default)
     {
-        _debounceTimer.Change(Timeout.Infinite, Timeout.Infinite);
+        Task backgroundSave;
+        lock (_saveGate)
+        {
+            _flushing = true;
+            _debounceTimer.Change(Timeout.Infinite, Timeout.Infinite);
+            backgroundSave = _backgroundSave;
+        }
 
-        if (Interlocked.Exchange(ref _savePending, 0) == 1)
-            await SaveAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await backgroundSave.ConfigureAwait(false);
+
+            if (Interlocked.Exchange(ref _savePending, 0) == 1)
+                await SaveAsync(cancellationToken).ConfigureAwait(false);
+
+            // A direct SaveAsync may also be in progress even when no debounce is pending.
+            await _writeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+            _writeLock.Release();
+        }
+        finally
+        {
+            lock (_saveGate)
+            {
+                _flushing = false;
+                if (!_disposed && Volatile.Read(ref _savePending) == 1)
+                    _debounceTimer.Change(SaveDebounce, Timeout.InfiniteTimeSpan);
+            }
+        }
     }
 
     private void OnDebounceElapsed(object? state)
     {
-        // Chạy trên thread pool. SaveAsync tự nuốt lỗi I/O, nhưng vẫn bọc thêm một lớp vì
-        // exception thoát ra từ callback của Timer sẽ giết cả tiến trình.
-        _ = Task.Run(async () =>
+        lock (_saveGate)
         {
-            try
+            if (_disposed || _flushing) return;
+            // Keep the task so shutdown can await an already-started save.
+            var previous = _backgroundSave;
+            _backgroundSave = Task.Run(async () =>
             {
-                await SaveAsync().ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Lưu cấu hình nền thất bại.");
-            }
-        });
+                try
+                {
+                    await previous.ConfigureAwait(false);
+                    await SaveAsync().ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Lưu cấu hình nền thất bại.");
+                }
+            });
+        }
     }
 
     /// <summary>
@@ -134,6 +162,8 @@ public sealed class AppSettingsService : IAppSettingsService
     {
         // "PresetOrder": null trong file sửa tay.
         settings.PresetOrder ??= [];
+        settings.Hotkeys ??= [];
+        settings.GameProfiles ??= [];
 
         if (settings.Hotkeys.Count == 0)
         {
@@ -180,25 +210,21 @@ public sealed class AppSettingsService : IAppSettingsService
         return settings;
     }
 
-    private void TryQuarantine()
-    {
-        try
-        {
-            var target = _paths.SettingsFilePath + ".corrupt";
-            File.Move(_paths.SettingsFilePath, target, overwrite: true);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            _logger.LogWarning(ex, "Không đổi tên được settings.json hỏng.");
-        }
-    }
-
     public void Dispose()
     {
-        if (_disposed) return;
-        _disposed = true;
+        Task backgroundSave;
+        lock (_saveGate)
+        {
+            if (_disposed) return;
+            _disposed = true;
+            _debounceTimer.Change(Timeout.Infinite, Timeout.Infinite);
+            backgroundSave = _backgroundSave;
+        }
 
         _debounceTimer.Dispose();
+        backgroundSave.GetAwaiter().GetResult();
+        _writeLock.Wait();
+        _writeLock.Release();
         _writeLock.Dispose();
     }
 }

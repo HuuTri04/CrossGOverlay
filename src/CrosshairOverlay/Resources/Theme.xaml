@@ -333,11 +333,17 @@
 
     <Style TargetType="Slider">
         <Setter Property="Height" Value="22"/>
+        <Setter Property="Focusable" Value="True"/>
+        <Setter Property="IsTabStop" Value="True"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
         <Setter Property="IsMoveToPointEnabled" Value="True"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Slider">
                     <Grid VerticalAlignment="Center" Background="Transparent">
+                          <Border x:Name="FocusRing" CornerRadius="5" Margin="1,0"
+                                  BorderBrush="#5500ED64" BorderThickness="1"
+                                  Visibility="Collapsed" IsHitTestVisible="False"/>
                         <Border Height="4" CornerRadius="2" VerticalAlignment="Center"
                                 Background="{StaticResource TrackBg}"/>
                         <Track x:Name="PART_Track">
@@ -353,6 +359,9 @@
                         </Track>
                     </Grid>
                     <ControlTemplate.Triggers>
+                          <Trigger Property="IsKeyboardFocused" Value="True">
+                              <Setter TargetName="FocusRing" Property="Visibility" Value="Visible"/>
+                          </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Opacity" Value="0.45"/>
                         </Trigger>

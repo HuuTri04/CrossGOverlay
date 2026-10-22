@@ -50,6 +50,7 @@
         <Grid Grid.Row="0" Margin="0,0,0,14">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" MaxWidth="330"/>
+                <ColumnDefinition Width="150"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
@@ -60,11 +61,16 @@
                      AutomationProperties.Name="{loc:Loc Library_SearchPlaceholder}"
                      Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
 
+            <ComboBox Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center"
+                      ItemsSource="{Binding ColorFilters}" DisplayMemberPath="Label" SelectedValuePath="Value"
+                      SelectedValue="{Binding SelectedColorFilter, Mode=TwoWay}"
+                      AutomationProperties.Name="{loc:Loc Library_ColorFilter}"/>
+
             <!-- Số mẫu đang hiện: người dùng gõ tìm kiếm cần biết ngay còn bao nhiêu kết quả. -->
-            <TextBlock Grid.Column="1" Text="{Binding ResultText}" Style="{StaticResource FieldLabel}"
+            <TextBlock Grid.Column="2" Text="{Binding ResultText}" Style="{StaticResource FieldLabel}"
                        VerticalAlignment="Center" Margin="12,0,0,0"/>
 
-            <ItemsControl Grid.Column="2" ItemsSource="{Binding Categories}" Focusable="False"
+            <ItemsControl Grid.Column="3" ItemsSource="{Binding Categories}" Focusable="False"
                           Margin="16,0,0,0" VerticalAlignment="Center">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>

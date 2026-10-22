@@ -39,6 +39,12 @@ public sealed class MonitorService : IMonitorService
         }
     }
 
+    public IReadOnlyList<MonitorInfo> RefreshMonitors()
+    {
+        Invalidate();
+        return GetMonitors();
+    }
+
     public MonitorInfo GetPrimaryMonitor()
     {
         var monitors = GetMonitors();

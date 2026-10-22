@@ -47,32 +47,32 @@
                             <RowDefinition Height="26"/>
                             <RowDefinition Height="26"/>
                             <RowDefinition Height="26"/>
-                            <RowDefinition Height="26"/>
                         </Grid.RowDefinitions>
 
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="R" Style="{DynamicResource FieldLabel}"/>
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="R" Style="{DynamicResource FieldLabel}"
+                                   Background="Transparent" Cursor="Hand" PreviewMouseDown="OnChannelLabelMouseDown"/>
                         <Slider Grid.Row="0" Grid.Column="1" x:Name="RedSlider" Minimum="0" Maximum="255"
+                                SmallChange="1"
                                 ValueChanged="OnChannelChanged"/>
                         <TextBlock Grid.Row="0" Grid.Column="2" x:Name="RedValue"
                                    Style="{DynamicResource FieldLabel}" HorizontalAlignment="Right"/>
 
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="G" Style="{DynamicResource FieldLabel}"/>
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="G" Style="{DynamicResource FieldLabel}"
+                                   Background="Transparent" Cursor="Hand" PreviewMouseDown="OnChannelLabelMouseDown"/>
                         <Slider Grid.Row="1" Grid.Column="1" x:Name="GreenSlider" Minimum="0" Maximum="255"
+                                SmallChange="1"
                                 ValueChanged="OnChannelChanged"/>
                         <TextBlock Grid.Row="1" Grid.Column="2" x:Name="GreenValue"
                                    Style="{DynamicResource FieldLabel}" HorizontalAlignment="Right"/>
 
-                        <TextBlock Grid.Row="2" Grid.Column="0" Text="B" Style="{DynamicResource FieldLabel}"/>
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="B" Style="{DynamicResource FieldLabel}"
+                                   Background="Transparent" Cursor="Hand" PreviewMouseDown="OnChannelLabelMouseDown"/>
                         <Slider Grid.Row="2" Grid.Column="1" x:Name="BlueSlider" Minimum="0" Maximum="255"
+                                SmallChange="1"
                                 ValueChanged="OnChannelChanged"/>
                         <TextBlock Grid.Row="2" Grid.Column="2" x:Name="BlueValue"
                                    Style="{DynamicResource FieldLabel}" HorizontalAlignment="Right"/>
 
-                        <TextBlock Grid.Row="3" Grid.Column="0" Text="A" Style="{DynamicResource FieldLabel}"/>
-                        <Slider Grid.Row="3" Grid.Column="1" x:Name="AlphaSlider" Minimum="0" Maximum="255"
-                                ValueChanged="OnChannelChanged"/>
-                        <TextBlock Grid.Row="3" Grid.Column="2" x:Name="AlphaValue"
-                                   Style="{DynamicResource FieldLabel}" HorizontalAlignment="Right"/>
                     </Grid>
 
                     <TextBlock Text="MÃ HEX" Style="{DynamicResource SectionHeader}"/>

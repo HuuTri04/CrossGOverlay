@@ -101,6 +101,11 @@ Mỗi khi {1} ở foreground, preset này sẽ tự được áp dụng. Xem ho�
   <data name="Preview_Zoom"><value>Phóng</value></data>
   <data name="Preview_Checkerboard"><value>Nền ca-rô</value></data>
   <data name="Preview_DarkBackground"><value>Nền tối</value></data>
+  <data name="Preview_CustomBackground"><value>Nền tùy chỉnh</value></data>
+  <data name="Preview_ResetBackground"><value>Khôi phục</value></data>
+  <data name="Preview_ImageFilter"><value>Ảnh nền (*.png;*.jpg;*.jpeg;*.webp)|*.png;*.jpg;*.jpeg;*.webp</value></data>
+  <data name="Preview_ImageErrorTitle"><value>Không mở được ảnh nền</value></data>
+  <data name="Preview_ImageError"><value>Không đọc được ảnh đã chọn: {0}</value></data>
 
   <!-- ===== Trình chỉnh sửa ===== -->
   <data name="Editor_General"><value>CHUNG</value></data>
@@ -171,6 +176,8 @@ Mỗi khi {1} ở foreground, preset này sẽ tự được áp dụng. Xem ho�
   <!-- ===== Tab Chung ===== -->
   <data name="General_Monitor"><value>MÀN HÌNH</value></data>
   <data name="General_RefreshMonitors"><value>Quét lại màn hình</value></data>
+  <data name="Display_OptimizedTitle"><value>Đã tối ưu cài đặt màn hình</value></data>
+  <data name="Display_OptimizedMessage"><value>Đã tự động áp dụng {0} FPS và Scale {1:0}% phù hợp với màn hình {2}{3} của bạn.</value></data>
   <data name="General_App"><value>ỨNG DỤNG</value></data>
   <data name="General_Language"><value>Ngôn ngữ</value></data>
   <data name="General_StartWithWindows"><value>Khởi động cùng Windows</value></data>
@@ -210,7 +217,7 @@ Mỗi khi {1} ở foreground, preset này sẽ tự được áp dụng. Xem ho�
   <!-- ===== Tab Game ===== -->
   <data name="Games_Header"><value>PROFILE GAME</value></data>
   <data name="Games_AddFromCurrent"><value>Thêm từ cửa sổ vừa dùng</value></data>
-  <data name="Games_AddMock"><value>Thêm bia thử: notepad.exe</value></data>
+  <data name="Games_AddMock"><value>Thêm Profile mẫu (Notepad)</value></data>
   <data name="Games_AddMockTip"><value>Tạo rule trỏ tới Notepad để thử tính năng tự đổi preset mà không cần mở game nặng.</value></data>
   <data name="Games_AddEmpty"><value>Thêm trống</value></data>
   <data name="Games_Remove"><value>Xoá</value></data>
@@ -231,9 +238,9 @@ Mỗi khi {1} ở foreground, preset này sẽ tự được áp dụng. Xem ho�
   <data name="Games_Behavior"><value>Khi khớp thì</value></data>
   <data name="Games_Preset"><value>Preset áp dụng</value></data>
   <data name="Games_EnableProfile"><value>Bật profile này</value></data>
-  <data name="Games_None"><value>—</value></data>
+  <data name="Games_None"><value>Đang chờ...</value></data>
   <data name="Games_Blocked"><value>(bị chặn — tiến trình chạy quyền admin)</value></data>
-  <data name="Games_NoMatch"><value>(không khớp profile nào)</value></data>
+  <data name="Games_NoMatch"><value>Chưa phát hiện game khớp Profile</value></data>
   <data name="Games_HintNoWindow"><value>Chưa nhận diện được cửa sổ nào. Hãy bật game lên, rồi Alt-Tab về đây và thử lại.</value></data>
   <data name="Games_HintNoProcessName"><value>Không lấy được tên tiến trình của cửa sổ đó.</value></data>
   <data name="Games_HintExists"><value>'{0}' đã có sẵn trong danh sách.</value></data>
@@ -316,6 +323,7 @@ Mỗi khi {1} ở foreground, preset này sẽ tự được áp dụng. Xem ho�
   <data name="Tray_Exit"><value>Thoát</value></data>
   <data name="Tray_TooltipOff"><value>{0} — đang tắt</value></data>
   <data name="Tray_TooltipHiddenByProfile"><value>{0} — đang bật, tạm ẩn theo game profile</value></data>
+  <data name="Shell_AdministratorTip"><value>Nếu chơi game có Vanguard/EAC, hãy chạy CrossGOverlay bằng Run as Administrator để overlay không bị đè.</value></data>
   <data name="Tray_RunningInTray"><value>Đang chạy trong khay hệ thống.</value></data>
   <data name="Tray_HiddenToTray"><value>Ứng dụng vẫn chạy trong khay hệ thống, overlay không bị tắt.</value></data>
   <data name="Fullscreen_WarnTitle"><value>Overlay có thể không hiển thị</value></data>
@@ -352,17 +360,25 @@ Bạn có thể tải thủ công từ trang phát hành.</value></data>
   <data name="Update_AutoCheck"><value>Tự kiểm tra cập nhật khi khởi động</value></data>
   <data name="Perf_Header"><value>HIỆU NĂNG</value></data>
   <data name="Perf_FpsLimit"><value>Giới hạn FPS overlay</value></data>
+  <data name="Perf_GlobalScale"><value>Tỉ lệ kích thước chung</value></data>
+  <data name="Perf_Fps30"><value>30 FPS</value></data>
   <data name="Perf_Fps60"><value>60 FPS</value></data>
   <data name="Perf_Fps120"><value>120 FPS</value></data>
+  <data name="Perf_Fps140"><value>140 FPS</value></data>
   <data name="Perf_Fps144"><value>144 FPS</value></data>
   <data name="Perf_FpsUnlimited"><value>Không giới hạn</value></data>
   <data name="Perf_HardwareAcceleration"><value>Sử dụng tăng tốc phần cứng (GPU)</value></data>
-  <data name="Perf_HardwareAccelerationTip"><value>Tắt nếu bạn gặp hiện tượng giật lag game do GPU bị quá tải.</value></data>
+  <data name="Perf_HardwareAccelerationTip"><value>Bật để chuyển tác vụ vẽ Overlay sang GPU giúp giảm tải CPU. Tắt nếu gặp hiện tượng nhấp nháy trên một số tựa game DirectX cũ.</value></data>
   <data name="Perf_Priority"><value>Mức độ ưu tiên (Process Priority)</value></data>
   <data name="Perf_PriorityNormal"><value>Bình thường (Normal)</value></data>
   <data name="Perf_PriorityHigh"><value>Cao (High)</value></data>
   <data name="Perf_PriorityTip"><value>Cao: Windows ưu tiên chia CPU cho overlay khi máy tải 100%, tránh tâm ngắm bị khựng. Overlay gần như không dùng CPU lúc rảnh nên không giành tài nguyên của game.</value></data>
   <data name="Data_Header"><value>DỮ LIỆU &amp; BẢO TRÌ</value></data>
+  <data name="Fullscreen_BorderlessHint"><value>Mẹo: Hãy đổi thiết lập hiển thị của game sang 'Borderless Windowed' để hiện tâm ngắm tốt nhất!</value></data>
+  <data name="Data_Backup"><value>Sao lưu</value></data>
+  <data name="Data_BackupDone"><value>Đã sao lưu dữ liệu.</value></data>
+  <data name="Data_Restore"><value>Khôi phục</value></data>
+  <data name="Data_RestoreConfirm"><value>Khôi phục dữ liệu từ bản sao lưu và khởi động lại ứng dụng?</value></data>
   <data name="Storage_Label"><value>Vị trí lưu trữ dữ liệu</value></data>
   <data name="Storage_Change"><value>Thay đổi...</value></data>
   <data name="Storage_Title"><value>Vị trí lưu trữ dữ liệu</value></data>
@@ -396,6 +412,7 @@ Dữ liệu ở thư mục cũ luôn được giữ nguyên.</value></data>
 
 {0}</value></data>
   <data name="Storage_FallbackNotice"><value>Không truy cập được thư mục dữ liệu {0}. Đang tạm dùng thư mục mặc định — dữ liệu của bạn vẫn còn ở thư mục kia.</value></data>
+  <data name="Storage_FallbackTitle"><value>Không truy cập được thư mục dữ liệu</value></data>
   <data name="Data_OpenFolder"><value>Mở thư mục dữ liệu</value></data>
   <data name="Data_OpenFolderTip"><value>Mở thư mục chứa settings.json, các preset và ảnh tâm ngắm (CustomImages).</value></data>
   <data name="Data_OpenFailed"><value>Không mở được thư mục {0}.
@@ -416,6 +433,7 @@ Dữ liệu ở thư mục cũ luôn được giữ nguyên.</value></data>
   <data name="Update_Header"><value>CẬP NHẬT</value></data>
   <data name="Hotkeys_Header"><value>PHÍM TẮT</value></data>
   <data name="Hw_Title"><value>THÔNG TIN HỆ THỐNG</value></data>
+  <data name="Hw_AppResources"><value>Tài nguyên ứng dụng</value></data>
   <data name="Hw_Os"><value>Hệ điều hành</value></data>
   <data name="Hw_Cpu"><value>CPU</value></data>
   <data name="Hw_Gpu"><value>Card đồ hoạ (GPU)</value></data>
@@ -445,7 +463,9 @@ Dữ liệu ở thư mục cũ luôn được giữ nguyên.</value></data>
   <data name="Adv_FiringColor"><value>Màu khi bắn</value></data>
   <data name="Oled_Header"><value>BẢO VỆ MÀN HÌNH</value></data>
   <data name="Oled_PixelShift"><value>Chống lưu ảnh màn hình OLED (Pixel Shift)</value></data>
-  <data name="Oled_PixelShiftHint"><value>Tự động dịch chuyển tâm ngắm 1-2 pixel mỗi vài phút để chống cháy hình (Burn-in). Hoàn toàn không ảnh hưởng đến độ chính xác.</value></data>
+  <data name="Oled_PixelShiftHint"><value>Dịch tâm ngắm tối đa 1 pixel vật lý theo chu kỳ ngẫu nhiên khoảng 1,5–2,5 phút khi overlay hiện. Tắt khi cần giữ tâm tuyệt đối.</value></data>
+  <data name="SmartContrast_Enable"><value>Tự đổi màu tương phản (Smart Contrast)</value></data>
+  <data name="SmartContrast_Hint"><value>Lấy mẫu màu gần tâm ngắm mỗi 250 ms khi overlay hiện để chọn đen hoặc trắng. Không áp dụng cho tâm ngắm ảnh.</value></data>
   <data name="Preset_DragToReorder"><value>Kéo thả để sắp xếp. Thứ tự này cũng là thứ tự của phím tắt Preset kế tiếp / trước đó.</value></data>
   <data name="Library_SearchPlaceholder"><value>Tìm tên tuyển thủ, súng, phong cách...</value></data>
   <data name="Library_CatAll"><value>Tất cả</value></data>
@@ -456,6 +476,18 @@ Dữ liệu ở thư mục cũ luôn được giữ nguyên.</value></data>
   <data name="Library_CatOther"><value>Tactical</value></data>
   <data name="Library_Use"><value>+ Thêm vào Preset</value></data>
   <data name="Library_Added"><value>Đã thêm {0} vào danh sách của bạn</value></data>
+  <data name="Library_Title"><value>Thư viện Tâm ngắm</value></data>
+  <data name="Library_AddedToast"><value>Đã thêm tâm ngắm {0} vào danh sách cá nhân!</value></data>
+  <data name="Library_ColorFilter"><value>Lọc theo màu sắc</value></data>
+  <data name="Library_ColorAll"><value>Tất cả màu</value></data>
+  <data name="Library_ColorGreen"><value>Xanh lá</value></data>
+  <data name="Library_ColorRed"><value>Đỏ</value></data>
+  <data name="Library_ColorBlue"><value>Xanh lam</value></data>
+  <data name="Library_ColorYellow"><value>Vàng</value></data>
+  <data name="Library_ColorWhite"><value>Trắng</value></data>
+  <data name="General_AdminLabel"><value>Quyền Quản trị viên (Administrator)</value></data>
+  <data name="General_AdminDescription"><value>Có thể cần khi game chạy quyền Admin; Anti-Cheat (Vanguard, EAC, BattlEye) vẫn có thể chặn overlay.</value></data>
+  <data name="Hotkeys_ExitMouseWarning"><value>⚠️ Lưu ý: Nên gán phím bàn phím thay cho chuột phụ để tránh ấn nhầm khi combat.</value></data>
   <data name="Library_AddFailed"><value>Không thêm được mẫu: {0}</value></data>
   <data name="Library_Loading"><value>Đang tải 500+ mẫu tâm ngắm...</value></data>
   <data name="Library_Empty"><value>Không có mẫu nào khớp. Thử từ khoá khác hoặc chọn "Tất cả".</value></data>

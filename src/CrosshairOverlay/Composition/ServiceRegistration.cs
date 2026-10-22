@@ -1,6 +1,7 @@
 ﻿using CrosshairOverlay.Core.Abstractions;
 using CrosshairOverlay.Services.Display;
 using CrosshairOverlay.Services.Export;
+using CrosshairOverlay.Services.Hardware;
 using CrosshairOverlay.Services.Input;
 using CrosshairOverlay.Services.Overlay;
 using CrosshairOverlay.Services.Presets;
@@ -43,8 +44,10 @@ internal static class ServiceRegistration
         // ---- hiển thị ----
         services.AddSingleton<IMonitorService, MonitorService>();
         services.AddSingleton<IDisplayModeReader, DisplayModeReader>();
+        services.AddSingleton<DisplayAnalyzerService>();
         services.AddSingleton<ICrosshairRenderer, CrosshairRenderer>();
         services.AddSingleton<IOverlayController, OverlayController>();
+        services.AddSingleton<ScreenColorSamplerService>();
 
         // ---- nhập liệu & tiến trình ----
         services.AddSingleton<HotkeyMessageWindow>();
@@ -62,8 +65,10 @@ internal static class ServiceRegistration
         services.AddSingleton<IProcessLauncher, ProcessLauncher>();
         services.AddSingleton<IAppRestartService>(provider => new AppRestartService(
             provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<AppRestartService>>(),
-            App.RequestShutdown));
+            () => App.RequestShutdown()));
         services.AddSingleton<IHardwareInfoService, HardwareInfoService>();
+        services.AddSingleton<RgbSyncService>();
+        services.AddSingleton<AudioFeedbackService>();
         services.AddSingleton<ICursorVisibilityMonitor, CursorVisibilityMonitor>();
         services.AddSingleton<ICrosshairTranslator, CrosshairTranslatorService>();
         services.AddSingleton<OverlayBehaviorController>();

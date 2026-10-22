@@ -98,6 +98,11 @@ Whenever {1} is in the foreground, this preset is applied automatically. See or 
   <data name="Preview_Zoom"><value>Zoom</value></data>
   <data name="Preview_Checkerboard"><value>Checkerboard</value></data>
   <data name="Preview_DarkBackground"><value>Dark background</value></data>
+  <data name="Preview_CustomBackground"><value>Custom background</value></data>
+  <data name="Preview_ResetBackground"><value>Restore</value></data>
+  <data name="Preview_ImageFilter"><value>Background images (*.png;*.jpg;*.jpeg;*.webp)|*.png;*.jpg;*.jpeg;*.webp</value></data>
+  <data name="Preview_ImageErrorTitle"><value>Cannot open background image</value></data>
+  <data name="Preview_ImageError"><value>Could not read the selected image: {0}</value></data>
 
   <data name="Editor_General"><value>GENERAL</value></data>
   <data name="Editor_PresetName"><value>Preset name</value></data>
@@ -165,6 +170,8 @@ Whenever {1} is in the foreground, this preset is applied automatically. See or 
 
   <data name="General_Monitor"><value>DISPLAY</value></data>
   <data name="General_RefreshMonitors"><value>Rescan displays</value></data>
+  <data name="Display_OptimizedTitle"><value>Display settings optimized</value></data>
+  <data name="Display_OptimizedMessage"><value>Applied {0} FPS and {1:0}% scale for your {2}{3} display.</value></data>
   <data name="General_App"><value>APPLICATION</value></data>
   <data name="General_Language"><value>Language</value></data>
   <data name="General_StartWithWindows"><value>Start with Windows</value></data>
@@ -202,7 +209,7 @@ Whenever {1} is in the foreground, this preset is applied automatically. See or 
 
   <data name="Games_Header"><value>GAME PROFILES</value></data>
   <data name="Games_AddFromCurrent"><value>Add from last active window</value></data>
-  <data name="Games_AddMock"><value>Add test target: notepad.exe</value></data>
+  <data name="Games_AddMock"><value>Add sample profile (Notepad)</value></data>
   <data name="Games_AddMockTip"><value>Creates a rule pointing at Notepad so you can test automatic preset switching without launching a heavy game.</value></data>
   <data name="Games_AddEmpty"><value>Add blank</value></data>
   <data name="Games_Remove"><value>Remove</value></data>
@@ -223,9 +230,9 @@ Whenever {1} is in the foreground, this preset is applied automatically. See or 
   <data name="Games_Behavior"><value>On match</value></data>
   <data name="Games_Preset"><value>Preset to apply</value></data>
   <data name="Games_EnableProfile"><value>Enable this profile</value></data>
-  <data name="Games_None"><value>—</value></data>
+  <data name="Games_None"><value>Waiting...</value></data>
   <data name="Games_Blocked"><value>(blocked — process runs as administrator)</value></data>
-  <data name="Games_NoMatch"><value>(no profile matches)</value></data>
+  <data name="Games_NoMatch"><value>No matching game profile detected</value></data>
   <data name="Games_HintNoWindow"><value>No window detected yet. Launch the game, Alt-Tab back here, then try again.</value></data>
   <data name="Games_HintNoProcessName"><value>Could not read that window's process name.</value></data>
   <data name="Games_HintExists"><value>'{0}' is already in the list.</value></data>
@@ -306,6 +313,7 @@ Whenever {1} is in the foreground, this preset is applied automatically. See or 
   <data name="Tray_Exit"><value>Quit</value></data>
   <data name="Tray_TooltipOff"><value>{0} — off</value></data>
   <data name="Tray_TooltipHiddenByProfile"><value>{0} — on, hidden by game profile rules</value></data>
+  <data name="Shell_AdministratorTip"><value>For games with Vanguard/EAC, run CrossGOverlay as Administrator so the overlay stays visible.</value></data>
   <data name="Tray_RunningInTray"><value>Running in the system tray.</value></data>
   <data name="Tray_HiddenToTray"><value>Still running in the system tray — the overlay stays on.</value></data>
   <data name="Fullscreen_WarnTitle"><value>The overlay may not be visible</value></data>
@@ -340,17 +348,25 @@ You can download it manually from the releases page.</value></data>
   <data name="Update_AutoCheck"><value>Check for updates on startup</value></data>
   <data name="Perf_Header"><value>PERFORMANCE</value></data>
   <data name="Perf_FpsLimit"><value>Overlay FPS limit</value></data>
+  <data name="Perf_GlobalScale"><value>Global crosshair scale</value></data>
+  <data name="Perf_Fps30"><value>30 FPS</value></data>
   <data name="Perf_Fps60"><value>60 FPS</value></data>
   <data name="Perf_Fps120"><value>120 FPS</value></data>
+  <data name="Perf_Fps140"><value>140 FPS</value></data>
   <data name="Perf_Fps144"><value>144 FPS</value></data>
   <data name="Perf_FpsUnlimited"><value>Unlimited</value></data>
   <data name="Perf_HardwareAcceleration"><value>Use hardware acceleration (GPU)</value></data>
-  <data name="Perf_HardwareAccelerationTip"><value>Turn off if your game stutters because the GPU is overloaded.</value></data>
+  <data name="Perf_HardwareAccelerationTip"><value>Use the GPU to draw the overlay and reduce CPU work. Turn off if older DirectX games flicker.</value></data>
   <data name="Perf_Priority"><value>Process priority</value></data>
   <data name="Perf_PriorityNormal"><value>Normal</value></data>
   <data name="Perf_PriorityHigh"><value>High</value></data>
   <data name="Perf_PriorityTip"><value>High: Windows gives the overlay CPU time first when the machine is at 100%, so the crosshair does not stutter. The overlay uses almost no CPU while idle, so it does not take resources from the game.</value></data>
   <data name="Data_Header"><value>DATA &amp; MAINTENANCE</value></data>
+  <data name="Fullscreen_BorderlessHint"><value>Tip: Switch the game's display mode to Borderless Windowed for the best crosshair visibility!</value></data>
+  <data name="Data_Backup"><value>Back up</value></data>
+  <data name="Data_BackupDone"><value>Data backed up.</value></data>
+  <data name="Data_Restore"><value>Restore</value></data>
+  <data name="Data_RestoreConfirm"><value>Restore this backup and restart the application?</value></data>
   <data name="Storage_Label"><value>Data storage location</value></data>
   <data name="Storage_Change"><value>Change...</value></data>
   <data name="Storage_Title"><value>Data storage location</value></data>
@@ -384,6 +400,7 @@ The app will restart to apply the change.</value></data>
 
 {0}</value></data>
   <data name="Storage_FallbackNotice"><value>The data folder {0} is not accessible. Using the default folder for now — your data is still in that folder.</value></data>
+  <data name="Storage_FallbackTitle"><value>Data folder unavailable</value></data>
   <data name="Data_OpenFolder"><value>Open data folder</value></data>
   <data name="Data_OpenFolderTip"><value>Open the folder with settings.json, your presets and crosshair images (CustomImages).</value></data>
   <data name="Data_OpenFailed"><value>Could not open the folder {0}.
@@ -404,6 +421,7 @@ The app will restart to apply the change.</value></data>
   <data name="Update_Header"><value>UPDATES</value></data>
   <data name="Hotkeys_Header"><value>HOTKEYS</value></data>
   <data name="Hw_Title"><value>SYSTEM INFORMATION</value></data>
+  <data name="Hw_AppResources"><value>Application resources</value></data>
   <data name="Hw_Os"><value>Operating system</value></data>
   <data name="Hw_Cpu"><value>CPU</value></data>
   <data name="Hw_Gpu"><value>Graphics card (GPU)</value></data>
@@ -432,7 +450,9 @@ The app will restart to apply the change.</value></data>
   <data name="Adv_FiringColor"><value>Firing color</value></data>
   <data name="Oled_Header"><value>SCREEN PROTECTION</value></data>
   <data name="Oled_PixelShift"><value>Prevent OLED image retention (Pixel Shift)</value></data>
-  <data name="Oled_PixelShiftHint"><value>Moves the crosshair by 1-2 pixels every few minutes to prevent burn-in. Has no effect on accuracy.</value></data>
+  <data name="Oled_PixelShiftHint"><value>Moves the crosshair by at most 1 physical pixel at randomized intervals of about 1.5–2.5 minutes while visible. Turn off for an exact fixed centre.</value></data>
+  <data name="SmartContrast_Enable"><value>Automatic contrast color (Smart Contrast)</value></data>
+  <data name="SmartContrast_Hint"><value>Samples near the crosshair every 250 ms while the overlay is visible to choose black or white. Does not apply to image crosshairs.</value></data>
   <data name="Preset_DragToReorder"><value>Drag to reorder. Next / Previous preset hotkeys follow this order.</value></data>
   <data name="Library_SearchPlaceholder"><value>Search by player, weapon, style...</value></data>
   <data name="Library_CatAll"><value>All</value></data>
@@ -443,6 +463,18 @@ The app will restart to apply the change.</value></data>
   <data name="Library_CatOther"><value>Tactical</value></data>
   <data name="Library_Use"><value>+ Add to presets</value></data>
   <data name="Library_Added"><value>Added {0} to your list</value></data>
+  <data name="Library_Title"><value>Crosshair Library</value></data>
+  <data name="Library_AddedToast"><value>Added {0} to your personal presets!</value></data>
+  <data name="Library_ColorFilter"><value>Filter by color</value></data>
+  <data name="Library_ColorAll"><value>All colors</value></data>
+  <data name="Library_ColorGreen"><value>Green</value></data>
+  <data name="Library_ColorRed"><value>Red</value></data>
+  <data name="Library_ColorBlue"><value>Blue</value></data>
+  <data name="Library_ColorYellow"><value>Yellow</value></data>
+  <data name="Library_ColorWhite"><value>White</value></data>
+  <data name="General_AdminLabel"><value>Administrator privileges</value></data>
+  <data name="General_AdminDescription"><value>May be needed when a game runs as Administrator; anti-cheat (Vanguard, EAC, BattlEye) can still block the overlay.</value></data>
+  <data name="Hotkeys_ExitMouseWarning"><value>⚠️ Tip: Use a keyboard shortcut instead of a side mouse button to avoid quitting during combat.</value></data>
   <data name="Library_AddFailed"><value>Could not add the template: {0}</value></data>
   <data name="Library_Loading"><value>Loading 500+ crosshair templates...</value></data>
   <data name="Library_Empty"><value>No templates match. Try another keyword or pick "All".</value></data>

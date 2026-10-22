@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using CrosshairOverlay.Core.Abstractions;
 using CrosshairOverlay.Core.Models;
 using CrosshairOverlay.Localization;
+using CrosshairOverlay.Services.Display;
 using Microsoft.Extensions.Logging;
 
 namespace CrosshairOverlay.ViewModels;
@@ -29,6 +30,8 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
         IOverlayController overlay,
         IAppSettingsService settings,
         IMonitorService monitors,
+        DisplayAnalyzerService displayAnalyzer,
+        ITrayIconController tray,
         ICrosshairRenderer renderer,
         IDialogService dialogs,
         IHotkeyService hotkeys,
@@ -60,7 +63,7 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
         _logger = logger;
 
         Editor = new CrosshairEditorViewModel(renderer, dialogs, images, settings);
-        General = new GeneralSettingsViewModel(settings, monitors, overlay, startup, updates, dialogs, paths, launcher, restart, storage, Toast);
+        General = new GeneralSettingsViewModel(settings, monitors, displayAnalyzer, tray, overlay, startup, updates, dialogs, paths, launcher, restart, storage, Toast, library);
         Hotkeys = new HotkeysViewModel(settings, hotkeys);
         Games = new GameProfilesViewModel(settings, library, watcher, matcher, scanner);
         SystemInfo = new SystemInfoViewModel(hardware, monitors, displayModes);

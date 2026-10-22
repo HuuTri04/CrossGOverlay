@@ -130,7 +130,8 @@ public sealed class CrosshairRenderer : ICrosshairRenderer
     {
         var dpi = options.DpiScale > 0 ? options.DpiScale : 1d;
         var snap = options.SnapToPixels;
-        var scale = Math.Clamp(profile.Scale, 0.1d, 10d);
+        var scale = Math.Clamp(profile.Scale, 0.1d, 10d)
+            * CrosshairLimits.Scale.Clamp(options.GlobalScale);
 
         double ToPx(double dip) => dip * scale * dpi;
         double SnapPx(double px) => snap ? Math.Round(px) : px;
@@ -320,7 +321,8 @@ public sealed class CrosshairRenderer : ICrosshairRenderer
         var snap = options.SnapToPixels && !rotated;
 
         // Số device pixel cho mỗi pixel ảnh.
-        var factor = Math.Clamp(profile.Image.Scale, 0.05d, 20d) * dpi;
+        var factor = Math.Clamp(profile.Image.Scale, 0.05d, 20d)
+            * CrosshairLimits.Scale.Clamp(options.GlobalScale) * dpi;
 
         var widthPx = image is null ? 0d : image.PixelWidth * factor;
         var heightPx = image is null ? 0d : image.PixelHeight * factor;

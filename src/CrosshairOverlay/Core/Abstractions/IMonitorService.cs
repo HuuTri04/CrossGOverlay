@@ -10,6 +10,9 @@ public interface IMonitorService : IDisposable
     /// <summary>Danh sách màn hình hiện tại (có cache, tự làm mới khi display config đổi).</summary>
     IReadOnlyList<MonitorInfo> GetMonitors();
 
+    /// <summary>Bỏ cache và đọc lại danh sách màn hình khi người dùng yêu cầu quét.</summary>
+    IReadOnlyList<MonitorInfo> RefreshMonitors();
+
     MonitorInfo GetPrimaryMonitor();
 
     MonitorInfo? GetMonitorFromWindow(nint hwnd);

@@ -72,10 +72,12 @@ public sealed partial class GameProfilesViewModel : ObservableObject, IDisposabl
 
     // ---- bảng chẩn đoán, cập nhật mỗi khi cửa sổ foreground đổi ----
 
-    [ObservableProperty] private string _detectedProcess = "—";
-    [ObservableProperty] private string _detectedTitle = "—";
-    [ObservableProperty] private string _detectedDisplayMode = "—";
-    [ObservableProperty] private string _detectedMatch = "—";
+    [ObservableProperty] private string _detectedProcess = Tr.Get("Games_None");
+    [ObservableProperty] private string _detectedTitle = Tr.Get("Games_None");
+    [ObservableProperty] private string _detectedDisplayMode = Tr.Get("Games_None");
+    [ObservableProperty] private string _detectedMatch = Tr.Get("Games_None");
+
+    [ObservableProperty] private bool _isWaitingForGame = true;
 
     /// <summary>Không đọc được tên file thực thi — gần như luôn vì tiến trình chạy quyền admin.</summary>
     [ObservableProperty] private bool _processNameBlocked;
@@ -143,6 +145,7 @@ public sealed partial class GameProfilesViewModel : ObservableObject, IDisposabl
 
         if (!window.IsValid)
         {
+            IsWaitingForGame = true;
             DetectedProcess = none;
             DetectedTitle = none;
             DetectedDisplayMode = none;
@@ -151,6 +154,7 @@ public sealed partial class GameProfilesViewModel : ObservableObject, IDisposabl
             return;
         }
 
+        IsWaitingForGame = false;
         ProcessNameBlocked = window.ProcessNameUnavailable;
 
         DetectedProcess = ProcessNameBlocked

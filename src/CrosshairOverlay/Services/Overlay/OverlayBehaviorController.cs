@@ -110,10 +110,12 @@ public sealed class OverlayBehaviorController : IDisposable
         _overlay.VisibilityChanged += OnOverlayVisibilityChanged;
 
         _overlay.SetFrameRateLimit(_settings.Current.OverlayFpsLimit);
+        _overlay.SetGlobalScale(_settings.Current.GlobalScale);
         ApplyPriority();
         ApplyInputSources();
         Update();
         UpdatePixelShift();
+        UpdateSmartContrast();
     }
 
     /// <summary>
@@ -145,6 +147,10 @@ public sealed class OverlayBehaviorController : IDisposable
                 _overlay.SetFrameRateLimit(_settings.Current.OverlayFpsLimit);
                 break;
 
+            case nameof(AppSettings.GlobalScale):
+                _overlay.SetGlobalScale(_settings.Current.GlobalScale);
+                break;
+
             case nameof(AppSettings.UseHardwareAcceleration):
                 ApplyRenderMode(_settings.Current.UseHardwareAcceleration);
                 _logger.LogInformation("Tăng tốc phần cứng: {State}.", _settings.Current.UseHardwareAcceleration ? "bật" : "tắt");
@@ -172,6 +178,10 @@ public sealed class OverlayBehaviorController : IDisposable
 
             case nameof(AppSettings.EnableOledPixelShift):
                 UpdatePixelShift();
+                break;
+
+            case nameof(AppSettings.EnableSmartContrast):
+                UpdateSmartContrast();
                 break;
         }
     }
@@ -214,6 +224,14 @@ public sealed class OverlayBehaviorController : IDisposable
     {
         var enabled = _settings.Current.EnableOledPixelShift;
 
+        // In the real app the overlay owns this clock, so hiding/disposing the overlay
+        // stops it even if the behavior controller has not been torn down yet.
+        if (_overlay is IOverlayRuntimeFeatures controller)
+        {
+            controller.ConfigureOledPixelShift(enabled);
+            return;
+        }
+
         if (!enabled)
         {
             _pixelShiftTimer?.Stop();
@@ -232,6 +250,12 @@ public sealed class OverlayBehaviorController : IDisposable
 
         if (_overlay.IsVisible) _pixelShiftTimer.Start();
         else _pixelShiftTimer.Stop();
+    }
+
+    private void UpdateSmartContrast()
+    {
+        if (_overlay is IOverlayRuntimeFeatures controller)
+            controller.ConfigureSmartContrast(_settings.Current.EnableSmartContrast);
     }
 
     /// <summary>Timer dịch pixel đang đếm (cho kiểm thử).</summary>

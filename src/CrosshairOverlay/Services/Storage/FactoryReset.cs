@@ -46,6 +46,7 @@ public static class FactoryReset
                 var extension = Path.GetExtension(file);
                 if (extension.Equals(".json", StringComparison.OrdinalIgnoreCase)
                     || extension.Equals(".tmp", StringComparison.OrdinalIgnoreCase)
+                    || extension.Equals(".bak", StringComparison.OrdinalIgnoreCase)
                     || file.EndsWith(".corrupt", StringComparison.OrdinalIgnoreCase))
                 {
                     removed += TryDelete(file, logger);

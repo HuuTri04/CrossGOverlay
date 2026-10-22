@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel;
 using System.IO;
+using System.Windows.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CrosshairOverlay.Core.Abstractions;
@@ -33,6 +34,7 @@ public sealed partial class CrosshairEditorViewModel : ObservableObject, IDispos
         // Gán thẳng vào field: đây là ĐỌC giá trị đã lưu, không được kích hoạt lưu ngược lại.
         _showCheckerboard = settings.Current.PreviewShowCheckerboard;
         _useDarkPreviewBackground = settings.Current.PreviewShowDarkBackground;
+        _ = LoadSavedPreviewBackgroundAsync(settings.Current.CustomPreviewBgPath);
 
         Types = BuildTypes();
         Shapes = BuildShapes();
@@ -52,6 +54,74 @@ public sealed partial class CrosshairEditorViewModel : ObservableObject, IDispos
 
     /// <summary>Nền tối của khung preview. Được ghi nhớ qua các lần mở app.</summary>
     [ObservableProperty] private bool _useDarkPreviewBackground;
+
+    /// <summary>Ảnh chỉ nạp khi mở Settings hoặc khi người dùng chọn; không tham gia vòng render của overlay.</summary>
+    [ObservableProperty] private BitmapSource? _customPreviewBackgroundImage;
+
+    public bool HasCustomPreviewBackground => !string.IsNullOrWhiteSpace(_settings.Current.CustomPreviewBgPath);
+
+    [RelayCommand]
+    private async Task ChoosePreviewBackgroundAsync()
+    {
+        var path = _dialogs.PickFileToOpen(
+            Tr.Get("Preview_ImageFilter"),
+            Path.GetDirectoryName(_settings.Current.CustomPreviewBgPath));
+        if (path is null) return;
+
+        var image = await TryDecodePreviewAsync(path, reportError: true);
+        if (image is null || _disposed) return;
+
+        CustomPreviewBackgroundImage = image;
+        _settings.Current.CustomPreviewBgPath = path;
+        OnPropertyChanged(nameof(HasCustomPreviewBackground));
+        SavePreviewOptions();
+    }
+
+    [RelayCommand]
+    private void ResetPreviewBackground()
+    {
+        CustomPreviewBackgroundImage = null;
+        _settings.Current.CustomPreviewBgPath = null;
+        OnPropertyChanged(nameof(HasCustomPreviewBackground));
+        SavePreviewOptions();
+    }
+
+    private async Task LoadSavedPreviewBackgroundAsync(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return;
+        var image = await TryDecodePreviewAsync(path, reportError: false);
+        if (!_disposed && _settings.Current.CustomPreviewBgPath == path)
+            CustomPreviewBackgroundImage = image;
+    }
+
+    private async Task<BitmapSource?> TryDecodePreviewAsync(string path, bool reportError)
+    {
+        try
+        {
+            return await Task.Run(() => DecodePreview(path));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException
+                                   or ArgumentException or InvalidOperationException
+                                   or System.Runtime.InteropServices.COMException)
+        {
+            if (reportError && !_disposed) _dialogs.ShowMessage(Tr.Get("Preview_ImageErrorTitle"),
+                Tr.Format("Preview_ImageError", ex.Message), isError: true);
+            return null;
+        }
+    }
+
+    private static BitmapSource DecodePreview(string path)
+    {
+        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        var bitmap = new BitmapImage();
+        bitmap.BeginInit();
+        bitmap.CacheOption = BitmapCacheOption.OnLoad;
+        bitmap.DecodePixelWidth = 1600;
+        bitmap.StreamSource = stream;
+        bitmap.EndInit();
+        bitmap.Freeze();
+        return bitmap;
+    }
 
     /// <summary>Hai chế độ: tâm ngắm tiêu chuẩn, hoặc dùng hình ảnh.</summary>
     public IReadOnlyList<LocalizedOption<CrosshairType>> Types { get; }

@@ -37,7 +37,15 @@ public sealed class PresetRepository : IPresetRepository
         var results = new List<CrosshairProfile>();
         var skipped = false;
 
-        foreach (var file in Directory.EnumerateFiles(_paths.PresetsDirectory, "*.json"))
+        var files = Directory.EnumerateFiles(_paths.PresetsDirectory, "*.json").ToList();
+        // Recover a preset even if the primary disappeared during a failed replacement.
+        foreach (var backup in Directory.EnumerateFiles(_paths.PresetsDirectory, "*.json.bak"))
+        {
+            var primary = backup[..^4];
+            if (!File.Exists(primary)) files.Add(primary);
+        }
+
+        foreach (var file in files)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -68,7 +76,7 @@ public sealed class PresetRepository : IPresetRepository
     public async Task<CrosshairProfile?> GetAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var path = PathFor(id);
-        return File.Exists(path)
+        return File.Exists(path) || File.Exists(path + ".bak")
             ? await TryReadAsync(path, cancellationToken).ConfigureAwait(false)
             : null;
     }
@@ -83,7 +91,7 @@ public sealed class PresetRepository : IPresetRepository
         await _writeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            await AtomicFile.WriteJsonAsync(PathFor(profile.Id), profile, cancellationToken)
+            await AtomicFile.WriteJsonAtomicAsync(PathFor(profile.Id), profile, cancellationToken)
                 .ConfigureAwait(false);
         }
         finally
@@ -101,9 +109,10 @@ public sealed class PresetRepository : IPresetRepository
 
         try
         {
-            if (File.Exists(path))
+            if (File.Exists(path) || File.Exists(path + ".bak"))
             {
-                File.Delete(path);
+                if (File.Exists(path)) File.Delete(path);
+                if (File.Exists(path + ".bak")) File.Delete(path + ".bak");
                 _logger.LogDebug("Đã xoá preset {Id}.", id);
                 PresetsChanged?.Invoke(this, EventArgs.Empty);
             }
@@ -164,7 +173,7 @@ public sealed class PresetRepository : IPresetRepository
     {
         try
         {
-            var preset = await AtomicFile.ReadJsonAsync<CrosshairProfile>(path, cancellationToken)
+            var preset = await AtomicFile.LoadJsonAsync<CrosshairProfile>(path, cancellationToken)
                 .ConfigureAwait(false);
 
             if (preset is null)

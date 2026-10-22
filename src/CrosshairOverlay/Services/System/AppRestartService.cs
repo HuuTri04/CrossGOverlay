@@ -18,11 +18,14 @@ public sealed class AppRestartService : IAppRestartService
         _shutdown = shutdown;
     }
 
-    public bool RestartWithFactoryReset(out string? error) => RestartCore(factoryReset: true, out error);
+    public bool RestartWithFactoryReset(out string? error) => RestartCore(factoryReset: true, null, out error);
 
-    public bool Restart(out string? error) => RestartCore(factoryReset: false, out error);
+    public bool Restart(out string? error) => RestartCore(factoryReset: false, null, out error);
 
-    private bool RestartCore(bool factoryReset, out string? error)
+    public bool RestartWithRestore(string archivePath, out string? error) =>
+        RestartCore(factoryReset: false, archivePath, out error);
+
+    private bool RestartCore(bool factoryReset, string? archivePath, out string? error)
     {
         var executable = Environment.ProcessPath;
         if (string.IsNullOrEmpty(executable))
@@ -39,6 +42,11 @@ public sealed class AppRestartService : IAppRestartService
                 WorkingDirectory = AppContext.BaseDirectory,
             };
             if (factoryReset) startInfo.ArgumentList.Add(StartupArguments.FactoryResetSwitch);
+            if (archivePath is not null)
+            {
+                startInfo.ArgumentList.Add(StartupArguments.RestoreArchiveSwitch);
+                startInfo.ArgumentList.Add(archivePath);
+            }
             startInfo.ArgumentList.Add(StartupArguments.WaitPidSwitch);
             startInfo.ArgumentList.Add(Environment.ProcessId.ToString(CultureInfo.InvariantCulture));
 

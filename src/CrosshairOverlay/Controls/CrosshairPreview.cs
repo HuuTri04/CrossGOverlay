@@ -32,6 +32,7 @@ public sealed class CrosshairPreview : FrameworkElement
     private static readonly Brush Checkerboard = CreateCheckerboard();
 
     private static readonly Brush MarkerFallback = Frozen(new SolidColorBrush(Color.FromRgb(0x00, 0xED, 0x64)));
+    private ImageBrush? _customBackdrop;
 
     private BitmapSource? _cached;
     private bool _dirty = true;
@@ -140,6 +141,26 @@ public sealed class CrosshairPreview : FrameworkElement
         set => SetValue(UseDarkBackgroundProperty, value);
     }
 
+    public static readonly DependencyProperty CustomBackgroundImageProperty = DependencyProperty.Register(
+        nameof(CustomBackgroundImage), typeof(ImageSource), typeof(CrosshairPreview),
+        new PropertyMetadata(null, OnCustomBackgroundChanged));
+
+    public ImageSource? CustomBackgroundImage
+    {
+        get => (ImageSource?)GetValue(CustomBackgroundImageProperty);
+        set => SetValue(CustomBackgroundImageProperty, value);
+    }
+
+    private static void OnCustomBackgroundChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        var preview = (CrosshairPreview)d;
+        preview._customBackdrop = e.NewValue is ImageSource source
+            ? new ImageBrush(source) { Stretch = Stretch.UniformToFill }
+            : null;
+        if (preview._customBackdrop?.CanFreeze == true) preview._customBackdrop.Freeze();
+        preview.InvalidateVisual();
+    }
+
     // ---------------------------------------------------------------- thay đổi
 
     private static void OnProfileChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -194,9 +215,9 @@ public sealed class CrosshairPreview : FrameworkElement
         if (size.Width <= 0 || size.Height <= 0) return;
 
         var area = new Rect(0, 0, size.Width, size.Height);
-        dc.DrawRectangle(UseDarkBackground ? DarkBackdrop : LightBackdrop, null, area);
+        dc.DrawRectangle(_customBackdrop ?? (UseDarkBackground ? DarkBackdrop : LightBackdrop), null, area);
 
-        if (ShowCheckerboard) dc.DrawRectangle(Checkerboard, null, area);
+        if (_customBackdrop is null && ShowCheckerboard) dc.DrawRectangle(Checkerboard, null, area);
 
         var cx = Math.Round(size.Width / 2d);
         var cy = Math.Round(size.Height / 2d);

@@ -1,66 +1,89 @@
 using System.IO;
-using System.Text;
 using System.Text.Json;
 
 namespace CrosshairOverlay.Services.Storage;
 
-/// <summary>
-/// Ghi file JSON theo kiểu ghi-tạm-rồi-thay-thế.
-/// </summary>
-/// <remarks>
-/// Ghi thẳng đè lên file cũ có nghĩa là mất điện hoặc app bị kill giữa chừng sẽ để lại một
-/// file JSON cụt — người dùng mất toàn bộ preset. Ghi ra file tạm rồi <see cref="File.Move"/>
-/// đè lên thì thao tác thay thế là nguyên tử ở mức hệ thống file, nên file đích luôn ở một
-/// trong hai trạng thái hợp lệ: nội dung cũ, hoặc nội dung mới.
-/// </remarks>
+/// <summary>Writes JSON through a temporary file and keeps the previous valid generation.</summary>
 internal static class AtomicFile
 {
-    private static readonly UTF8Encoding Utf8NoBom = new(encoderShouldEmitUTF8Identifier: false);
-
-    public static async Task WriteJsonAsync<T>(
-        string path, T value, CancellationToken cancellationToken = default)
+    public static async Task WriteJsonAtomicAsync<T>(
+        string filePath, T data, CancellationToken cancellationToken = default) where T : class
     {
-        var directory = Path.GetDirectoryName(path);
+        var directory = Path.GetDirectoryName(filePath);
         if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
 
-        var json = JsonSerializer.Serialize(value, AppJson.Options);
-        var tempPath = path + ".tmp";
+        var tempPath = filePath + ".tmp";
+        var backupPath = filePath + ".bak";
+        try
+        {
+            await using (var stream = new FileStream(tempPath, FileMode.Create, FileAccess.Write,
+                FileShare.None, 4096, FileOptions.Asynchronous))
+            {
+                await JsonSerializer.SerializeAsync(stream, data, AppJson.Options, cancellationToken)
+                    .ConfigureAwait(false);
+                await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
+                stream.Flush(flushToDisk: true);
+            }
 
-        await File.WriteAllTextAsync(tempPath, json, Utf8NoBom, cancellationToken)
-            .ConfigureAwait(false);
-
-        File.Move(tempPath, path, overwrite: true);
+            if (File.Exists(filePath))
+            {
+                // Preserve a good backup if the primary was already corrupt.
+                if (await IsReadableAsync<T>(filePath, cancellationToken).ConfigureAwait(false))
+                    File.Replace(tempPath, filePath, backupPath);
+                else
+                    File.Move(tempPath, filePath, overwrite: true);
+            }
+            else
+            {
+                File.Move(tempPath, filePath);
+            }
+        }
+        finally
+        {
+            try { if (File.Exists(tempPath)) File.Delete(tempPath); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        }
     }
 
-    public static async Task<T?> ReadJsonAsync<T>(
-        string path, CancellationToken cancellationToken = default)
+    public static async Task<T?> LoadJsonAsync<T>(
+        string filePath, CancellationToken cancellationToken = default) where T : class
     {
-        if (!File.Exists(path)) return default;
-
-        var json = await File.ReadAllTextAsync(path, cancellationToken).ConfigureAwait(false);
-        if (string.IsNullOrWhiteSpace(json)) return default;
-
-        return JsonSerializer.Deserialize<T>(json, AppJson.Options);
+        var primary = await TryReadAsync<T>(filePath, cancellationToken).ConfigureAwait(false);
+        if (primary is not null) return primary;
+        return await TryReadAsync<T>(filePath + ".bak", cancellationToken).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Dọn file <c>.tmp</c> còn sót lại từ lần ghi bị ngắt giữa chừng. Lỗi ở đây không quan trọng.
-    /// </summary>
+    private static async Task<bool> IsReadableAsync<T>(string path, CancellationToken cancellationToken) where T : class =>
+        await TryReadAsync<T>(path, cancellationToken).ConfigureAwait(false) is not null;
+
+    private static async Task<T?> TryReadAsync<T>(string path, CancellationToken cancellationToken) where T : class
+    {
+        try
+        {
+            if (!File.Exists(path)) return default;
+            await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read,
+                4096, FileOptions.Asynchronous);
+            return await JsonSerializer.DeserializeAsync<T>(stream, AppJson.Options, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+        {
+            return default;
+        }
+    }
+
     public static void CleanupTemporaries(string directory)
     {
         try
         {
             if (!Directory.Exists(directory)) return;
-
             foreach (var file in Directory.EnumerateFiles(directory, "*.tmp"))
             {
                 try { File.Delete(file); }
-                catch (IOException) { /* file đang bị giữ, để lần sau */ }
+                catch (IOException) { }
                 catch (UnauthorizedAccessException) { }
             }
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
     }
 }

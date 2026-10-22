@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -5,6 +6,7 @@ using CrosshairOverlay.Core.Abstractions;
 using CrosshairOverlay.Core.Models;
 using CrosshairOverlay.Localization;
 using CrosshairOverlay.Services.Presets;
+using CrosshairOverlay.Services.Storage;
 using Microsoft.Extensions.Logging;
 
 namespace CrosshairOverlay.ViewModels;
@@ -32,10 +34,12 @@ public sealed partial class PresetLibraryViewModel : ObservableObject, IDisposab
     private readonly IPresetCatalogService _catalog;
     private readonly IPresetLibrary _library;
     private readonly ILogger<PresetLibraryViewModel> _logger;
+    private readonly ITrayIconController? _tray;
 
     private readonly Dictionary<Guid, CatalogItemViewModel> _items = [];
     private IReadOnlyList<CatalogItemViewModel> _filtered = [];
     private string _selectedCategory = CatalogCategories.All;
+    private LibraryColorFilter _selectedColorFilter;
     private int _columnCount = 4;
     private bool _disposed;
 
@@ -43,12 +47,23 @@ public sealed partial class PresetLibraryViewModel : ObservableObject, IDisposab
         IPresetCatalogService catalog,
         IPresetLibrary library,
         ICrosshairRenderer renderer,
-        ILogger<PresetLibraryViewModel> logger)
+        ILogger<PresetLibraryViewModel> logger,
+        ITrayIconController? tray = null)
     {
         _catalog = catalog;
         _library = library;
         _logger = logger;
+        _tray = tray;
         Renderer = renderer;
+        ColorFilters =
+        [
+            new(LibraryColorFilter.All, "Library_ColorAll"),
+            new(LibraryColorFilter.Green, "Library_ColorGreen"),
+            new(LibraryColorFilter.Red, "Library_ColorRed"),
+            new(LibraryColorFilter.Blue, "Library_ColorBlue"),
+            new(LibraryColorFilter.Yellow, "Library_ColorYellow"),
+            new(LibraryColorFilter.White, "Library_ColorWhite"),
+        ];
 
         // Dịch vụ luôn trả danh sách cố định, nhưng ViewModel không được sập nếu nó trả rỗng.
         var keys = catalog.GetCategories() is { Count: > 0 } fromService ? fromService : CatalogCategories.Ordered;
@@ -56,12 +71,24 @@ public sealed partial class PresetLibraryViewModel : ObservableObject, IDisposab
 
         // Chip đầu tiên ("Tất cả") ứng với bộ lọc mặc định; đánh dấu thẳng, không đi vòng qua SelectCategory.
         Categories[0].SetSelectedSilently(true);
+        TranslationSource.Instance.PropertyChanged += OnLanguageChanged;
     }
 
     /// <summary>Renderer dùng chung với overlay, cho ảnh thu nhỏ của từng thẻ.</summary>
     public ICrosshairRenderer Renderer { get; }
 
     public IReadOnlyList<CategoryChipViewModel> Categories { get; }
+    public IReadOnlyList<LocalizedOption<LibraryColorFilter>> ColorFilters { get; }
+
+    public LibraryColorFilter SelectedColorFilter
+    {
+        get => _selectedColorFilter;
+        set
+        {
+            if (!SetProperty(ref _selectedColorFilter, value)) return;
+            ApplyFilter();
+        }
+    }
 
     /// <summary>Thông báo "Đã thêm …" ở góc dưới; người dùng ở lại tab để chọn tiếp mẫu khác.</summary>
     public ToastViewModel Toast { get; } = new();
@@ -115,6 +142,12 @@ public sealed partial class PresetLibraryViewModel : ObservableObject, IDisposab
 
     partial void OnSearchTextChanged(string value) => ApplyFilter();
 
+    private void OnLanguageChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        foreach (var option in ColorFilters) option.Refresh();
+        ApplyFilter();
+    }
+
     internal void SelectCategory(string key)
     {
         if (_selectedCategory == key) return;
@@ -131,6 +164,7 @@ public sealed partial class PresetLibraryViewModel : ObservableObject, IDisposab
         if (IsLoading) return;
 
         _filtered = [.. _catalog.FilterPresets(SearchText, _selectedCategory)
+            .Where(p => MatchesColor(p.Color, _selectedColorFilter))
             .Select(p => _items.TryGetValue(p.Id, out var item) ? item : null)
             .OfType<CatalogItemViewModel>()];
 
@@ -138,6 +172,23 @@ public sealed partial class PresetLibraryViewModel : ObservableObject, IDisposab
         IsEmpty = _filtered.Count == 0;
         EmptyText = _items.Count == 0 ? Tr.Get("Library_Missing") : Tr.Get("Library_Empty");
         RebuildRows();
+    }
+
+    internal static bool MatchesColor(string hex, LibraryColorFilter filter)
+    {
+        if (filter == LibraryColorFilter.All) return true;
+        var color = JsonColorConverter.Parse(hex);
+        if (color is null) return false;
+        var (r, g, b) = ((int)color.Value.R, (int)color.Value.G, (int)color.Value.B);
+        return filter switch
+        {
+            LibraryColorFilter.White => Math.Min(r, Math.Min(g, b)) >= 180 && Math.Max(r, Math.Max(g, b)) - Math.Min(r, Math.Min(g, b)) <= 50,
+            LibraryColorFilter.Yellow => r >= 150 && g >= 120 && b < Math.Min(r, g) * 0.65,
+            LibraryColorFilter.Green => g >= 80 && g > r * 1.2 && g > b * 1.2,
+            LibraryColorFilter.Red => r >= 80 && r > g * 1.2 && r > b * 1.2,
+            LibraryColorFilter.Blue => b >= 80 && b > r * 1.2 && b >= g * 0.9,
+            _ => false,
+        };
     }
 
     private void RebuildRows()
@@ -170,6 +221,7 @@ public sealed partial class PresetLibraryViewModel : ObservableObject, IDisposab
 
             _logger.LogInformation("Thêm mẫu '{Template}' từ thư viện thành preset '{Name}'.", item.Name, added.Name);
             Toast.Show(Tr.Format("Library_Added", added.Name));
+            _tray?.ShowNotification(Tr.Get("Library_Title"), Tr.Format("Library_AddedToast", added.Name));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
@@ -193,9 +245,12 @@ public sealed partial class PresetLibraryViewModel : ObservableObject, IDisposab
         if (_disposed) return;
         _disposed = true;
 
+        TranslationSource.Instance.PropertyChanged -= OnLanguageChanged;
         Toast.Dispose();
     }
 }
+
+public enum LibraryColorFilter { All, Green, Red, Blue, Yellow, White }
 
 /// <summary>Một hàng của lưới thẻ.</summary>
 /// <remarks>

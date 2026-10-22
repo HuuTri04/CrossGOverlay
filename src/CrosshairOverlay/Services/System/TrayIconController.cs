@@ -4,8 +4,8 @@ using CrosshairOverlay.Core;
 using CrosshairOverlay.Core.Abstractions;
 using CrosshairOverlay.Localization;
 using CrosshairOverlay.ViewModels;
+using CrosshairOverlay.Views;
 using H.NotifyIcon;
-using H.NotifyIcon.Core;
 using Microsoft.Extensions.Logging;
 
 namespace CrosshairOverlay.Services.System;
@@ -18,10 +18,12 @@ public sealed class TrayIconController : ITrayIconController
     private TaskbarIcon? _icon;
     private TrayMenuViewModel? _menu;
     private global::System.Drawing.Icon? _currentIcon;
+    private SystemTrayToastWindow? _toast;
     private string _activePresetName = "—";
     private bool _overlayEnabled = true;
     private bool _overlayVisible = true;
     private bool _disposed;
+    private int _iconCleanupStarted;
 
     public TrayIconController(ILogger<TrayIconController> logger) => _logger = logger;
 
@@ -68,6 +70,9 @@ public sealed class TrayIconController : ITrayIconController
         _icon.TrayMouseDoubleClick += (_, _) => OpenSettingsRequested?.Invoke(this, EventArgs.Empty);
         _icon.ForceCreate();
 
+        AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
+        AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
+
         _logger.LogInformation("Tray icon đã khởi tạo.");
     }
 
@@ -113,19 +118,30 @@ public sealed class TrayIconController : ITrayIconController
 
     public void ShowNotification(string title, string message, bool isWarning = false)
     {
-        if (_icon is null) return;
+        if (_icon is null || _disposed) return;
+
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher is null || dispatcher.HasShutdownStarted) return;
+        if (!dispatcher.CheckAccess())
+        {
+            dispatcher.BeginInvoke(new Action(() => ShowNotification(title, message, isWarning)));
+            return;
+        }
 
         try
         {
-            _icon.ShowNotification(
-                title,
-                message,
-                isWarning ? NotificationIcon.Warning : NotificationIcon.Info);
+            _toast?.Close();
+            var toast = new SystemTrayToastWindow(title, message,
+                () => OpenSettingsRequested?.Invoke(this, EventArgs.Empty));
+            toast.Closed += (_, _) => { if (ReferenceEquals(_toast, toast)) _toast = null; };
+            _toast = toast;
+            toast.ShowToast();
         }
         catch (Exception ex)
         {
-            // Bong bóng thông báo có thể bị chính sách hệ thống hoặc Focus Assist chặn.
-            _logger.LogDebug(ex, "Không hiển thị được thông báo khay hệ thống.");
+            _toast?.Close();
+            _toast = null;
+            _logger.LogDebug(ex, "Không hiển thị được thông báo khay tùy chỉnh.");
         }
     }
 
@@ -134,15 +150,40 @@ public sealed class TrayIconController : ITrayIconController
         if (_disposed) return;
         _disposed = true;
 
+        AppDomain.CurrentDomain.UnhandledException -= OnUnhandledException;
+        AppDomain.CurrentDomain.ProcessExit -= OnProcessExit;
+
         TranslationSource.Instance.PropertyChanged -= OnLanguageChanged;
+
+        _toast?.Close();
+        _toast = null;
 
         _menu?.Dispose();
         _menu = null;
 
-        _icon?.Dispose();
-        _icon = null;
+        CleanupTrayIcon();
 
         _currentIcon?.Dispose();
         _currentIcon = null;
+    }
+
+    private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e) => CleanupTrayIcon();
+
+    private void OnProcessExit(object? sender, EventArgs e) => CleanupTrayIcon();
+
+    private void CleanupTrayIcon()
+    {
+        if (Interlocked.Exchange(ref _iconCleanupStarted, 1) != 0) return;
+
+        var icon = _icon;
+        _icon = null;
+        if (icon is null) return;
+
+        // H.NotifyIcon dùng Visibility thay cho NotifyIcon.Visible. Dispose gửi NIM_DELETE
+        // đến Explorer; cố gắng gọi cả hai kể cả khi quá trình thoát đang ở luồng nền.
+        try { icon.Visibility = Visibility.Collapsed; }
+        catch (Exception) { /* Dispatcher có thể đã dừng khi ProcessExit chạy. */ }
+        try { icon.Dispose(); }
+        catch (Exception) { /* Không để lỗi dọn icon cản quá trình thoát. */ }
     }
 }

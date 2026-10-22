@@ -112,6 +112,7 @@
     -->
     <Resource Include="images\app.ico" />
     <Resource Include="images\BrandingLogo.ico" />
+    <Resource Include="Resources\icon.png" />
   </ItemGroup>
 
   <ItemGroup>

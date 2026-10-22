@@ -122,8 +122,6 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
             return;
         }
 
-        WarnIfExclusiveFullscreen(window);
-
         if (IsTestTarget(window))
         {
             // Test tâm ngắm: người dùng muốn thấy preset ĐANG CHỈNH. Không đổi preset theo game
@@ -149,6 +147,13 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
             ClearMatch();
             return;
         }
+
+        WarnIfExclusiveFullscreen(window);
+
+        var needsTopmost = ActiveGameProfile?.Id != match.Id
+            || _matchedProcessId != window.ProcessId
+            || e.Previous.Handle != window.Handle
+            || !_overlay.IsVisible;
 
         ActiveGameProfile = match;
         _matchedProcessId = window.ProcessId;
@@ -189,6 +194,10 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
         }
 
         ApplyVisibility();
+        if (_overlay.IsVisible && _overlay is IOverlayForegroundTarget target)
+            target.OnForegroundGameChanged(window.Handle);
+        if (needsTopmost && _overlay.IsVisible && _overlay is IOverlayZOrder zOrder)
+            zOrder.ReassertTopmost();
     }
 
     /// <summary>Cửa sổ game đang khớp vừa đóng, hoặc tiến trình game đã thoát.</summary>

@@ -58,6 +58,9 @@ public interface IOverlayController : IDisposable
     /// <param name="framesPerSecond">60, 120, 144…; 0 hoặc âm là không giới hạn.</param>
     void SetFrameRateLimit(int framesPerSecond);
 
+    /// <summary>Áp tỉ lệ kích thước chung, không sửa các preset.</summary>
+    void SetGlobalScale(double scale);
+
     /// <summary>
     /// Vẽ tâm ngắm bằng màu khác màu của preset (vd trong lúc giữ chuột trái); null là trả về màu preset.
     /// </summary>
@@ -79,4 +82,16 @@ public interface IOverlayController : IDisposable
 public sealed class OverlayVisibilityChangedEventArgs(bool isVisible) : EventArgs
 {
     public bool IsVisible { get; } = isVisible;
+}
+
+/// <summary>Raises a visible overlay above newly activated topmost windows without taking focus.</summary>
+public interface IOverlayZOrder
+{
+    void ReassertTopmost();
+}
+
+/// <summary>Notifies the overlay of an actual foreground game transition.</summary>
+public interface IOverlayForegroundTarget
+{
+    void OnForegroundGameChanged(nint windowHandle);
 }

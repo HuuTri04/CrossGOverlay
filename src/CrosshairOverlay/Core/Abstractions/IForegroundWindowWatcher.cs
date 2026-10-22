@@ -3,7 +3,8 @@
 namespace CrosshairOverlay.Core.Abstractions;
 
 /// <summary>
-/// Theo dõi cửa sổ đang active bằng <c>SetWinEventHook(EVENT_SYSTEM_FOREGROUND, WINEVENT_OUTOFCONTEXT)</c>.
+/// Theo dõi cửa sổ đang active bằng <c>SetWinEventHook(EVENT_SYSTEM_FOREGROUND, WINEVENT_OUTOFCONTEXT)</c>
+/// cùng lượt kiểm tra dự phòng mỗi giây.
 /// </summary>
 /// <remarks>
 /// Cờ <c>WINEVENT_OUTOFCONTEXT</c> là điểm mấu chốt: callback chạy trong tiến trình của

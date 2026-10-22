@@ -6,7 +6,7 @@ using CrosshairOverlay.Services.Storage;
 
 namespace CrosshairOverlay.Controls;
 
-/// <summary>Một ô màu bấm vào mở bảng chọn: swatch dựng sẵn, slider RGBA và ô nhập hex.</summary>
+/// <summary>Một ô màu bấm vào mở bảng chọn: swatch dựng sẵn, slider RGB và ô nhập hex.</summary>
 /// <remarks>
 /// Tự viết thay vì kéo thêm thư viện: crosshair chỉ cần vài màu tương phản cao, nên bảng swatch
 /// cộng slider giải quyết gần hết nhu cầu, và không thêm một dependency chỉ để chọn màu.
@@ -21,6 +21,20 @@ public partial class ColorPickerButton : UserControl
         InitializeComponent();
         SwatchList.ItemsSource = CreateSwatches();
         Loaded += (_, _) => Refresh();
+    }
+
+    private void OnChannelLabelMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Left || sender is not FrameworkElement label) return;
+
+        var slider = Grid.GetRow(label) switch
+        {
+            0 => RedSlider,
+            1 => GreenSlider,
+            2 => BlueSlider,
+            _ => null,
+        };
+        if (slider?.Focus() == true) e.Handled = true;
     }
 
     public static readonly DependencyProperty SelectedColorProperty = DependencyProperty.Register(
@@ -43,11 +57,11 @@ public partial class ColorPickerButton : UserControl
     {
         var color = SelectedColor;
 
-        var brush = new SolidColorBrush(color);
+        var brush = new SolidColorBrush(Color.FromRgb(color.R, color.G, color.B));
         brush.Freeze();
         Swatch.Background = brush;
 
-        HexLabel.Text = JsonColorConverter.ToHex(color);
+        HexLabel.Text = JsonColorConverter.ToRgbHex(color);
 
         if (_updating) return;
 
@@ -57,8 +71,7 @@ public partial class ColorPickerButton : UserControl
             RedSlider.Value = color.R;
             GreenSlider.Value = color.G;
             BlueSlider.Value = color.B;
-            AlphaSlider.Value = color.A;
-            HexBox.Text = JsonColorConverter.ToHex(color);
+            HexBox.Text = JsonColorConverter.ToRgbHex(color);
             UpdateChannelLabels();
         }
         finally
@@ -72,7 +85,6 @@ public partial class ColorPickerButton : UserControl
         RedValue.Text = ((int)RedSlider.Value).ToString();
         GreenValue.Text = ((int)GreenSlider.Value).ToString();
         BlueValue.Text = ((int)BlueSlider.Value).ToString();
-        AlphaValue.Text = ((int)AlphaSlider.Value).ToString();
     }
 
     private void OnOpenClick(object sender, RoutedEventArgs e) => PickerPopup.IsOpen = !PickerPopup.IsOpen;
@@ -86,13 +98,12 @@ public partial class ColorPickerButton : UserControl
         {
             UpdateChannelLabels();
 
-            SelectedColor = Color.FromArgb(
-                (byte)AlphaSlider.Value,
+            SelectedColor = Color.FromRgb(
                 (byte)RedSlider.Value,
                 (byte)GreenSlider.Value,
                 (byte)BlueSlider.Value);
 
-            HexBox.Text = JsonColorConverter.ToHex(SelectedColor);
+            HexBox.Text = JsonColorConverter.ToRgbHex(SelectedColor);
         }
         finally
         {
@@ -103,12 +114,13 @@ public partial class ColorPickerButton : UserControl
         var brush = new SolidColorBrush(SelectedColor);
         brush.Freeze();
         Swatch.Background = brush;
-        HexLabel.Text = JsonColorConverter.ToHex(SelectedColor);
+        HexLabel.Text = JsonColorConverter.ToRgbHex(SelectedColor);
     }
 
     private void OnSwatchClick(object sender, MouseButtonEventArgs e)
     {
-        if (sender is FrameworkElement { Tag: Color color }) SelectedColor = color;
+        if (sender is FrameworkElement { Tag: Color color })
+            SelectedColor = Color.FromRgb(color.R, color.G, color.B);
     }
 
     private void OnHexKeyDown(object sender, KeyEventArgs e)
@@ -126,8 +138,8 @@ public partial class ColorPickerButton : UserControl
         var parsed = JsonColorConverter.Parse(HexBox.Text);
 
         // Nhập sai thì lặng lẽ trả về giá trị hiện tại — không quấy rầy bằng hộp thoại lỗi.
-        if (parsed is { } color) SelectedColor = color;
-        else HexBox.Text = JsonColorConverter.ToHex(SelectedColor);
+        if (parsed is { } color) SelectedColor = Color.FromRgb(color.R, color.G, color.B);
+        else HexBox.Text = JsonColorConverter.ToRgbHex(SelectedColor);
     }
 
     private static List<SwatchItem> CreateSwatches()

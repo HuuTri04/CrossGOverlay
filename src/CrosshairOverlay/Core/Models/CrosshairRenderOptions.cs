@@ -14,11 +14,13 @@ namespace CrosshairOverlay.Core.Models;
 /// Vẽ bằng màu này thay cho màu của preset (vd màu khi bắn). Chỉ ảnh hưởng hình vẽ lần này, không đụng
 /// tới preset. Viền giữ màu riêng để tâm vẫn nổi trên nền; tâm ngắm ảnh không có màu nên không đổi.
 /// </param>
+/// <param name="GlobalScale">Tỉ lệ áp dụng cho overlay; preview giữ mặc định 1.</param>
 public readonly record struct CrosshairRenderOptions(
     double DpiScale = 1d,
     bool SnapToPixels = true,
     double MaxExtent = 2000d,
-    System.Windows.Media.Color? ColorOverride = null)
+    System.Windows.Media.Color? ColorOverride = null,
+    double GlobalScale = 1d)
 {
     public static CrosshairRenderOptions Default { get; } = new();
 }

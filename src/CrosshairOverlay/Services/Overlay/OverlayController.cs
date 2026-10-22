@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 namespace CrosshairOverlay.Services.Overlay;
 
 /// <inheritdoc cref="IOverlayController"/>
-public sealed class OverlayController : IOverlayController
+public sealed class OverlayController : IOverlayController, IOverlayRuntimeFeatures, IOverlayZOrder, IOverlayForegroundTarget
 {
     /// <summary>
     /// Chu kỳ khẳng định lại vị trí topmost. Game vào fullscreen hoặc app khác bật topmost
@@ -22,9 +22,12 @@ public sealed class OverlayController : IOverlayController
     private readonly ICrosshairRenderer _renderer;
     private readonly IMonitorService _monitors;
     private readonly ILogger<OverlayController> _logger;
+    private readonly ScreenColorSamplerService _screenSampler;
     private readonly Dispatcher _dispatcher;
 
     private readonly RenderThrottle _rebuildThrottle;
+    private OledPixelShiftTimer? _oledPixelShift;
+    private bool _oledPixelShiftEnabled;
 
     private OverlayWindow? _window;
     /// <summary>
@@ -49,8 +52,11 @@ public sealed class OverlayController : IOverlayController
     private MonitorInfo? _monitor;
     private MonitorSelectionMode _selectionMode = MonitorSelectionMode.FollowForegroundWindow;
     private string? _targetDeviceName;
+    private double _globalScale = 1d;
 
     private global::System.Windows.Media.Color? _colorOverride;
+    private global::System.Windows.Media.Color? _smartContrastColor;
+    private bool _smartContrastEnabled;
 
     /// <summary>Dịch chống lưu ảnh, physical pixel.</summary>
     private int _shiftX;
@@ -67,13 +73,16 @@ public sealed class OverlayController : IOverlayController
     public OverlayController(
         ICrosshairRenderer renderer,
         IMonitorService monitors,
+        ScreenColorSamplerService screenSampler,
         ILogger<OverlayController> logger)
     {
         _renderer = renderer;
         _monitors = monitors;
+        _screenSampler = screenSampler;
         _logger = logger;
         _dispatcher = Dispatcher.CurrentDispatcher;
         _rebuildThrottle = new RenderThrottle(_dispatcher, Rebuild);
+        _screenSampler.ContrastColorChanged += OnContrastColorChanged;
     }
 
     public bool IsVisible => _visible;
@@ -86,6 +95,7 @@ public sealed class OverlayController : IOverlayController
 
     public void Initialize()
     {
+        if (DispatchToUi(Initialize)) return;
         ThrowIfDisposed();
         if (_window is not null) return;
 
@@ -114,6 +124,7 @@ public sealed class OverlayController : IOverlayController
     public void SetProfile(CrosshairProfile profile)
     {
         ArgumentNullException.ThrowIfNull(profile);
+        if (DispatchToUi(() => SetProfile(profile))) return;
         ThrowIfDisposed();
 
         if (ReferenceEquals(_profile, profile)) return;
@@ -121,6 +132,7 @@ public sealed class OverlayController : IOverlayController
         if (_profile is not null) HookProfile(_profile, subscribe: false);
         _profile = profile;
         HookProfile(_profile, subscribe: true);
+        UpdateScreenSampler();
 
         _logger.LogDebug("Overlay đổi sang preset '{Name}' ({Id}).", profile.Name, profile.Id);
         Invalidate();
@@ -128,11 +140,14 @@ public sealed class OverlayController : IOverlayController
 
     public void SetVisible(bool visible)
     {
+        if (DispatchToUi(() => SetVisible(visible))) return;
         ThrowIfDisposed();
         if (_window is null) Initialize();
         if (_visible == visible) return;
 
         _visible = visible;
+        _oledPixelShift?.Configure(_oledPixelShiftEnabled, visible);
+        UpdateScreenSampler();
 
         if (visible)
         {
@@ -164,8 +179,38 @@ public sealed class OverlayController : IOverlayController
 
     public void Toggle() => SetVisible(!_visible);
 
+    public void ReassertTopmost()
+    {
+        if (DispatchToUi(ReassertTopmost)) return;
+        if (_disposed || !_visible || _window is null) return;
+
+        if (!_window.ReassertTopmost())
+            _logger.LogDebug("Không đưa được overlay lên topmost (Win32 error {Error}).",
+                Marshal.GetLastWin32Error());
+    }
+
+    public void OnForegroundGameChanged(nint windowHandle)
+    {
+        if (DispatchToUi(() => OnForegroundGameChanged(windowHandle))) return;
+        if (_disposed || !_visible || _selectionMode != MonitorSelectionMode.FollowForegroundWindow
+            || windowHandle == 0) return;
+
+        // MonitorFromWindow resolves the game's physical monitor. Its effective DPI comes from
+        // GetDpiForMonitor in MonitorService; GetDpiForWindow can be virtualized for older games,
+        // so it must not determine the overlay's own pixel-to-DIP transform.
+        var target = _monitors.GetMonitorFromWindow(windowHandle);
+        if (target is null || target.Value.Equals(_monitor)) return;
+
+        _logger.LogDebug("Game moved to {Monitor}; game window DPI {Dpi}.",
+            target.Value.DeviceName, NativeMethods.GetDpiForWindow(windowHandle));
+        _monitor = target;
+        Invalidate();
+        _rebuildThrottle.Flush();
+    }
+
     public void SetSuppressed(bool suppressed)
     {
+        if (DispatchToUi(() => SetSuppressed(suppressed))) return;
         ThrowIfDisposed();
         if (_suppressed == suppressed) return;
 
@@ -177,6 +222,7 @@ public sealed class OverlayController : IOverlayController
 
     public void SetFrameRateLimit(int framesPerSecond)
     {
+        if (DispatchToUi(() => SetFrameRateLimit(framesPerSecond))) return;
         ThrowIfDisposed();
 
         var interval = FrameInterval(framesPerSecond);
@@ -187,8 +233,19 @@ public sealed class OverlayController : IOverlayController
             "Giới hạn khung hình overlay: {Limit}.", framesPerSecond > 0 ? $"{framesPerSecond} FPS" : "không giới hạn");
     }
 
+    public void SetGlobalScale(double scale)
+    {
+        if (DispatchToUi(() => SetGlobalScale(scale))) return;
+        ThrowIfDisposed();
+        scale = CrosshairLimits.Scale.Clamp(scale);
+        if (Math.Abs(_globalScale - scale) < 0.0001d) return;
+        _globalScale = scale;
+        Invalidate();
+    }
+
     public void SetColorOverride(global::System.Windows.Media.Color? color)
     {
+        if (DispatchToUi(() => SetColorOverride(color))) return;
         ThrowIfDisposed();
         if (Nullable.Equals(_colorOverride, color)) return;
 
@@ -206,6 +263,7 @@ public sealed class OverlayController : IOverlayController
 
     public void SetPixelShift(int dx, int dy)
     {
+        if (DispatchToUi(() => SetPixelShift(dx, dy))) return;
         ThrowIfDisposed();
         if (_shiftX == dx && _shiftY == dy) return;
 
@@ -219,12 +277,52 @@ public sealed class OverlayController : IOverlayController
         _logger.LogDebug("Dịch overlay chống lưu ảnh: ({X}, {Y}) px.", dx, dy);
     }
 
+    public void ConfigureOledPixelShift(bool enabled)
+    {
+        if (DispatchToUi(() => ConfigureOledPixelShift(enabled))) return;
+        ThrowIfDisposed();
+        _oledPixelShiftEnabled = enabled;
+        if (enabled && _oledPixelShift is null)
+            _oledPixelShift = new OledPixelShiftTimer(_dispatcher, SetPixelShift,
+                OverlayBehaviorController.PixelShiftInterval);
+        _oledPixelShift?.Configure(enabled, _visible);
+    }
+
+    public void ConfigureSmartContrast(bool enabled)
+    {
+        if (DispatchToUi(() => ConfigureSmartContrast(enabled))) return;
+        ThrowIfDisposed();
+        _smartContrastEnabled = enabled;
+        UpdateScreenSampler();
+        if (!enabled && _smartContrastColor is not null)
+        {
+            _smartContrastColor = null;
+            Invalidate();
+        }
+    }
+
+    private void UpdateScreenSampler()
+    {
+        if (_smartContrastEnabled && _visible && _profile?.Type != CrosshairType.Image)
+            _screenSampler.Start(() => _monitor?.PhysicalCenter ?? new Point(0, 0));
+        else
+            _screenSampler.Stop();
+    }
+
+    private void OnContrastColorChanged(object? sender, global::System.Windows.Media.Color color)
+    {
+        if (!_smartContrastEnabled || !_visible || _smartContrastColor == color) return;
+        _smartContrastColor = color;
+        if (_colorOverride is null) Invalidate();
+    }
+
     /// <summary>1000 ms / FPS (60 FPS ≈ 16,7 ms); không giới hạn là 0.</summary>
     internal static TimeSpan FrameInterval(int framesPerSecond) =>
         framesPerSecond > 0 ? TimeSpan.FromMilliseconds(1000d / framesPerSecond) : TimeSpan.Zero;
 
     public void MoveToMonitor(MonitorInfo monitor)
     {
+        if (DispatchToUi(() => MoveToMonitor(monitor))) return;
         ThrowIfDisposed();
         _monitor = monitor;
         _selectionMode = MonitorSelectionMode.Specific;
@@ -234,6 +332,7 @@ public sealed class OverlayController : IOverlayController
 
     public void SetMonitorSelection(MonitorSelectionMode mode, string? targetDeviceName)
     {
+        if (DispatchToUi(() => SetMonitorSelection(mode, targetDeviceName))) return;
         ThrowIfDisposed();
         _selectionMode = mode;
         _targetDeviceName = targetDeviceName;
@@ -251,6 +350,7 @@ public sealed class OverlayController : IOverlayController
     /// </remarks>
     public void Invalidate()
     {
+        if (DispatchToUi(Invalidate)) return;
         if (_disposed || _window is null || _profile is null) return;
 
         _rebuildThrottle.Request();
@@ -278,12 +378,13 @@ public sealed class OverlayController : IOverlayController
                 MaxExtent: Math.Max(
                     monitor.Bounds.Width / monitor.DpiScaleX,
                     monitor.Bounds.Height / monitor.DpiScaleY),
-                ColorOverride: _colorOverride);
+                ColorOverride: _colorOverride ?? _smartContrastColor,
+                GlobalScale: _globalScale);
 
             var contentSize = _renderer.Measure(_profile, options);
             var drawing = _renderer.Build(_profile, options);
 
-            _window.Host.SetAliasing(_renderer.PrefersAliasedEdges(_profile));
+            _window.SetAliasedVectorEdges(_renderer.PrefersAliasedEdges(_profile));
             _window.Host.SetDrawing(drawing);
             _lastContentSize = contentSize;
             ApplyPlacement(monitor, contentSize);
@@ -433,12 +534,25 @@ public sealed class OverlayController : IOverlayController
 
     private void ThrowIfDisposed() => ObjectDisposedException.ThrowIf(_disposed, this);
 
+    private bool DispatchToUi(Action action)
+    {
+        if (_dispatcher.CheckAccess()) return false;
+        if (!_disposed && !_dispatcher.HasShutdownStarted)
+            _dispatcher.BeginInvoke(new Action(() => { if (!_disposed) action(); }), DispatcherPriority.Normal);
+        return true;
+    }
+
     public void Dispose()
     {
+        if (DispatchToUi(Dispose)) return;
         if (_disposed) return;
         _disposed = true;
 
         _monitors.DisplayConfigurationChanged -= OnDisplayConfigurationChanged;
+        _screenSampler.Stop();
+        _screenSampler.ContrastColorChanged -= OnContrastColorChanged;
+        _oledPixelShift?.Dispose();
+        _oledPixelShift = null;
         _rebuildThrottle.Dispose();
 
         if (_topmostTimer is not null)

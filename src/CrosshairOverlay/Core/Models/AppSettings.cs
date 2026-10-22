@@ -65,6 +65,15 @@ public sealed partial class AppSettings : ObservableObject
     /// </summary>
     [ObservableProperty] private int _overlayFpsLimit = 60;
 
+    /// <summary>Tỉ lệ bổ sung cho mọi preset; 1.0 giữ nguyên kích thước riêng của từng preset.</summary>
+    public double GlobalScale
+    {
+        get => _globalScale;
+        set => SetProperty(ref _globalScale, CrosshairLimits.Scale.Clamp(value));
+    }
+
+    private double _globalScale = 1d;
+
     /// <summary>Dùng GPU để vẽ (RenderMode.Default); tắt thì vẽ bằng CPU (SoftwareOnly).</summary>
     [ObservableProperty] private bool _useHardwareAcceleration = true;
 
@@ -86,12 +95,18 @@ public sealed partial class AppSettings : ObservableObject
     /// <summary>Chống lưu ảnh OLED: dịch overlay 1 pixel theo chu kỳ vài phút.</summary>
     [ObservableProperty] private bool _enableOledPixelShift;
 
+    /// <summary>Choose a high contrast crosshair color from the nearby desktop pixels.</summary>
+    [ObservableProperty] private bool _enableSmartContrast;
+
     /// <summary>Khung preview vẽ nền ca-rô để thấy rõ phần trong suốt của crosshair.</summary>
     /// <remarks>File settings.json cũ không có khoá này sẽ giữ mặc định BẬT.</remarks>
     [ObservableProperty] private bool _previewShowCheckerboard = true;
 
     /// <summary>Khung preview dùng nền tối thay vì nền sáng.</summary>
     [ObservableProperty] private bool _previewShowDarkBackground = true;
+
+    /// <summary>Ảnh nền xem trước do người dùng chọn; null hoặc file không còn tồn tại dùng nền mặc định.</summary>
+    [ObservableProperty] private string? _customPreviewBgPath;
 
     public ObservableCollection<HotkeyBinding> Hotkeys { get; set; } = [];
 

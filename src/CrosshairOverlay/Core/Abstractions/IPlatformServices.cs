@@ -159,6 +159,9 @@ public interface IDialogService
     /// <summary>Trả về null nếu người dùng huỷ.</summary>
     string? PickFileToOpen(string filter, string? initialDirectory = null);
 
+    /// <summary>Trả về null nếu người dùng huỷ chọn nơi lưu.</summary>
+    string? PickFileToSave(string filter, string defaultFileName);
+
     /// <summary>Hộp thoại chọn thư mục. Trả về null nếu người dùng huỷ.</summary>
     string? PickFolder(string title, string? initialDirectory = null);
 
@@ -197,6 +200,9 @@ public interface IAppRestartService
 
     /// <summary>Mở instance mới (chờ instance này thoát hẳn) rồi thoát instance này.</summary>
     bool Restart(out string? error);
+
+    /// <summary>Khởi động lại và áp bản ZIP sau khi instance cũ đã ghi xong và thoát.</summary>
+    bool RestartWithRestore(string archivePath, out string? error);
 }
 
 /// <param name="CopiedFiles">Số file đã sao chép (0 nếu không chép).</param>

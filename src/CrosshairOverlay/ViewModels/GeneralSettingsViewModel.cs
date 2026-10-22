@@ -1,9 +1,12 @@
 ﻿using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using System.Security.Principal;
 using CommunityToolkit.Mvvm.Input;
 using CrosshairOverlay.Core.Abstractions;
 using CrosshairOverlay.Core.Models;
 using CrosshairOverlay.Localization;
+using CrosshairOverlay.Services.Display;
+using CrosshairOverlay.Services.Storage;
 
 namespace CrosshairOverlay.ViewModels;
 
@@ -12,6 +15,8 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
 {
     private readonly IAppSettingsService _settings;
     private readonly IMonitorService _monitors;
+    private readonly DisplayAnalyzerService _displayAnalyzer;
+    private readonly ITrayIconController _tray;
     private readonly IOverlayController _overlay;
     private readonly IStartupService _startup;
     private readonly IUpdateService _updates;
@@ -21,12 +26,15 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
     private readonly IProcessLauncher _launcher;
     private readonly IAppRestartService _restart;
     private readonly IStorageLocationService _storage;
+    private readonly IPresetLibrary? _library;
 
     private bool _disposed;
 
     public GeneralSettingsViewModel(
         IAppSettingsService settings,
         IMonitorService monitors,
+        DisplayAnalyzerService displayAnalyzer,
+        ITrayIconController tray,
         IOverlayController overlay,
         IStartupService startup,
         IUpdateService updates,
@@ -35,19 +43,24 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
         IProcessLauncher launcher,
         IAppRestartService restart,
         IStorageLocationService storage,
-        ToastViewModel toast)
+        ToastViewModel toast,
+        IPresetLibrary? library = null)
     {
         _toast = toast;
+        _library = library;
         _storage = storage;
         _paths = paths;
         _launcher = launcher;
         _restart = restart;
         _settings = settings;
         _monitors = monitors;
+        _displayAnalyzer = displayAnalyzer;
+        _tray = tray;
         _overlay = overlay;
         _startup = startup;
         _updates = updates;
         _dialogs = dialogs;
+        IsAdminRunning = CheckAdminRights();
 
         _monitorMode = settings.Current.MonitorSelectionMode;
         _languageCode = settings.Current.Language;
@@ -64,6 +77,21 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
 
     /// <summary>View bind thẳng vào đây cho các toggle đơn giản (checkbox).</summary>
     public AppSettings Settings => _settings.Current;
+
+    public bool IsAdminRunning { get; }
+
+    private static bool CheckAdminRights()
+    {
+        try
+        {
+            using var identity = WindowsIdentity.GetCurrent();
+            return new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
 
     /// <summary>Danh sách giữ nguyên khi đổi ngôn ngữ; từng mục tự báo nhãn đã đổi.</summary>
     public IReadOnlyList<LocalizedOption<MonitorSelectionMode>> MonitorModes { get; }
@@ -84,6 +112,19 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
         {
             if (_settings.Current.OverlayFpsLimit == value) return;
             _settings.Current.OverlayFpsLimit = value;
+            _settings.RequestSave();
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>Scale áp dụng chung cho overlay; người dùng vẫn có thể chỉnh lại sau khi quét.</summary>
+    public double GlobalScale
+    {
+        get => _settings.Current.GlobalScale;
+        set
+        {
+            if (Math.Abs(_settings.Current.GlobalScale - value) < 0.0001d) return;
+            _settings.Current.GlobalScale = value;
             _settings.RequestSave();
             OnPropertyChanged();
         }
@@ -110,6 +151,58 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
 
     /// <summary>Đang sao chép dữ liệu sang thư mục mới — khoá nút và hiện trạng thái.</summary>
     [ObservableProperty] private bool _isChangingStorage;
+
+    [ObservableProperty] private bool _isHandlingBackup;
+
+    [RelayCommand]
+    private async Task BackupDataAsync()
+    {
+        if (IsHandlingBackup) return;
+        var path = _dialogs.PickFileToSave("ZIP archive (*.zip)|*.zip", "CrossGOverlay-backup.zip");
+        if (path is null) return;
+
+        IsHandlingBackup = true;
+        try
+        {
+            if (_library is not null) await _library.FlushAsync();
+            await _settings.FlushAsync();
+            // A fresh install may still have only in-memory defaults and no settings.json.
+            await _settings.SaveAsync();
+            await Task.Run(() => DataBackupArchive.Create(_paths, path));
+            _toast.Show(Tr.Get("Data_BackupDone"));
+        }
+        catch (Exception ex) when (ex is global::System.IO.IOException or UnauthorizedAccessException
+                                   or global::System.IO.InvalidDataException or global::System.Text.Json.JsonException
+                                   or NotSupportedException or OverflowException)
+        {
+            _dialogs.ShowMessage(Tr.Get("Data_Header"), ex.Message, isError: true);
+        }
+        finally { IsHandlingBackup = false; }
+    }
+
+    [RelayCommand]
+    private async Task RestoreDataAsync()
+    {
+        if (IsHandlingBackup) return;
+        var path = _dialogs.PickFileToOpen("ZIP archive (*.zip)|*.zip");
+        if (path is null) return;
+
+        IsHandlingBackup = true;
+        try
+        {
+            await Task.Run(() => DataBackupArchive.Validate(path));
+            if (!_dialogs.Confirm(Tr.Get("Data_Restore"), Tr.Get("Data_RestoreConfirm"))) return;
+            if (!_restart.RestartWithRestore(path, out var error))
+                _dialogs.ShowMessage(Tr.Get("Data_Restore"), error ?? "?", isError: true);
+        }
+        catch (Exception ex) when (ex is global::System.IO.IOException or UnauthorizedAccessException
+                                   or global::System.IO.InvalidDataException or global::System.Text.Json.JsonException
+                                   or OverflowException or NotSupportedException)
+        {
+            _dialogs.ShowMessage(Tr.Get("Data_Restore"), ex.Message, isError: true);
+        }
+        finally { IsHandlingBackup = false; }
+    }
 
     /// <summary>
     /// Đổi thư mục dữ liệu: chọn thư mục → hỏi có chép dữ liệu hiện tại không → chép (nếu có) → ghi con trỏ
@@ -221,6 +314,18 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
         }
     }
 
+    public bool EnableSmartContrast
+    {
+        get => _settings.Current.EnableSmartContrast;
+        set
+        {
+            if (_settings.Current.EnableSmartContrast == value) return;
+            _settings.Current.EnableSmartContrast = value;
+            _settings.RequestSave();
+            OnPropertyChanged();
+        }
+    }
+
     [ObservableProperty] private IReadOnlyList<MonitorInfo> _availableMonitors = [];
 
     [ObservableProperty] private MonitorSelectionMode _monitorMode;
@@ -289,8 +394,10 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
 
     private static IReadOnlyList<LocalizedOption<int>> BuildFpsLimits() =>
     [
+        new(30, "Perf_Fps30"),
         new(60, "Perf_Fps60"),
         new(120, "Perf_Fps120"),
+        new(140, "Perf_Fps140"),
         new(144, "Perf_Fps144"),
         new(0, "Perf_FpsUnlimited"),
     ];
@@ -351,7 +458,6 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
         _settings.RequestSave();
     }
 
-    [RelayCommand]
     private void RefreshMonitors()
     {
         AvailableMonitors = _monitors.GetMonitors();
@@ -359,6 +465,31 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
         var savedName = Settings.TargetMonitorDeviceName;
         PinnedMonitor = AvailableMonitors.Cast<MonitorInfo?>().FirstOrDefault(
             m => m!.Value.DeviceName == savedName) ?? AvailableMonitors.FirstOrDefault();
+    }
+
+    [RelayCommand]
+    private async Task RefreshMonitorsAndOptimizeAsync()
+    {
+        AvailableMonitors = _monitors.RefreshMonitors();
+        RefreshMonitors();
+
+        var recommendation = _displayAnalyzer.AnalyzeDisplayAndGetRecommendations(
+            MonitorMode, Settings.TargetMonitorDeviceName);
+
+        OverlayFpsLimit = recommendation.RecommendedFps;
+        GlobalScale = recommendation.RecommendedScale;
+        _overlay.SetMonitorSelection(MonitorMode, Settings.TargetMonitorDeviceName);
+
+        // AppSettingsService serializes through AtomicFile; await this explicit user action.
+        await _settings.SaveAsync();
+
+        _tray.ShowNotification(
+            Tr.Get("Display_OptimizedTitle"),
+            Tr.Format("Display_OptimizedMessage",
+                recommendation.RecommendedFps,
+                recommendation.RecommendedScale * 100d,
+                recommendation.DisplayLabel,
+                recommendation.RefreshRate > 0 ? $" {recommendation.RefreshRate}Hz" : string.Empty));
     }
 
     /// <summary>Gọi khi một checkbox bind thẳng vào <see cref="Settings"/> vừa đổi.</summary>

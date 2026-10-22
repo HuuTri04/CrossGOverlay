@@ -26,7 +26,60 @@ public partial class SliderField : UserControl
     public SliderField()
     {
         InitializeComponent();
+        UpdateSliderStep();
         SyncTextFromValue();
+    }
+
+    public static readonly DependencyProperty LabelColumnWidthProperty = DependencyProperty.Register(
+        nameof(LabelColumnWidth), typeof(GridLength), typeof(SliderField),
+        new PropertyMetadata(new GridLength(88d)));
+
+    public GridLength LabelColumnWidth
+    {
+        get => (GridLength)GetValue(LabelColumnWidthProperty);
+        set => SetValue(LabelColumnWidthProperty, value);
+    }
+
+    /// <summary>Override bước phím cho từng thanh; null giữ quy tắc hiện tại theo khoảng giá trị.</summary>
+    public static readonly DependencyProperty SmallChangeProperty = DependencyProperty.Register(
+        nameof(SmallChange), typeof(double?), typeof(SliderField),
+        new PropertyMetadata(null, OnSmallChangeChanged));
+
+    public double? SmallChange
+    {
+        get => (double?)GetValue(SmallChangeProperty);
+        set => SetValue(SmallChangeProperty, value);
+    }
+
+    private static void OnSmallChangeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) =>
+        ((SliderField)d).UpdateSliderStep();
+
+    private void UpdateSliderStep()
+    {
+        if (TrackSlider is not null) TrackSlider.SmallChange = Step();
+    }
+
+    private void OnSliderPreviewMouseDown(object sender, MouseButtonEventArgs e) => TrackSlider.Focus();
+
+    private void OnLabelPreviewMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Left) return;
+        TrackSlider.Focus();
+        e.Handled = true;
+    }
+
+    private void OnSliderPreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        var direction = e.Key switch
+        {
+            Key.Right or Key.Up => 1,
+            Key.Left or Key.Down => -1,
+            _ => 0,
+        };
+        if (direction == 0) return;
+
+        Value = Math.Round(Value + direction * Step(), 10);
+        e.Handled = true;
     }
 
     public static readonly DependencyProperty LabelProperty = DependencyProperty.Register(
@@ -78,6 +131,7 @@ public partial class SliderField : UserControl
 
         field.Minimum = range.Min;
         field.Maximum = range.Max;
+        field.UpdateSliderStep();
     }
 
     public static readonly DependencyProperty MinimumProperty = DependencyProperty.Register(
@@ -123,8 +177,11 @@ public partial class SliderField : UserControl
         return Math.Clamp(value, field.Minimum, field.Maximum);
     }
 
-    private static void OnRangeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) =>
+    private static void OnRangeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
         d.CoerceValue(ValueProperty);
+        ((SliderField)d).UpdateSliderStep();
+    }
 
     private static void OnValueChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
@@ -235,7 +292,9 @@ public partial class SliderField : UserControl
         }
     }
 
-    private double Step() => IsFineGrained ? 0.05d : 1d;
+    private double Step() => SmallChange is > 0d and < double.PositiveInfinity
+        ? SmallChange.Value
+        : IsFineGrained ? 0.05d : 1d;
 
     /// <summary>
     /// Thông số dạng hệ số cần chỉnh tới hàng phần trăm: khoảng nhỏ (độ mờ 0..1), hoặc khoảng có
