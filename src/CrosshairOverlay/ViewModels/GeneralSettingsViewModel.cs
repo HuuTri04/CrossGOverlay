@@ -284,6 +284,27 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
         }
     }
 
+    /// <summary>Controls the cadence of app-owned UI motion; separate from the overlay FPS limit.</summary>
+    public int UiTargetFps
+    {
+        get => _settings.Current.UiTargetFps;
+        set
+        {
+            var fps = Math.Clamp(value, 60, 144);
+            if (_settings.Current.UiTargetFps == fps) return;
+            _settings.Current.UiTargetFps = fps;
+            UiAnimationFrameRate.TargetFps = fps;
+            _settings.RequestSave();
+            OnPropertyChanged();
+        }
+    }
+
+    [RelayCommand]
+    private void SetUiFps(string? value)
+    {
+        if (int.TryParse(value, out var fps)) UiTargetFps = fps;
+    }
+
     /// <summary>Scale áp dụng chung cho overlay; người dùng vẫn có thể chỉnh lại sau khi quét.</summary>
     public double GlobalScale
     {

@@ -59,13 +59,13 @@
             <!-- ======== Hai huy hiệu phiên bản: đang dùng ➜ sắp cài -->
             <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,12,0,0">
                 <Border Style="{StaticResource VersionBadge}">
-                    <TextBlock Text="{Binding CurrentVersionText}" FontSize="11.5" FontWeight="SemiBold"
+                    <TextBlock Text="{Binding CurrentVersionText, Mode=OneWay}" FontSize="11.5" FontWeight="SemiBold"
                                Foreground="{StaticResource UpdGhostText}"/>
                 </Border>
                 <TextBlock Text="➜" Margin="10,0" VerticalAlignment="Center" FontSize="12"
                            Foreground="{StaticResource UpdHeaderText}"/>
                 <Border Style="{StaticResource VersionBadgeNew}">
-                    <TextBlock Text="{Binding LatestVersionText}" FontSize="11.5" FontWeight="SemiBold"
+                    <TextBlock Text="{Binding LatestVersionText, Mode=OneWay}" FontSize="11.5" FontWeight="SemiBold"
                                Foreground="{StaticResource AccentBright}"/>
                 </Border>
             </StackPanel>
@@ -77,7 +77,7 @@
                 <Border Background="{StaticResource UpdNotesBg}" BorderBrush="{StaticResource UpdNotesBorder}"
                         BorderThickness="1" CornerRadius="6" Padding="12" Height="120">
                     <ScrollViewer Style="{StaticResource PanelScrollViewer}">
-                        <TextBlock Text="{Binding Changelog}" TextWrapping="Wrap" FontSize="12" LineHeight="18"
+                        <TextBlock Text="{Binding Changelog, Mode=OneWay}" TextWrapping="Wrap" FontSize="12" LineHeight="18"
                                    Foreground="{StaticResource UpdNotesText}">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
@@ -96,18 +96,18 @@
 
             <!-- ======== Tiến trình: chỉ hiện trong lúc tải -->
             <StackPanel Grid.Row="4" Margin="0,16,0,0"
-                        Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVisibility}}">
+                        Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVisibility}, Mode=OneWay}">
                 <ProgressBar Style="{StaticResource UpdateProgressBar}" Value="{Binding ProgressPercent, Mode=OneWay}"/>
                 <DockPanel Margin="0,8,0,0">
-                    <TextBlock DockPanel.Dock="Right" Text="{Binding ProgressText}" FontSize="12"
+                    <TextBlock DockPanel.Dock="Right" Text="{Binding ProgressText, Mode=OneWay}" FontSize="12"
                                FontWeight="SemiBold" Foreground="{StaticResource AccentBright}"/>
-                    <TextBlock Text="{Binding DownloadStatus}" FontSize="12"
+                    <TextBlock Text="{Binding DownloadStatus, Mode=OneWay}" FontSize="12"
                                Foreground="{StaticResource UpdHeaderText}" TextTrimming="CharacterEllipsis"/>
                 </DockPanel>
             </StackPanel>
 
             <!-- Lỗi tải: thay chỗ của thanh tiến trình, vì lúc đó không còn tải nữa. -->
-            <TextBlock Grid.Row="4" Margin="0,16,0,0" Text="{Binding ErrorText}" FontSize="12"
+            <TextBlock Grid.Row="4" Margin="0,16,0,0" Text="{Binding ErrorText, Mode=OneWay}" FontSize="12"
                        Foreground="{StaticResource Danger}" TextWrapping="Wrap">
                 <TextBlock.Style>
                     <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">

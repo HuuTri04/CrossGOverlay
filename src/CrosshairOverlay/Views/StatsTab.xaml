@@ -11,16 +11,16 @@
                     <UniformGrid Columns="3">
                         <StackPanel Margin="0,0,12,0">
                             <TextBlock Text="{loc:Loc Stats_VisibleTime}" Style="{StaticResource FieldLabel}"/>
-                            <TextBlock Text="{Binding VisibleTime}" FontSize="20" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding VisibleTime, Mode=OneWay}" FontSize="20" FontWeight="SemiBold"/>
                         </StackPanel>
                         <StackPanel Margin="0,0,12,0">
                             <TextBlock Text="{loc:Loc Stats_Switches}" Style="{StaticResource FieldLabel}"/>
-                            <TextBlock Text="{Binding SwitchCount}" FontSize="20" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding SwitchCount, Mode=OneWay}" FontSize="20" FontWeight="SemiBold"/>
                         </StackPanel>
                         <StackPanel>
                             <TextBlock Text="{loc:Loc Stats_ActivePreset}" Style="{StaticResource FieldLabel}"/>
-                            <TextBlock Text="{Binding ActivePreset}" FontSize="15" FontWeight="SemiBold"
-                                       TextTrimming="CharacterEllipsis" ToolTip="{Binding ActivePreset}"/>
+                            <TextBlock Text="{Binding ActivePreset, Mode=OneWay}" FontSize="15" FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis" ToolTip="{Binding ActivePreset, Mode=OneWay}"/>
                         </StackPanel>
                     </UniformGrid>
                 </StackPanel>
@@ -35,11 +35,11 @@
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="{loc:Loc Stats_Timeline}" Style="{StaticResource SectionHeader}"
                                    VerticalAlignment="Center"/>
-                        <ComboBox Grid.Column="1" ItemsSource="{Binding RangeOptions}"
+                        <ComboBox Grid.Column="1" ItemsSource="{Binding RangeOptions, Mode=OneWay}"
                                   DisplayMemberPath="Label" SelectedValuePath="Value"
                                   SelectedValue="{Binding SelectedRange, Mode=TwoWay}"/>
                     </Grid>
-                    <ItemsControl ItemsSource="{Binding DailyRows}">
+                    <ItemsControl ItemsSource="{Binding DailyRows, Mode=OneWay}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Grid Margin="0,0,0,7">
@@ -48,11 +48,11 @@
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="86"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="{Binding Label}" FontSize="11.5"
+                                    <TextBlock Text="{Binding Label, Mode=OneWay}" FontSize="11.5"
                                                Foreground="{StaticResource TextMuted}"/>
                                     <ProgressBar Grid.Column="1" Minimum="0" Maximum="100"
-                                                 Value="{Binding PercentOfMax}" Height="10" Margin="8,3"/>
-                                    <TextBlock Grid.Column="2" Text="{Binding Duration}" FontSize="11.5"
+                                                 Value="{Binding PercentOfMax, Mode=OneWay}" Height="10" Margin="8,3"/>
+                                    <TextBlock Grid.Column="2" Text="{Binding Duration, Mode=OneWay}" FontSize="11.5"
                                                TextAlignment="Right"/>
                                 </Grid>
                             </DataTemplate>
@@ -65,7 +65,7 @@
                 <StackPanel>
                     <TextBlock Text="{loc:Loc Stats_Usage}" Style="{StaticResource SectionHeader}"
                                Margin="0,0,0,10"/>
-                    <ItemsControl ItemsSource="{Binding Rows}">
+                    <ItemsControl ItemsSource="{Binding Rows, Mode=OneWay}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Grid Margin="0,0,0,9">
@@ -75,12 +75,12 @@
                                         <ColumnDefinition Width="65"/>
                                         <ColumnDefinition Width="86"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"
-                                               ToolTip="{Binding Name}"/>
+                                    <TextBlock Text="{Binding Name, Mode=OneWay}" TextTrimming="CharacterEllipsis"
+                                               ToolTip="{Binding Name, Mode=OneWay}"/>
                                     <ProgressBar Grid.Column="1" Minimum="0" Maximum="100"
-                                                 Value="{Binding Percent}" Height="9" Margin="8,4"/>
-                                    <TextBlock Grid.Column="2" Text="{Binding PercentText}" TextAlignment="Right"/>
-                                    <TextBlock Grid.Column="3" Text="{Binding Duration}" TextAlignment="Right"
+                                                 Value="{Binding Percent, Mode=OneWay}" Height="9" Margin="8,4"/>
+                                    <TextBlock Grid.Column="2" Text="{Binding PercentText, Mode=OneWay}" TextAlignment="Right"/>
+                                    <TextBlock Grid.Column="3" Text="{Binding Duration, Mode=OneWay}" TextAlignment="Right"
                                                Foreground="{StaticResource TextMuted}"/>
                                 </Grid>
                             </DataTemplate>
@@ -96,7 +96,7 @@
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                         <TextBlock Text="{loc:Loc Stats_DataSize}" Style="{StaticResource FieldLabel}"
                                    VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <TextBlock Text="{Binding FileSizeText}" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding FileSizeText, Mode=OneWay}" FontWeight="SemiBold"/>
                     </StackPanel>
                     <CheckBox Style="{StaticResource ToggleSwitch}"
                               Content="{loc:Loc Stats_AutoCleanup}" Margin="0,0,0,12"

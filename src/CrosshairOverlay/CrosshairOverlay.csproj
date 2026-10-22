@@ -4,6 +4,8 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
+    <!-- Stack-only UTF-16 buffers for the foreground Win32 fallback path. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <UseWindowsForms>false</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>

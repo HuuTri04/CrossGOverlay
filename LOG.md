@@ -575,3 +575,41 @@ Khi hoàn thành một tính năng hoặc bản sửa lỗi tiếp theo, thêm m
 - Giữ `PublishReadyToRun` đã có và khai báo rõ `TieredCompilation`/`TieredPGO` cho bản phát hành. Xác nhận bằng MSBuild cả ba thuộc tính là `true`. Không ép `SetProcessWorkingSetSize`: thu gọn working set không giải phóng VRAM và có thể gây page fault/khựng khi khôi phục cửa sổ.
 - Rà soát: ảnh nền đã tự ẩn và nhả bitmap khi thu nhỏ; card dùng ARGB, panel con giữ nền trong suốt, slider có `Delay=10`, vùng cuộn cấp trang theo pixel, brush tĩnh đã frozen. Không đổi `TextOptions`, phông hay màu chữ; không gán `Background=Transparent` hàng loạt vì có thể đổi vùng bắt chuột mà không giảm draw call.
 - Build Release thành công (1 cảnh báo xUnit2029 có sẵn); 594 kiểm thử đạt, loại một bài Raw Input cần chuột thật. Một bài đo thời gian lệch 1 ms ở lượt đầu và đạt khi chạy lại. Chưa đo cold/warm startup hay FPS trên phần cứng thật, nên chưa kết luận đạt “instant startup”, 60 FPS hoặc 0% CPU.
+
+### 2026-10-22 — Tab Tạo Crosshair bằng pixel art
+
+- Thêm tab “Tạo Crosshair” sau Thư viện. `PixelArtTab` và `PixelArtViewModel` chỉ được khởi tạo ở lần mở tab đầu tiên, không tăng chi phí dựng giao diện lúc khởi động.
+- Bảng vẽ dùng một `WriteableBitmap` cho lưới 16×16, 24×24 hoặc 32×32; kéo chuột trái để vẽ liên tục, chuột phải để xóa, có công cụ bút/tẩy, xóa sạch, đường tâm, tám màu mẫu và mã HEX tùy chỉnh. Đường lưới và đường tâm chỉ nằm trong editor, không xuất vào ảnh PNG.
+- Mã chia sẻ `PX1` dùng RLE + Base64, có kiểm tra kích thước và dữ liệu trước khi tải. Có thể sao chép, dán để khôi phục bản vẽ; preset ảnh PNG được lưu qua kho ảnh hiện có. Nút Lưu thêm preset vào thư viện và kích hoạt; nút Áp dụng trực tiếp đổi overlay trong phiên mà không tự tạo preset trong thư viện.
+- Build Release thành công. 10 test mới cho mã chia sẻ đạt; 750 test đạt khi loại bài Raw Input cần phần cứng và một bài `SliderField` cũ thiếu resource `FieldLabel` khi chạy riêng trên luồng STA. Chưa đo FPS thực tế trên desktop.
+### 2026-10-22 — Giới hạn GC latency theo phiên game và tinh gọn tương tác WPF
+
+- Bỏ việc bật `SustainedLowLatency` ngay từ lúc khởi động. `GamingGcLatencyService` chỉ chuyển chế độ khi cửa sổ game khớp profile đang ở foreground và overlay thực sự hiện; khi chuyển về app, ẩn overlay, bật Stream suppression, dừng watcher hoặc thoát ứng dụng, dịch vụ phục hồi chế độ GC trước đó. Không ép `GC.Collect` và không can thiệp `NoGCRegion` do nơi khác quản lý.
+- Giữ cơ chế aliasing theo hình dạng đã có ở overlay: nét thẳng dạng khối dùng `Aliased`, vòng tròn/ảnh xoay giữ render mượt; ảnh pixel nhập vào overlay tiếp tục dùng `NearestNeighbor` khi phóng nguyên bội. Bảng vẽ pixel mới dùng `Aliased` và `NearestNeighbor` riêng, không đổi kiểu chữ mặc định.
+- Bỏ hai margin âm trong template ListBoxItem/TabControl bằng padding hoặc render transform có cùng vị trí hiển thị; bỏ Fade khi mở ComboBox để phản hồi trực tiếp. Trạng thái của bảng vẽ pixel được giữ chiều cao cố định, tránh đổi chiều cao card mỗi khi có thông báo. Không đổi toàn bộ kích thước nút/ô hoặc trạng thái Visibility vì các cỡ chữ đa ngôn ngữ và vùng bắt chuột cần được giữ nguyên.
+- Build Release thành công; 4 test mới cho chuyển trạng thái GC và 754 test trong bộ lọc phù hợp đạt. Lượt này chưa đo thời gian Measure/Arrange, GC pause hay FPS trên phần cứng thực tế; không cam kết loại bỏ hoàn toàn micro-stutter.
+### 2026-10-22 — Cuộn quán tính có thời hạn cho các panel
+
+- Thêm `SmoothScrollBehavior` cho các `PanelScrollViewer`: cộng dồn bước lăn vào điểm đích, nội suy EaseOutCubic trong 200 ms bằng timer chỉ hoạt động lúc đang cuộn; dừng ngay khi ẩn, unload hoặc người dùng bấm chuột/phím. Không giữ `ScrollViewer` bằng dictionary tĩnh, không chạy vòng lặp khi idle.
+- `WheelScrollAssist` vẫn chọn vùng cuộn gần con trỏ và chuyển cú lăn ra vùng cha ở mép; nay xét điểm đích đang chuyển động để không nuốt các cú lăn liên tiếp. Các panel cuộn theo pixel; danh sách Thư viện tiếp tục `VirtualizingStackPanel` + `CanContentScroll=True` + Recycling để không dựng toàn bộ card trong RAM.
+- Đặt cờ rounding/deferred scrolling an toàn ở style `ScrollViewer`; khi chuyển động, cờ `IsScrolling` tạm bỏ nền hover trên nút thường, nút nhấn và mục ListBox mà không khóa click. Giữ nguyên font chữ, màu nền card và cơ chế dựng chữ mặc định.
+- Build Release thành công; 760 test trong bộ lọc phù hợp đạt, gồm 6 test mới cho bước lăn và easing. Chưa đo độ mượt hoặc FPS trên màn hình thật; animation cuộn có thể tăng số lần layout trong 200 ms nên không khẳng định triệt tiêu mọi lag trên mọi máy.
+
+### 2026-10-22 — Bộ chọn nhịp chuyển động giao diện 60–144 FPS
+
+- Thêm card UI FPS trong Tab Chung với slider 60–144 và các nút chọn nhanh 60/75/90/120/144 FPS; giá trị được lưu riêng trong `settings.json`, mặc định 144 và được giới hạn trong khoảng hợp lệ. Giữ nguyên FPS overlay và kiểu chữ hiện có.
+- Áp dụng ngay nhịp đã chọn cho timer cuộn quán tính và các animation toast do ứng dụng tạo; timer cuộn vẫn dừng khi không thao tác. Nạp lại giá trị đã lưu khi khởi động và đồng bộ khi cài đặt thay đổi.
+- Không dùng `Timeline.DesiredFrameRateProperty.OverrideMetadata` lúc chạy vì đây không phải giới hạn compositor toàn cục; tốc độ thực tế phụ thuộc WPF, màn hình và tải hệ thống. Build Release thành công; 761 test phù hợp đạt.
+
+### 2026-10-22 — Đồng bộ giao diện thẻ UI FPS trong Tab Chung
+
+- Chuyển card UI FPS sang style `Card` dùng chung với các panel Hiệu năng và Bảo vệ màn hình, gồm nền/border/bo góc tự thích ứng khi bật ảnh nền ứng dụng. Tiêu đề nhóm dùng `SectionHeader` chữ in hoa; dòng mô tả giữ cỡ chữ nhỏ và tự xuống dòng.
+- Xếp điều khiển thành hàng nhãn bấm để focus slider, slider 60–144 và ô giá trị nền tối bên phải. Thu gọn năm nút chọn nhanh thành chip số 60/75/90/120/144 với nhãn riêng; bổ sung chuỗi tiếng Việt và tiếng Anh. Giữ nguyên binding, lệnh lưu FPS, font và cơ chế dựng chữ.
+- Build Release thành công, 0 cảnh báo và 0 lỗi. Đây là thay đổi XAML/chuỗi giao diện nên không bổ sung bài test mô phỏng triển khai.
+
+### 2026-10-22 — Rà soát binding, resource và Win32 foreground path
+
+- Ghi rõ `Mode=OneWay` cho 89 binding chỉ hiển thị trong các view/theme (văn bản, danh sách, trạng thái, màu, thumbnail), giữ `TwoWay` cho ô nhập, slider và toggle. Chuyển 5 `DynamicResource` cuối trong popup chọn màu sang `StaticResource` vì theme hiện không thay brush/style lúc chạy. Đây chủ yếu là chuẩn hóa ý nghĩa binding; các thuộc tính TextBlock vốn mặc định OneWay nên không tuyên bố giảm chi phí theo tỷ lệ cố định.
+- Trong `ForegroundWindowWatcher`, dùng một delegate Dispatcher tái sử dụng cho sự kiện foreground, và đọc tiêu đề ở nhánh fallback qua bộ đệm UTF-16 `stackalloc` cùng P/Invoke con trỏ. Nhánh kiểm tra tiêu đề không còn tạo `StringBuilder`/`string` cho mỗi lần quét; khi foreground thật sự đổi, chuỗi/đối tượng sự kiện vẫn cần tạo để cập nhật UI và audit log. `RECT`/ID tiến trình đã là value type trên stack, không cấp phát thêm struct dùng chung gây tranh chấp luồng.
+- Không áp `BitmapCache` lên card có slider/chữ động: thay đổi một phần tử con sẽ làm WPF raster hóa lại cả card và giữ thêm bitmap trong VRAM; nền ảnh hiện đã được xử lý sẵn thành bitmap frozen. Không nâng `ThreadPriority` cho UI hay hạ ưu tiên thread pool dùng chung, tránh giành CPU của game hoặc tác vụ khác. Không đổi phông chữ, TextFormattingMode, màu hay viền card.
+- Build Release thành công; 761 bài test hồi quy phù hợp đạt. Chưa đo FPS, CPU, RAM hoặc VRAM trên máy chạy game nên không khẳng định mức giảm tài nguyên cụ thể.

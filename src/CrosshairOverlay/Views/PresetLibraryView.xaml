@@ -24,9 +24,10 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <ctl:CrosshairThumbnail Grid.Row="0" Profile="{Binding PreviewProfile}" Renderer="{Binding Renderer}"/>
+                    <ctl:CrosshairThumbnail Grid.Row="0" Profile="{Binding PreviewProfile, Mode=OneWay}"
+                                            Renderer="{Binding Renderer, Mode=OneWay}"/>
 
-                    <TextBlock Grid.Row="1" Margin="2,7,2,6" Text="{Binding Name}" ToolTip="{Binding Name}"
+                    <TextBlock Grid.Row="1" Margin="2,7,2,6" Text="{Binding Name, Mode=OneWay}" ToolTip="{Binding Name, Mode=OneWay}"
                                FontSize="12.5" TextTrimming="CharacterEllipsis"/>
 
                     <Button Grid.Row="2" Style="{StaticResource SmallAccentButton}"
@@ -62,15 +63,15 @@
                      Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
 
             <ComboBox Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center"
-                      ItemsSource="{Binding ColorFilters}" DisplayMemberPath="Label" SelectedValuePath="Value"
+                      ItemsSource="{Binding ColorFilters, Mode=OneWay}" DisplayMemberPath="Label" SelectedValuePath="Value"
                       SelectedValue="{Binding SelectedColorFilter, Mode=TwoWay}"
                       AutomationProperties.Name="{loc:Loc Library_ColorFilter}"/>
 
             <!-- Số mẫu đang hiện: người dùng gõ tìm kiếm cần biết ngay còn bao nhiêu kết quả. -->
-            <TextBlock Grid.Column="2" Text="{Binding ResultText}" Style="{StaticResource FieldLabel}"
+            <TextBlock Grid.Column="2" Text="{Binding ResultText, Mode=OneWay}" Style="{StaticResource FieldLabel}"
                        VerticalAlignment="Center" Margin="12,0,0,0"/>
 
-            <ItemsControl Grid.Column="3" ItemsSource="{Binding Categories}" Focusable="False"
+            <ItemsControl Grid.Column="3" ItemsSource="{Binding Categories, Mode=OneWay}" Focusable="False"
                           Margin="16,0,0,0" VerticalAlignment="Center">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
@@ -84,8 +85,8 @@
                                      AutomationProperties.Name="{Binding Label}"
                                      IsChecked="{Binding IsSelected, Mode=TwoWay}">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="{Binding Label}"/>
-                                <TextBlock Text="{Binding Count}" Margin="6,0,0,0" Opacity="0.65"/>
+                                <TextBlock Text="{Binding Label, Mode=OneWay}"/>
+                                <TextBlock Text="{Binding Count, Mode=OneWay}" Margin="6,0,0,0" Opacity="0.65"/>
                             </StackPanel>
                         </RadioButton>
                     </DataTemplate>
@@ -100,7 +101,7 @@
             ScrollUnit=Pixel giữ cuộn mượt từng pixel thay vì nhảy từng hàng.
         -->
         <ItemsControl x:Name="RowsList" Grid.Row="1"
-                      ItemsSource="{Binding Rows}"
+                      ItemsSource="{Binding Rows, Mode=OneWay}"
                       Focusable="False"
                       SizeChanged="OnRowsSizeChanged"
                       VirtualizingPanel.IsVirtualizing="True"
@@ -132,14 +133,14 @@
                         cây giao diện của thẻ và chỉ đổi dữ liệu (xem CatalogRow). Ô không có mẫu thì rỗng, không vẽ gì.
                     -->
                     <StackPanel Orientation="Horizontal">
-                        <ContentPresenter Content="{Binding Slot0}"/>
-                        <ContentPresenter Content="{Binding Slot1}"/>
-                        <ContentPresenter Content="{Binding Slot2}"/>
-                        <ContentPresenter Content="{Binding Slot3}"/>
-                        <ContentPresenter Content="{Binding Slot4}"/>
-                        <ContentPresenter Content="{Binding Slot5}"/>
-                        <ContentPresenter Content="{Binding Slot6}"/>
-                        <ContentPresenter Content="{Binding Slot7}"/>
+                        <ContentPresenter Content="{Binding Slot0, Mode=OneWay}"/>
+                        <ContentPresenter Content="{Binding Slot1, Mode=OneWay}"/>
+                        <ContentPresenter Content="{Binding Slot2, Mode=OneWay}"/>
+                        <ContentPresenter Content="{Binding Slot3, Mode=OneWay}"/>
+                        <ContentPresenter Content="{Binding Slot4, Mode=OneWay}"/>
+                        <ContentPresenter Content="{Binding Slot5, Mode=OneWay}"/>
+                        <ContentPresenter Content="{Binding Slot6, Mode=OneWay}"/>
+                        <ContentPresenter Content="{Binding Slot7, Mode=OneWay}"/>
                     </StackPanel>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
@@ -148,17 +149,17 @@
         <!-- Đang đọc / không có kết quả -->
         <TextBlock Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
                    Style="{StaticResource FieldLabel}" Text="{loc:Loc Library_Loading}"
-                   Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}"/>
+                   Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}, Mode=OneWay}"/>
         <TextBlock Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"
                    TextWrapping="Wrap" MaxWidth="420"
-                   Style="{StaticResource FieldLabel}" Text="{Binding EmptyText}"
-                   Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}"/>
+                   Style="{StaticResource FieldLabel}" Text="{Binding EmptyText, Mode=OneWay}"
+                   Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}, Mode=OneWay}"/>
 
         <!-- Thông báo nhỏ ở góc dưới, tự ẩn sau 2,5 giây. Người dùng vẫn ở lại tab để chọn tiếp mẫu khác. -->
         <Border Grid.Row="1" Style="{StaticResource Toast}" HorizontalAlignment="Right"
                 VerticalAlignment="Bottom" Margin="0,0,18,18"
-                Visibility="{Binding Toast.IsVisible, Converter={StaticResource BoolToVisibility}}">
-            <TextBlock Text="{Binding Toast.Text}" FontSize="13" TextWrapping="Wrap" MaxWidth="520"/>
+                Visibility="{Binding Toast.IsVisible, Converter={StaticResource BoolToVisibility}, Mode=OneWay}">
+            <TextBlock Text="{Binding Toast.Text, Mode=OneWay}" FontSize="13" TextWrapping="Wrap" MaxWidth="520"/>
         </Border>
     </Grid>
 </UserControl>

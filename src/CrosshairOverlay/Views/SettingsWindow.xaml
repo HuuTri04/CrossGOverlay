@@ -21,42 +21,42 @@
                 <TextBlock Text="{loc:Loc Games_WeaponHint}" TextWrapping="Wrap" FontSize="11" Foreground="{StaticResource TextMuted}"/>
                 <Grid Margin="0,4,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition Width="*"/><ColumnDefinition Width="28"/></Grid.ColumnDefinitions>
                     <TextBlock Text="1" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}"/>
-                    <ComboBox Grid.Column="1" ItemsSource="{Binding DataContext.Games.Presets, RelativeSource={RelativeSource AncestorType=Window}}"
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding DataContext.Games.Presets, RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"
                               DisplayMemberPath="Name" SelectedValuePath="Id" SelectedValue="{Binding Weapon1PresetId, Mode=TwoWay}"/>
                     <Button Grid.Column="2" Content="&#x00D7;" ToolTip="Clear mapping"
                             Command="{Binding DataContext.Games.ClearWeapon1PresetCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
                 </Grid>
                 <Grid Margin="0,4,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition Width="*"/><ColumnDefinition Width="28"/></Grid.ColumnDefinitions>
                     <TextBlock Text="2" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}"/>
-                    <ComboBox Grid.Column="1" ItemsSource="{Binding DataContext.Games.Presets, RelativeSource={RelativeSource AncestorType=Window}}"
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding DataContext.Games.Presets, RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"
                               DisplayMemberPath="Name" SelectedValuePath="Id" SelectedValue="{Binding Weapon2PresetId, Mode=TwoWay}"/>
                     <Button Grid.Column="2" Content="&#x00D7;" ToolTip="Clear mapping"
                             Command="{Binding DataContext.Games.ClearWeapon2PresetCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
                 </Grid>
                 <Grid Margin="0,4,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition Width="*"/><ColumnDefinition Width="28"/></Grid.ColumnDefinitions>
                     <TextBlock Text="3" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}"/>
-                    <ComboBox Grid.Column="1" ItemsSource="{Binding DataContext.Games.Presets, RelativeSource={RelativeSource AncestorType=Window}}"
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding DataContext.Games.Presets, RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"
                               DisplayMemberPath="Name" SelectedValuePath="Id" SelectedValue="{Binding Weapon3PresetId, Mode=TwoWay}"/>
                     <Button Grid.Column="2" Content="&#x00D7;" ToolTip="Clear mapping"
                             Command="{Binding DataContext.Games.ClearWeapon3PresetCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
                 </Grid>
                 <Grid Margin="0,4,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition Width="*"/><ColumnDefinition Width="28"/></Grid.ColumnDefinitions>
                     <TextBlock Text="4" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}"/>
-                    <ComboBox Grid.Column="1" ItemsSource="{Binding DataContext.Games.Presets, RelativeSource={RelativeSource AncestorType=Window}}"
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding DataContext.Games.Presets, RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"
                               DisplayMemberPath="Name" SelectedValuePath="Id" SelectedValue="{Binding Weapon4PresetId, Mode=TwoWay}"/>
                     <Button Grid.Column="2" Content="&#x00D7;" ToolTip="Clear mapping"
                             Command="{Binding DataContext.Games.ClearWeapon4PresetCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
                 </Grid>
                 <Grid Margin="0,4,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition Width="*"/><ColumnDefinition Width="28"/></Grid.ColumnDefinitions>
                     <TextBlock Text="Q" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}"/>
-                    <ComboBox Grid.Column="1" ItemsSource="{Binding DataContext.Games.Presets, RelativeSource={RelativeSource AncestorType=Window}}"
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding DataContext.Games.Presets, RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"
                               DisplayMemberPath="Name" SelectedValuePath="Id" SelectedValue="{Binding WeaponQPresetId, Mode=TwoWay}"/>
                     <Button Grid.Column="2" Content="&#x00D7;" ToolTip="Clear mapping"
                             Command="{Binding DataContext.Games.ClearWeaponQPresetCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
                 </Grid>
                 <Grid Margin="0,4,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition Width="*"/><ColumnDefinition Width="28"/></Grid.ColumnDefinitions>
                     <TextBlock Text="E" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}"/>
-                    <ComboBox Grid.Column="1" ItemsSource="{Binding DataContext.Games.Presets, RelativeSource={RelativeSource AncestorType=Window}}"
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding DataContext.Games.Presets, RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"
                               DisplayMemberPath="Name" SelectedValuePath="Id" SelectedValue="{Binding WeaponEPresetId, Mode=TwoWay}"/>
                     <Button Grid.Column="2" Content="&#x00D7;" ToolTip="Clear mapping"
                             Command="{Binding DataContext.Games.ClearWeaponEPresetCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
@@ -136,7 +136,12 @@
             SettingsWindow.OnTabChanged). Nhờ vậy khởi động app không đụng tới file thư viện mẫu.
         -->
         <DataTemplate x:Key="LibraryPanel">
-            <views:PresetLibraryView DataContext="{Binding Library}"/>
+            <views:PresetLibraryView DataContext="{Binding Library, Mode=OneWay}"/>
+        </DataTemplate>
+
+        <!-- The editor view and its view model are both created on the first visit. -->
+        <DataTemplate x:Key="PixelArtPanel">
+            <views:PixelArtTab/>
         </DataTemplate>
 
         <!-- Nội dung cột trình chỉnh sửa; dựng trễ một nhịp sau khi cửa sổ đã hiện. -->
@@ -148,7 +153,7 @@
                                     <!-- Chế độ đứng TRÊN CÙNG: nó quyết định mọi thứ bên dưới hiện hay ẩn. -->
                                     <TextBlock Text="{loc:Loc Editor_Mode}" Style="{StaticResource SectionHeader}"
                                                Margin="0,12,0,6"/>
-                                    <ComboBox ItemsSource="{Binding Editor.Types}"
+                                    <ComboBox ItemsSource="{Binding Editor.Types, Mode=OneWay}"
                                               DisplayMemberPath="Label" SelectedValuePath="Value"
                                               SelectedValue="{Binding Editor.Profile.Type, Mode=TwoWay}"/>
 
@@ -166,7 +171,7 @@
                                                 Converter={StaticResource BoolToVisibility}, Mode=OneWay}">
                                         <TextBlock Text="{loc:Loc Editor_Shape}" Style="{StaticResource FieldLabel}"
                                                    Margin="0,12,0,4"/>
-                                        <ComboBox ItemsSource="{Binding Editor.Shapes}"
+                                        <ComboBox ItemsSource="{Binding Editor.Shapes, Mode=OneWay}"
                                                   DisplayMemberPath="Label" SelectedValuePath="Value"
                                                   SelectedValue="{Binding Editor.Profile.Shape, Mode=TwoWay}"/>
 
@@ -456,7 +461,7 @@
                                     Kéo thả để đổi thứ tự (DragReorder): thứ tự lưu vào settings.json và là
                                     thứ tự của phím tắt Preset kế tiếp / trước đó.
                                 -->
-                                <ListBox ItemsSource="{Binding Presets}"
+                                <ListBox ItemsSource="{Binding Presets, Mode=OneWay}"
                                          SelectedItem="{Binding SelectedPreset, Mode=TwoWay}"
                                          DisplayMemberPath="Name"
                                          SelectionChanged="OnPresetSelectionChanged"
@@ -492,10 +497,10 @@
                                     <StackPanel Grid.Column="2" Orientation="Horizontal">
                                         <CheckBox Content="{loc:Loc Preview_Checkerboard}" Margin="0,0,16,0"
                                                   IsChecked="{Binding Editor.ShowCheckerboard, Mode=TwoWay}"
-                                                  IsEnabled="{Binding Editor.ArePreviewBackdropOptionsEnabled}"/>
+                                                  IsEnabled="{Binding Editor.ArePreviewBackdropOptionsEnabled, Mode=OneWay}"/>
                                         <CheckBox Content="{loc:Loc Preview_DarkBackground}"
                                                   IsChecked="{Binding Editor.UseDarkPreviewBackground, Mode=TwoWay}"
-                                                  IsEnabled="{Binding Editor.ArePreviewBackdropOptionsEnabled}"/>
+                                                  IsEnabled="{Binding Editor.ArePreviewBackdropOptionsEnabled, Mode=OneWay}"/>
                                     </StackPanel>
                                 </Grid>
                             </Border>
@@ -507,7 +512,7 @@
                                         Margin="0,0,6,0"/>
                                 <Button Content="{loc:Loc Preview_ResetBackground}"
                                         Command="{Binding Editor.ResetPreviewBackgroundCommand}"
-                                        IsEnabled="{Binding Editor.CanResetPreviewBackground}"/>
+                                        IsEnabled="{Binding Editor.CanResetPreviewBackground, Mode=OneWay}"/>
                             </StackPanel>
 
                             <ctl:CrosshairPreview
@@ -550,20 +555,20 @@
                             <StackPanel>
                                 <TextBlock Text="{loc:Loc General_Monitor}" Style="{StaticResource SectionHeader}"
                                            Margin="0,0,0,8"/>
-                                <ComboBox ItemsSource="{Binding General.MonitorModes}"
+                                <ComboBox ItemsSource="{Binding General.MonitorModes, Mode=OneWay}"
                                           DisplayMemberPath="Label" SelectedValuePath="Value"
                                           SelectedValue="{Binding General.MonitorMode, Mode=TwoWay}"/>
 
                                 <StackPanel Margin="0,10,0,0"
                                             Visibility="{Binding General.ShowMonitorPicker,
                                                          Converter={StaticResource BoolToVisibility}, Mode=OneWay}">
-                                    <ComboBox ItemsSource="{Binding General.AvailableMonitors}"
+                                    <ComboBox ItemsSource="{Binding General.AvailableMonitors, Mode=OneWay}"
                                               SelectedItem="{Binding General.PinnedMonitor, Mode=TwoWay}"
                                               DisplayMemberPath="DeviceName"/>
                                 </StackPanel>
 
                                 <Border Style="{StaticResource InnerCard}" Margin="0,12,0,0" Padding="12,8">
-                                    <ItemsControl ItemsSource="{Binding General.AvailableMonitors}">
+                                    <ItemsControl ItemsSource="{Binding General.AvailableMonitors, Mode=OneWay}">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
                                                 <TextBlock Style="{StaticResource FieldLabel}" FontFamily="Consolas"
@@ -593,7 +598,7 @@
 
                                 <TextBlock Text="{loc:Loc Perf_FpsLimit}" Style="{StaticResource FieldLabel}"
                                            Margin="0,0,0,4"/>
-                                <ComboBox ItemsSource="{Binding General.FpsLimits}"
+                                <ComboBox ItemsSource="{Binding General.FpsLimits, Mode=OneWay}"
                                           DisplayMemberPath="Label" SelectedValuePath="Value"
                                           SelectedValue="{Binding General.OverlayFpsLimit, Mode=TwoWay}"/>
 
@@ -615,10 +620,66 @@
 
                                 <TextBlock Text="{loc:Loc Perf_Priority}" Style="{StaticResource FieldLabel}"
                                            Margin="0,16,0,4"/>
-                                <ComboBox ItemsSource="{Binding General.PriorityModes}"
+                                <ComboBox ItemsSource="{Binding General.PriorityModes, Mode=OneWay}"
                                           DisplayMemberPath="Label" SelectedValuePath="Value"
                                           ToolTip="{loc:Loc Perf_PriorityTip}"
                                           SelectedValue="{Binding General.ProcessPriority, Mode=TwoWay}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- UI motion cadence is independent of the overlay/GIF FPS setting above. -->
+                        <Border Style="{StaticResource Card}" Margin="0,14,0,0">
+                            <Border.Resources>
+                                <Style x:Key="UiFpsPresetButton" TargetType="Button"
+                                       BasedOn="{StaticResource {x:Type Button}}">
+                                    <Setter Property="Background" Value="#111D27"/>
+                                    <Setter Property="BorderBrush" Value="#1F2D37"/>
+                                    <Setter Property="Foreground" Value="#8A9CA8"/>
+                                    <Setter Property="FontSize" Value="11"/>
+                                    <Setter Property="MinWidth" Value="32"/>
+                                    <Setter Property="Padding" Value="7,4"/>
+                                </Style>
+                            </Border.Resources>
+                            <StackPanel>
+                                <TextBlock Text="{loc:Loc Perf_UiFpsTitle}" Style="{StaticResource SectionHeader}"
+                                           Margin="0,0,0,6"/>
+                                <TextBlock FontSize="11" Foreground="#8A9CA8" Margin="0,0,0,8"
+                                           Text="{loc:Loc Perf_UiFpsHint}" TextWrapping="Wrap"/>
+                                <Grid Margin="0,6,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="120"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="72"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Label Target="{Binding ElementName=UiFpsSlider, Mode=OneWay}" Padding="0"
+                                           FontSize="12" Foreground="#FFFFFF" VerticalAlignment="Center"
+                                           Content="{loc:Loc Perf_UiFpsLevel}"/>
+                                    <Slider x:Name="UiFpsSlider" Grid.Column="1" Margin="8,0,0,0"
+                                            Minimum="60" Maximum="144" TickFrequency="1"
+                                            IsSnapToTickEnabled="True" SmallChange="1" LargeChange="10"
+                                            Focusable="True" IsTabStop="True" VerticalAlignment="Center"
+                                            Value="{Binding General.UiTargetFps, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=10}"/>
+                                    <Border Grid.Column="2" Background="#111D27" BorderBrush="#1F2D37"
+                                            BorderThickness="1" CornerRadius="4" Height="28" Margin="8,0,0,0">
+                                        <TextBlock FontSize="12" FontWeight="SemiBold" Foreground="#00ED64"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                   Text="{Binding General.UiTargetFps, StringFormat='{}{0} FPS', Mode=OneWay}"/>
+                                    </Border>
+                                </Grid>
+                                <StackPanel HorizontalAlignment="Right" Margin="0,4,0,0" Orientation="Horizontal">
+                                    <TextBlock FontSize="11" Foreground="#5A6C78" Margin="0,0,8,0"
+                                               Text="{loc:Loc Perf_UiFpsQuick}" VerticalAlignment="Center"/>
+                                    <Button Content="60" Command="{Binding General.SetUiFpsCommand}" CommandParameter="60"
+                                            Style="{StaticResource UiFpsPresetButton}"/>
+                                    <Button Content="75" Command="{Binding General.SetUiFpsCommand}" CommandParameter="75"
+                                            Margin="4,0,0,0" Style="{StaticResource UiFpsPresetButton}"/>
+                                    <Button Content="90" Command="{Binding General.SetUiFpsCommand}" CommandParameter="90"
+                                            Margin="4,0,0,0" Style="{StaticResource UiFpsPresetButton}"/>
+                                    <Button Content="120" Command="{Binding General.SetUiFpsCommand}" CommandParameter="120"
+                                            Margin="4,0,0,0" Style="{StaticResource UiFpsPresetButton}"/>
+                                    <Button Content="144" Command="{Binding General.SetUiFpsCommand}" CommandParameter="144"
+                                            Margin="4,0,0,0" Style="{StaticResource UiFpsPresetButton}"/>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
 
@@ -763,7 +824,7 @@
 
                                     <TextBlock Text="{loc:Loc General_Language}" Style="{StaticResource FieldLabel}"
                                                Margin="0,0,0,4"/>
-                                    <ComboBox ItemsSource="{Binding General.Languages}"
+                                    <ComboBox ItemsSource="{Binding General.Languages, Mode=OneWay}"
                                               DisplayMemberPath="Label" SelectedValuePath="Value"
                                               SelectedValue="{Binding General.LanguageCode, Mode=TwoWay}"/>
 
@@ -945,7 +1006,7 @@
                                         Grid.IsSharedSizeScope để cột 1 và 3 rộng bằng nhau ở mọi dòng dù nhãn dài
                                         ngắn khác nhau. Lỗi đăng ký (nếu có) nằm ở dòng phụ, dưới ô nhập phím.
                                     -->
-                                    <ItemsControl ItemsSource="{Binding Hotkeys.Rows}" Grid.IsSharedSizeScope="True">
+                                    <ItemsControl ItemsSource="{Binding Hotkeys.Rows, Mode=OneWay}" Grid.IsSharedSizeScope="True">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
                                                 <!-- 3 DIP trên/dưới: đủ tách dòng, và là phần để cả tab vừa khít không cần cuộn. -->
@@ -1082,7 +1143,7 @@
 
                                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,8,0,0"
                                                         Style="{StaticResource DependentGroup}"
-                                                        IsEnabled="{Binding IsChecked, ElementName=FiringColorToggle}">
+                                                        IsEnabled="{Binding IsChecked, ElementName=FiringColorToggle, Mode=OneWay}">
                                                 <TextBlock Text="{loc:Loc Adv_FiringColor}" Style="{StaticResource FieldLabel}"
                                                            VerticalAlignment="Center" Margin="0,0,12,0"/>
                                                 <ctl:ColorPickerButton VerticalAlignment="Center"
@@ -1155,14 +1216,14 @@
                                                 <Ellipse Width="7" Height="7" Fill="#00ED64" Margin="0,0,6,0"/>
                                                 <TextBlock Text="CPU: " Foreground="#8A9CA8" FontSize="12"
                                                            VerticalAlignment="Center"/>
-                                                <TextBlock Text="{Binding CpuValue}" Foreground="White" FontSize="12"
+                                                <TextBlock Text="{Binding CpuValue, Mode=OneWay}" Foreground="White" FontSize="12"
                                                            FontWeight="SemiBold" VerticalAlignment="Center"/>
                                             </StackPanel>
                                             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                                 <Ellipse Width="7" Height="7" Fill="#00ED64" Margin="0,0,6,0"/>
                                                 <TextBlock Text="RAM: " Foreground="#8A9CA8" FontSize="12"
                                                            VerticalAlignment="Center"/>
-                                                <TextBlock Text="{Binding MemoryValue}" Foreground="White" FontSize="12"
+                                                <TextBlock Text="{Binding MemoryValue, Mode=OneWay}" Foreground="White" FontSize="12"
                                                            FontWeight="SemiBold" VerticalAlignment="Center"/>
                                             </StackPanel>
                                         </Grid>
@@ -1205,7 +1266,7 @@
                                         Command="{Binding Games.RemoveProfileCommand}"/>
                             </StackPanel>
 
-                            <ListBox ItemsSource="{Binding Games.Profiles}"
+                            <ListBox ItemsSource="{Binding Games.Profiles, Mode=OneWay}"
                                      ScrollViewer.VerticalScrollBarVisibility="Auto"
                                      SelectedItem="{Binding Games.SelectedProfile, Mode=TwoWay}"
                                      DisplayMemberPath="Name"/>
@@ -1246,7 +1307,7 @@
                                                Foreground="{StaticResource TextMuted}"/>
 
                                     <Border Style="{StaticResource InnerCard}" Padding="6" Height="180">
-                                        <ListBox ItemsSource="{Binding Games.RunningApps}"
+                                        <ListBox ItemsSource="{Binding Games.RunningApps, Mode=OneWay}"
                                                  ScrollViewer.VerticalScrollBarVisibility="Auto"
                                                  SelectedItem="{Binding Games.SelectedRunningApp, Mode=TwoWay}"
                                                  DisplayMemberPath="Display"/>
@@ -1271,7 +1332,7 @@
                                         <TextBlock Text="{loc:Loc Games_MatchMode}"
                                                    Style="{StaticResource FieldLabel}" Margin="0,10,0,4"/>
                                         <ComboBox ItemsSource="{Binding DataContext.Games.MatchModes,
-                                                                RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"
                                                   DisplayMemberPath="Label" SelectedValuePath="Value"
                                                   SelectedValue="{Binding MatchMode, Mode=TwoWay}"/>
 
@@ -1283,14 +1344,14 @@
                                         <TextBlock Text="{loc:Loc Games_Behavior}"
                                                    Style="{StaticResource FieldLabel}" Margin="0,10,0,4"/>
                                         <ComboBox ItemsSource="{Binding DataContext.Games.Behaviors,
-                                                                RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"
                                                   DisplayMemberPath="Label" SelectedValuePath="Value"
                                                   SelectedValue="{Binding Behavior, Mode=TwoWay}"/>
 
                                         <TextBlock Text="{loc:Loc Games_Preset}"
                                                    Style="{StaticResource FieldLabel}" Margin="0,10,0,4"/>
                                         <ComboBox ItemsSource="{Binding DataContext.Games.Presets,
-                                                                RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"
                                                   DisplayMemberPath="Name" SelectedValuePath="Id"
                                                   SelectedValue="{Binding PresetId, Mode=TwoWay}"/>
                                         <ContentControl Content="{Binding}" ContentTemplate="{StaticResource WeaponPresetEditor}"/>
@@ -1399,7 +1460,7 @@
                                     <TextBlock Text="{loc:Loc Games_MatchMode}"
                                                Style="{StaticResource FieldLabel}" Margin="0,10,0,4"/>
                                     <ComboBox ItemsSource="{Binding DataContext.Games.MatchModes,
-                                                            RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"
                                               DisplayMemberPath="Label" SelectedValuePath="Value"
                                               SelectedValue="{Binding MatchMode, Mode=TwoWay}"/>
 
@@ -1410,14 +1471,14 @@
                                     <TextBlock Text="{loc:Loc Games_Behavior}"
                                                Style="{StaticResource FieldLabel}" Margin="0,10,0,4"/>
                                     <ComboBox ItemsSource="{Binding DataContext.Games.Behaviors,
-                                                            RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"
                                               DisplayMemberPath="Label" SelectedValuePath="Value"
                                               SelectedValue="{Binding Behavior, Mode=TwoWay}"/>
 
                                     <TextBlock Text="{loc:Loc Games_Preset}"
                                                Style="{StaticResource FieldLabel}" Margin="0,10,0,4"/>
                                     <ComboBox ItemsSource="{Binding DataContext.Games.Presets,
-                                                            RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"
                                               DisplayMemberPath="Name" SelectedValuePath="Id"
                                               SelectedValue="{Binding PresetId, Mode=TwoWay}"/>
                                     <ContentControl Content="{Binding}" ContentTemplate="{StaticResource WeaponPresetEditor}"/>
@@ -1441,7 +1502,11 @@
                 <ContentControl x:Name="LibraryHost" Content="{Binding}"/>
             </TabItem>
 
-            <TabItem x:Name="StatsNavigationTab" Header="{loc:Loc Tab_Stats}" Content="{Binding Stats}">
+            <TabItem x:Name="PixelArtNavigationTab" Header="{loc:Loc Tab_PixelArt}">
+                <ContentControl x:Name="PixelArtHost"/>
+            </TabItem>
+
+            <TabItem x:Name="StatsNavigationTab" Header="{loc:Loc Tab_Stats}" Content="{Binding Stats, Mode=OneWay}">
                 <TabItem.ContentTemplate>
                     <DataTemplate>
                         <views:StatsTab/>
@@ -1457,8 +1522,8 @@
         -->
         <Border Grid.Row="1" Style="{StaticResource Toast}" HorizontalAlignment="Right" VerticalAlignment="Bottom"
                 Margin="0,0,24,24"
-                Visibility="{Binding Toast.IsVisible, Converter={StaticResource BoolToVisibility}}">
-            <TextBlock Text="{Binding Toast.Text}" FontSize="13" TextWrapping="Wrap" MaxWidth="460"/>
+                Visibility="{Binding Toast.IsVisible, Converter={StaticResource BoolToVisibility}, Mode=OneWay}">
+            <TextBlock Text="{Binding Toast.Text, Mode=OneWay}" FontSize="13" TextWrapping="Wrap" MaxWidth="460"/>
         </Border>
     </Grid>
     </Grid>

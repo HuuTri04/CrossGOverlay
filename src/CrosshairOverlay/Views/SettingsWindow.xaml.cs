@@ -143,6 +143,11 @@ public partial class SettingsWindow : Window
         if (!ReferenceEquals(e.OriginalSource, sender)) return;
         UpdatePerformanceMonitor();
         UpdateStatsTimer();
+        if (PixelArtNavigationTab?.IsSelected == true && PixelArtHost.ContentTemplate is null)
+        {
+            PixelArtHost.ContentTemplate = (DataTemplate)FindResource("PixelArtPanel");
+            PixelArtHost.Content = _viewModel.PixelArt;
+        }
         if (_libraryStarted || !LibraryTab.IsSelected) return;
 
         _libraryStarted = true;

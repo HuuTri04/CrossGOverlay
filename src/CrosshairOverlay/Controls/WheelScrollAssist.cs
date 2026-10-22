@@ -69,11 +69,13 @@ public static class WheelScrollAssist
     }
 
     /// <summary>
-    /// Trang nội dung cuộn 48 DIP/nấc. Danh sách không dùng style này tiếp tục theo thiết lập
-    /// số dòng của Windows để giữ hành vi cuộn logic và ảo hóa hiện có.
+    /// Trang nội dung dùng quán tính 64 DIP/nấc khi được bật; nhánh 48 DIP là fallback.
+    /// Danh sách ảo hóa tiếp tục theo thiết lập số dòng của Windows.
     /// </summary>
     private static void Scroll(ScrollViewer viewer, int delta)
     {
+        if (SmoothScrollBehavior.TryQueueWheel(viewer, delta)) return;
+
         if (GetFixedPixelWheel(viewer))
         {
             viewer.ScrollToVerticalOffset(Math.Clamp(
@@ -118,9 +120,10 @@ public static class WheelScrollAssist
 
         if (viewer.ScrollableHeight <= Epsilon) return false;
 
+        var offset = SmoothScrollBehavior.GetEffectiveOffset(viewer);
         return scrollDown
-            ? viewer.VerticalOffset < viewer.ScrollableHeight - Epsilon
-            : viewer.VerticalOffset > Epsilon;
+            ? offset < viewer.ScrollableHeight - Epsilon
+            : offset > Epsilon;
     }
 
     /// <summary>

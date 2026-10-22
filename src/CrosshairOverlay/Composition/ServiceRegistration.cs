@@ -57,6 +57,7 @@ internal static class ServiceRegistration
         services.AddSingleton<IForegroundWindowWatcher, ForegroundWindowWatcher>();
         services.AddSingleton<IGameProfileMatcher, GameProfileMatcher>();
         services.AddSingleton<IRunningApplicationScanner, RunningApplicationScanner>();
+        services.AddSingleton<GamingGcLatencyService>();
         services.AddSingleton<IProfileAutoSwitcher, ProfileAutoSwitcher>();
         services.AddSingleton<WeaponAutoSwitchService>();
 

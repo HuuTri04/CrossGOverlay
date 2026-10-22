@@ -1,5 +1,4 @@
-﻿using System.Runtime;
-using System.Windows;
+﻿using System.Windows;
 using CrosshairOverlay.Composition;
 using CrosshairOverlay.Core;
 using CrosshairOverlay.Core.Abstractions;
@@ -83,11 +82,6 @@ internal sealed class AppBootstrapper
         _appXamlMs = global::System.Diagnostics.Stopwatch.GetElapsedTime(_constructedAt).TotalMilliseconds;
         _arguments = StartupArguments.Parse(e.Args);
 
-        // Một đợt thu gom gen2 gây khựng sẽ thành micro-stutter nhìn thấy được trong game.
-        // SustainedLowLatency yêu cầu GC tránh những đợt đó, đổi lại heap có thể lớn hơn đôi
-        // chút — đánh đổi đúng cho tiến trình chỉ cấp phát khi người dùng đổi preset.
-        GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
-
         InstallGlobalExceptionHandlers();
         _ = InitializeAsync();
     }
@@ -138,6 +132,7 @@ internal sealed class AppBootstrapper
 
             var settings = _provider.GetRequiredService<IAppSettingsService>();
             await settings.LoadAsync().ConfigureAwait(true);
+            UiAnimationFrameRate.TargetFps = settings.Current.UiTargetFps;
             _logging.SetLevel(settings.Current.LogLevel);
             boot.Mark("cài đặt");
 
@@ -526,6 +521,13 @@ internal sealed class AppBootstrapper
     private void OnVisibilitySettingChanged(object? sender, global::System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (_provider is null) return;
+
+        if (e.PropertyName == nameof(AppSettings.UiTargetFps))
+        {
+            UiAnimationFrameRate.TargetFps =
+                _provider.GetRequiredService<IAppSettingsService>().Current.UiTargetFps;
+            return;
+        }
 
         if (e.PropertyName == nameof(AppSettings.StreamModeEnabled))
         {

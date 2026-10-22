@@ -26,6 +26,7 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
     private readonly Lazy<HotkeysViewModel> _hotkeysTab;
     private readonly Lazy<GameProfilesViewModel> _gamesTab;
     private readonly Lazy<StatsViewModel> _statsTab;
+    private readonly Lazy<PixelArtViewModel> _pixelArtTab;
 
     private bool _syncingSelection;
     private bool _disposed;
@@ -75,6 +76,7 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
         _gamesTab = new Lazy<GameProfilesViewModel>(() => new GameProfilesViewModel(settings, library, watcher, matcher, scanner));
         _systemInfo = new Lazy<SystemInfoViewModel>(() => new SystemInfoViewModel(hardware, monitors, displayModes));
         _statsTab = new Lazy<StatsViewModel>(() => new StatsViewModel(usageStats, dialogs));
+        _pixelArtTab = new Lazy<PixelArtViewModel>(() => new PixelArtViewModel(library, images, overlay));
 
         // Ô "Bật overlay" là lựa chọn của người dùng, không phải overlay có đang hiện hay không —
         // xem App.ToggleOverlay. Đồng bộ hai chiều với menu khay và phím tắt qua cài đặt.
@@ -98,6 +100,8 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
     public SystemInfoViewModel SystemInfo => _systemInfo.Value;
 
     public StatsViewModel Stats => _statsTab.Value;
+
+    public PixelArtViewModel PixelArt => _pixelArtTab.Value;
 
     /// <summary>Tab "Thư viện": dữ liệu chỉ được nạp khi người dùng mở tab đó lần đầu.</summary>
     public PresetLibraryViewModel Library { get; }

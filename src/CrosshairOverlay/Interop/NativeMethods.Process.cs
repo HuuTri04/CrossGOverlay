@@ -68,6 +68,10 @@ internal static partial class NativeMethods
     [DllImport(User32, EntryPoint = "GetWindowTextW", CharSet = CharSet.Unicode)]
     internal static extern int GetWindowText(nint hWnd, StringBuilder lpString, int nMaxCount);
 
+    // Direct UTF-16 buffer for the fallback check: no StringBuilder marshalling per tick.
+    [DllImport(User32, EntryPoint = "GetWindowTextW", ExactSpelling = true)]
+    internal static extern unsafe int GetWindowText(nint hWnd, char* lpString, int nMaxCount);
+
     [DllImport(User32, EntryPoint = "GetWindowTextLengthW", CharSet = CharSet.Unicode)]
     internal static extern int GetWindowTextLength(nint hWnd);
 

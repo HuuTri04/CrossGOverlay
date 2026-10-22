@@ -1,5 +1,6 @@
 ﻿using CrosshairOverlay.Core.Abstractions;
 using CrosshairOverlay.Core.Models;
+using CrosshairOverlay.Services.System;
 using Microsoft.Extensions.Logging;
 
 namespace CrosshairOverlay.Services.Process;
@@ -16,6 +17,7 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
     private readonly IPresetLibrary _library;
     private readonly IOverlayController _overlay;
     private readonly IAppSettingsService _settings;
+    private readonly GamingGcLatencyService? _gcLatency;
     private readonly ILogger<ProfileAutoSwitcher> _logger;
 
     /// <summary>
@@ -44,6 +46,7 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
 
     private bool _started;
     private bool _streamSuppressed;
+    private bool _foregroundIsMatchedGame;
     private bool _disposed;
 
     public ProfileAutoSwitcher(
@@ -52,13 +55,15 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
         IPresetLibrary library,
         IOverlayController overlay,
         IAppSettingsService settings,
-        ILogger<ProfileAutoSwitcher> logger)
+        ILogger<ProfileAutoSwitcher> logger,
+        GamingGcLatencyService? gcLatency = null)
     {
         _watcher = watcher;
         _matcher = matcher;
         _library = library;
         _overlay = overlay;
         _settings = settings;
+        _gcLatency = gcLatency;
         _logger = logger;
     }
 
@@ -70,7 +75,12 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
             _settings.Current.AutoSwitchByGameProfile = value;
             _settings.RequestSave();
 
-            if (!value) RestoreManualPreset();
+            if (!value)
+            {
+                _foregroundIsMatchedGame = false;
+                UpdateGcLatency();
+                RestoreManualPreset();
+            }
         }
     }
 
@@ -97,6 +107,7 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
         _started = true;
         _watcher.ForegroundChanged += OnForegroundChanged;
         _watcher.TrackedWindowClosed += OnTrackedWindowClosed;
+        _overlay.VisibilityChanged += OnOverlayVisibilityChanged;
         _watcher.Start();
     }
 
@@ -107,8 +118,16 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
         _started = false;
         _watcher.ForegroundChanged -= OnForegroundChanged;
         _watcher.TrackedWindowClosed -= OnTrackedWindowClosed;
+        _overlay.VisibilityChanged -= OnOverlayVisibilityChanged;
         _watcher.Stop();
+        _foregroundIsMatchedGame = false;
+        _gcLatency?.SetActive(false);
     }
+
+    private void OnOverlayVisibilityChanged(object? sender, OverlayVisibilityChangedEventArgs e) => UpdateGcLatency();
+
+    private void UpdateGcLatency() =>
+        _gcLatency?.SetActive(_started && _foregroundIsMatchedGame && _overlay.IsVisible && !_streamSuppressed);
 
     private void OnForegroundChanged(object? sender, ForegroundWindowChangedEventArgs e)
     {
@@ -119,12 +138,16 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
         // thủ công nếu tiến trình game đã thoát hẳn — kiểm tra một lần tại đây, không polling.
         if (window.IsOwnProcess)
         {
+            _foregroundIsMatchedGame = false;
+            UpdateGcLatency();
             if (ActiveGameProfile is not null && !IsMatchedProcessAlive()) ClearMatch();
             return;
         }
 
         if (IsTestTarget(window))
         {
+            _foregroundIsMatchedGame = false;
+            UpdateGcLatency();
             // Test tâm ngắm: người dùng muốn thấy preset ĐANG CHỈNH. Không đổi preset theo game
             // profile nào (máy có sẵn profile cho Notepad thì test sẽ hiện nhầm preset khác), và hiện
             // kể cả ở chế độ "chỉ hiện trong game".
@@ -139,7 +162,12 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
 
         SetInTestWindow(false);
 
-        if (!IsEnabled) return;
+        if (!IsEnabled)
+        {
+            _foregroundIsMatchedGame = false;
+            UpdateGcLatency();
+            return;
+        }
 
         var match = _matcher.Match(window, _settings.Current.GameProfiles);
 
@@ -169,6 +197,7 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
 
         if (match.Behavior == GameProfileBehavior.HideOverlay)
         {
+            _foregroundIsMatchedGame = false;
             _logger.LogDebug("Game profile '{Name}' yêu cầu ẩn overlay.", match.Name);
             ApplyVisibility();
             return;
@@ -180,6 +209,7 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
             _logger.LogWarning(
                 "Game profile '{Name}' trỏ tới preset không còn tồn tại ({PresetId}).",
                 match.Name, match.PresetId);
+            ClearMatch();
             return;
         }
 
@@ -194,6 +224,7 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
             _library.SetActive(preset);
         }
 
+        _foregroundIsMatchedGame = true;
         ApplyVisibility();
         if (_overlay.IsVisible && _overlay is IOverlayForegroundTarget target)
             target.OnForegroundGameChanged(window.Handle);
@@ -226,6 +257,7 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
 
     private void ClearMatch()
     {
+        _foregroundIsMatchedGame = false;
         ActiveGameProfile = null;
         _matchedProcessId = 0;
         HandleNoMatch();
@@ -278,13 +310,16 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
         ApplyVisibility();
     }
 
-    public void ApplyVisibility() =>
+    public void ApplyVisibility()
+    {
         _overlay.SetVisible(ShouldShowOverlay(
             _settings.Current.OverlayEnabled,
             IsEnabled,
             _settings.Current.ShowOnlyInMatchedGames,
             ActiveGameProfile,
             _inTestWindow) && !_streamSuppressed);
+        UpdateGcLatency();
+    }
 
     public void BeginCrosshairTest(string processName)
     {

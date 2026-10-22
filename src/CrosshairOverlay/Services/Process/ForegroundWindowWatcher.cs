@@ -39,8 +39,8 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
     private readonly StringBuilder _pathBuffer = new(MaxPathLength);
     private readonly StringBuilder _titleBuffer = new(256);
 
-    /// <summary>Delegate đọc lại foreground, tạo sẵn để mỗi sự kiện không cấp phát closure mới.</summary>
-    private readonly Action _refresh;
+    /// <summary>Dispatcher callback reused for every queued foreground event.</summary>
+    private readonly Action _queuedRefresh;
     private readonly Action _trackedWindowDestroyed;
     private readonly WaitOrTimerCallback _processExitCallback;
     private readonly Timer _fallbackTimer;
@@ -86,7 +86,7 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
         _audit = audit;
         _dispatcher = Dispatcher.CurrentDispatcher;
         _callback = OnWinEvent;
-        _refresh = Refresh;
+        _queuedRefresh = RefreshQueued;
         _trackedWindowDestroyed = OnTrackedWindowDestroyed;
         _processExitCallback = OnTrackedProcessExitSignaled;
         _fallbackTimer = new Timer(OnFallbackTick, null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
@@ -370,16 +370,18 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
 
         try
         {
-            _dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
-            {
-                Interlocked.Exchange(ref _refreshQueued, 0);
-                if (_started) _refresh();
-            }));
+            _dispatcher.BeginInvoke(DispatcherPriority.Normal, _queuedRefresh);
         }
         catch (InvalidOperationException)
         {
             Interlocked.Exchange(ref _refreshQueued, 0);
         }
+    }
+
+    private void RefreshQueued()
+    {
+        Interlocked.Exchange(ref _refreshQueued, 0);
+        if (_started) Refresh();
     }
 
     /// <summary>
@@ -416,8 +418,7 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
             }
 
             if (DateTime.UtcNow.Ticks < Volatile.Read(ref _retryMetadataUntilTicks)
-                || !string.Equals(ReadTitleForFallback(hwnd), Volatile.Read(ref _publishedTitle),
-                    StringComparison.Ordinal))
+                || !TitleMatchesPublished(hwnd, Volatile.Read(ref _publishedTitle)))
             {
                 QueueRefresh();
             }
@@ -428,13 +429,15 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
         }
     }
 
-    private static string ReadTitleForFallback(nint hwnd)
+    private static unsafe bool TitleMatchesPublished(nint hwnd, string publishedTitle)
     {
-        var length = NativeMethods.GetWindowTextLength(hwnd);
-        if (length <= 0) return string.Empty;
-        var title = new StringBuilder(Math.Min(length + 1, 1024));
-        NativeMethods.GetWindowText(hwnd, title, title.Capacity);
-        return title.ToString();
+        // Same 1024-character cap as TryGetWindowTitle, without allocating on each fallback tick.
+        Span<char> title = stackalloc char[1024];
+        fixed (char* buffer = title)
+        {
+            var length = NativeMethods.GetWindowText(hwnd, buffer, title.Length);
+            return length >= 0 && title[..length].SequenceEqual(publishedTitle.AsSpan());
+        }
     }
 
     private ForegroundWindowInfo Describe(nint hwnd)

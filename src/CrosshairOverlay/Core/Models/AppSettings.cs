@@ -68,6 +68,15 @@ public sealed partial class AppSettings : ObservableObject
     /// </summary>
     [ObservableProperty] private int _overlayFpsLimit = 60;
 
+    /// <summary>Nhịp tối đa cho các chuyển động giao diện do ứng dụng điều khiển; không giới hạn FPS overlay.</summary>
+    public int UiTargetFps
+    {
+        get => _uiTargetFps;
+        set => SetProperty(ref _uiTargetFps, Math.Clamp(value, 60, 144));
+    }
+
+    private int _uiTargetFps = 144;
+
     /// <summary>Tỉ lệ bổ sung cho mọi preset; 1.0 giữ nguyên kích thước riêng của từng preset.</summary>
     public double GlobalScale
     {

@@ -1,8 +1,10 @@
 using System.Windows;
 using System.Collections.ObjectModel;
+using System.Runtime;
 using CrosshairOverlay.Core.Abstractions;
 using CrosshairOverlay.Core.Models;
 using CrosshairOverlay.Services.Process;
+using CrosshairOverlay.Services.System;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
@@ -142,6 +144,40 @@ public class GameProfileMatcherTests
 /// <summary>Regression for a game whose metadata appears after its first foreground event.</summary>
 public sealed class GameProfileActivationTests
 {
+    [Fact]
+    public void GcLowLatencyOnlyWhileMatchedGameOverlayIsVisible()
+    {
+        var mode = GCLatencyMode.Interactive;
+        using var gc = new GamingGcLatencyService(() => mode, value => mode = value);
+        var watcher = new Watcher();
+        var preset = CrosshairProfile.CreateDefault();
+        var overlay = new Overlay();
+        var settings = new Settings();
+        settings.Current.ShowOnlyInMatchedGames = true;
+        settings.Current.GameProfiles.Add(new GameProfile { Pattern = "game.exe", PresetId = preset.Id });
+        using var switcher = new ProfileAutoSwitcher(watcher, new GameProfileMatcher(),
+            new Library(preset), overlay, settings, NullLogger<ProfileAutoSwitcher>.Instance, gc);
+        switcher.Start();
+
+        var game = new ForegroundWindowInfo(1234, 9999, "game.exe", @"C:\Games\game.exe", "Game",
+            new Rect(0, 0, 1280, 720), FullscreenKind.None);
+        watcher.Publish(game);
+        Assert.Equal(GCLatencyMode.SustainedLowLatency, mode);
+
+        overlay.SetVisible(false);
+        Assert.Equal(GCLatencyMode.Interactive, mode);
+        overlay.SetVisible(true);
+        Assert.Equal(GCLatencyMode.SustainedLowLatency, mode);
+
+        watcher.Publish(game with { ProcessId = Environment.ProcessId, ProcessName = "CrossGOverlay" });
+        Assert.Equal(GCLatencyMode.Interactive, mode);
+
+        watcher.Publish(game);
+        Assert.Equal(GCLatencyMode.SustainedLowLatency, mode);
+        switcher.Stop();
+        Assert.Equal(GCLatencyMode.Interactive, mode);
+    }
+
     [Fact]
     public void StreamSuppression_HidesAndRestoresMatchedGameOverlay()
     {

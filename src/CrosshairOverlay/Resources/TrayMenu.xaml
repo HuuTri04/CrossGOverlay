@@ -11,7 +11,7 @@
         x:Shared="False": mỗi lần lấy ra là một menu mới, không dùng chung một instance.
     -->
     <ContextMenu x:Key="TrayContextMenu" x:Shared="False">
-        <MenuItem Header="{Binding OpenSettingsText}" Command="{Binding OpenSettingsCommand}"/>
+        <MenuItem Header="{Binding OpenSettingsText, Mode=OneWay}" Command="{Binding OpenSettingsCommand}"/>
         <!--
             Dấu tích = overlay ĐANG HIỆN (trạng thái thật).
 
@@ -19,10 +19,10 @@
             ngay lúc bấm, trước khi biết overlay có thật sự đổi hay không (vd game profile đang ép
             ẩn). Dấu tích chỉ được đổi khi trạng thái thật đổi.
         -->
-        <MenuItem Header="{Binding OverlayText}" Command="{Binding ToggleOverlayCommand}"
+        <MenuItem Header="{Binding OverlayText, Mode=OneWay}" Command="{Binding ToggleOverlayCommand}"
                   IsChecked="{Binding IsOverlayEnabled, Mode=OneWay}"/>
         <Separator/>
-        <MenuItem Header="{Binding ExitText}" Command="{Binding ExitCommand}"/>
+        <MenuItem Header="{Binding ExitText, Mode=OneWay}" Command="{Binding ExitCommand}"/>
     </ContextMenu>
 
 </ResourceDictionary>

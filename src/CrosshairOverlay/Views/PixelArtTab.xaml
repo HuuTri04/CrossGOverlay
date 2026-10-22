@@ -1,0 +1,195 @@
+<UserControl x:Class="CrosshairOverlay.Views.PixelArtTab"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ctl="clr-namespace:CrosshairOverlay.Controls"
+             xmlns:loc="clr-namespace:CrosshairOverlay.Localization"
+             xmlns:po="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options">
+    <UserControl.Resources>
+        <SolidColorBrush x:Key="PixelGreen" Color="#00FF00" po:Freeze="True"/>
+        <SolidColorBrush x:Key="PixelRed" Color="#FF0000" po:Freeze="True"/>
+        <SolidColorBrush x:Key="PixelWhite" Color="#FFFFFF" po:Freeze="True"/>
+        <SolidColorBrush x:Key="PixelYellow" Color="#FFFF00" po:Freeze="True"/>
+        <SolidColorBrush x:Key="PixelBlue" Color="#00BFFF" po:Freeze="True"/>
+        <SolidColorBrush x:Key="PixelMagenta" Color="#FF00FF" po:Freeze="True"/>
+        <SolidColorBrush x:Key="PixelOrange" Color="#FF8800" po:Freeze="True"/>
+        <SolidColorBrush x:Key="PixelBlack" Color="#000000" po:Freeze="True"/>
+
+        <Style x:Key="PixelSwatch" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Width" Value="32"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Margin" Value="0,0,7,0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Swatch" Background="{TemplateBinding Background}"
+                                BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" CornerRadius="4"/>
+                        <ControlTemplate.Triggers>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsMouseOver" Value="True"/>
+                                    <Condition Property="ctl:SmoothScrollBehavior.IsScrolling" Value="False"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="Swatch" Property="BorderBrush" Value="{StaticResource AccentBright}"/>
+                                <Setter TargetName="Swatch" Property="BorderThickness" Value="2"/>
+                            </MultiTrigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Swatch" Property="BorderBrush" Value="{StaticResource AccentBright}"/>
+                                <Setter TargetName="Swatch" Property="BorderThickness" Value="2"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <ScrollViewer Style="{StaticResource PanelScrollViewer}">
+        <Grid Margin="0,0,4,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="350"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0" Margin="0,0,14,0">
+                <Border Style="{StaticResource Card}" Margin="0,0,0,14">
+                    <StackPanel>
+                        <TextBlock Text="{loc:Loc Pixel_Tools}" Style="{StaticResource SectionHeader}" Margin="0,0,0,12"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="125"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{loc:Loc Pixel_GridSize}" Style="{StaticResource FieldLabel}"
+                                       VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            <ComboBox Grid.Column="1" ItemsSource="{Binding GridSizes, Mode=OneWay}"
+                                      SelectedItem="{Binding GridSize, Mode=TwoWay}"/>
+                            <TextBlock Grid.Column="2" Text="{loc:Loc Pixel_GridHint}" Style="{StaticResource FieldLabel}"
+                                       VerticalAlignment="Center" Margin="12,0,0,0" TextWrapping="Wrap"/>
+                        </Grid>
+                        <WrapPanel Margin="0,14,0,0">
+                            <Button Content="{loc:Loc Pixel_Brush}" Command="{Binding UseBrushCommand}" Margin="0,0,8,8">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsBrushSelected}" Value="True">
+                                                <Setter Property="Background" Value="#2800ED64"/>
+                                                <Setter Property="BorderBrush" Value="{StaticResource AccentBright}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                            <Button Content="{loc:Loc Pixel_Eraser}" Command="{Binding UseEraserCommand}" Margin="0,0,8,8">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsEraserSelected}" Value="True">
+                                                <Setter Property="Background" Value="#2800ED64"/>
+                                                <Setter Property="BorderBrush" Value="{StaticResource AccentBright}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                            <Button Content="{loc:Loc Pixel_Clear}" Command="{Binding ClearCanvasCommand}" Margin="0,0,8,8"/>
+                            <Button Content="{loc:Loc Pixel_CenterGuide}" Command="{Binding ToggleCenterGuideCommand}" Margin="0,0,0,8">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding ShowCenterGuide}" Value="True">
+                                                <Setter Property="Background" Value="#2800ED64"/>
+                                                <Setter Property="BorderBrush" Value="{StaticResource AccentBright}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                        </WrapPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="{loc:Loc Pixel_Canvas}" Style="{StaticResource SectionHeader}" Margin="0,0,0,10"/>
+                        <Border BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" CornerRadius="4"
+                                Padding="8" HorizontalAlignment="Center">
+                            <ctl:PixelArtCanvas Width="384" Height="384"
+                                                Bitmap="{Binding Bitmap, Mode=OneWay}"
+                                                GridSize="{Binding GridSize, Mode=OneWay}"
+                                                ShowCenterGuide="{Binding ShowCenterGuide, Mode=OneWay}"/>
+                        </Border>
+                        <TextBlock Text="{loc:Loc Pixel_DrawHint}" Style="{StaticResource FieldLabel}"
+                                   HorizontalAlignment="Center" Margin="0,10,0,0"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <StackPanel Grid.Column="1">
+                <Border Style="{StaticResource Card}" Margin="0,0,0,14">
+                    <StackPanel>
+                        <TextBlock Text="{loc:Loc Pixel_Palette}" Style="{StaticResource SectionHeader}" Margin="0,0,0,12"/>
+                        <WrapPanel>
+                            <Button Style="{StaticResource PixelSwatch}" Background="{StaticResource PixelGreen}" ToolTip="#00FF00"
+                                    Command="{Binding SelectPaletteColorCommand}" CommandParameter="#00FF00"/>
+                            <Button Style="{StaticResource PixelSwatch}" Background="{StaticResource PixelRed}" ToolTip="#FF0000"
+                                    Command="{Binding SelectPaletteColorCommand}" CommandParameter="#FF0000"/>
+                            <Button Style="{StaticResource PixelSwatch}" Background="{StaticResource PixelWhite}" ToolTip="#FFFFFF"
+                                    Command="{Binding SelectPaletteColorCommand}" CommandParameter="#FFFFFF"/>
+                            <Button Style="{StaticResource PixelSwatch}" Background="{StaticResource PixelYellow}" ToolTip="#FFFF00"
+                                    Command="{Binding SelectPaletteColorCommand}" CommandParameter="#FFFF00"/>
+                            <Button Style="{StaticResource PixelSwatch}" Background="{StaticResource PixelBlue}" ToolTip="#00BFFF"
+                                    Command="{Binding SelectPaletteColorCommand}" CommandParameter="#00BFFF"/>
+                            <Button Style="{StaticResource PixelSwatch}" Background="{StaticResource PixelMagenta}" ToolTip="#FF00FF"
+                                    Command="{Binding SelectPaletteColorCommand}" CommandParameter="#FF00FF"/>
+                            <Button Style="{StaticResource PixelSwatch}" Background="{StaticResource PixelOrange}" ToolTip="#FF8800"
+                                    Command="{Binding SelectPaletteColorCommand}" CommandParameter="#FF8800"/>
+                            <Button Style="{StaticResource PixelSwatch}" Background="{StaticResource PixelBlack}" ToolTip="#000000"
+                                    Command="{Binding SelectPaletteColorCommand}" CommandParameter="#000000"/>
+                        </WrapPanel>
+                        <Grid Margin="0,12,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="32"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Background="{Binding SelectedColorBrush, Mode=OneWay}" BorderBrush="{StaticResource BorderBrushSoft}"
+                                    BorderThickness="1" CornerRadius="4" Width="28" Height="28"/>
+                            <TextBox Grid.Column="1" Text="{Binding CustomHex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                     MaxLength="7" VerticalContentAlignment="Center" Margin="4,0,8,0"/>
+                            <Button Grid.Column="2" Content="{loc:Loc Pixel_CustomColor}"
+                                    Command="{Binding SelectCustomColorCommand}"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource Card}" Margin="0,0,0,14">
+                    <StackPanel>
+                        <TextBlock Text="{loc:Loc Pixel_ShareTitle}" Style="{StaticResource SectionHeader}" Margin="0,0,0,10"/>
+                        <TextBox Text="{Binding ShareCode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 Height="125" MaxLength="9000" TextWrapping="Wrap" AcceptsReturn="False"
+                                 VerticalScrollBarVisibility="Auto"/>
+                        <WrapPanel Margin="0,10,0,0">
+                            <Button Content="{loc:Loc Pixel_CopyCode}" Command="{Binding CopyCodeCommand}" Margin="0,0,8,0"/>
+                            <Button Content="{loc:Loc Pixel_LoadCode}" Command="{Binding LoadCodeCommand}"/>
+                        </WrapPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="{loc:Loc Pixel_SaveTitle}" Style="{StaticResource SectionHeader}" Margin="0,0,0,10"/>
+                        <TextBlock Text="{loc:Loc Pixel_PresetName}" Style="{StaticResource FieldLabel}" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding PresetName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" MaxLength="80"/>
+                        <Button Content="{loc:Loc Pixel_SavePreset}" Command="{Binding SavePresetCommand}"
+                                Style="{StaticResource AccentButton}" Margin="0,12,0,8"/>
+                        <Button Content="{loc:Loc Pixel_ApplyDirect}" Command="{Binding ApplyDirectCommand}"/>
+                        <TextBlock Text="{Binding StatusMessage, Mode=OneWay}" Style="{StaticResource FieldLabel}"
+                                   TextWrapping="Wrap" Height="38" Margin="0,12,0,0"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Grid>
+    </ScrollViewer>
+</UserControl>

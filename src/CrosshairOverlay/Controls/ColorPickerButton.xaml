@@ -14,11 +14,11 @@
         <Popup x:Name="PickerPopup" StaysOpen="False" AllowsTransparency="True"
                Placement="Bottom" PlacementTarget="{Binding ElementName=OpenButton}"
                PopupAnimation="Fade">
-            <Border Background="{DynamicResource CardBg}" BorderBrush="{DynamicResource BorderBrushSoft}"
+            <Border Background="{StaticResource CardBg}" BorderBrush="{StaticResource BorderBrushSoft}"
                     BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,6,0,0" Width="250">
                 <StackPanel>
 
-                    <TextBlock Text="MÀU THƯỜNG DÙNG" Style="{DynamicResource SectionHeader}" Margin="0,0,0,6"/>
+                    <TextBlock Text="MÀU THƯỜNG DÙNG" Style="{StaticResource SectionHeader}" Margin="0,0,0,6"/>
                     <ItemsControl x:Name="SwatchList">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
@@ -35,7 +35,7 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
-                    <TextBlock Text="TINH CHỈNH" Style="{DynamicResource SectionHeader}"/>
+                    <TextBlock Text="TINH CHỈNH" Style="{StaticResource SectionHeader}"/>
 
                     <Grid Margin="0,2,0,0">
                         <Grid.ColumnDefinitions>
@@ -75,7 +75,7 @@
 
                     </Grid>
 
-                    <TextBlock Text="MÃ HEX" Style="{DynamicResource SectionHeader}"/>
+                    <TextBlock Text="MÃ HEX" Style="{StaticResource SectionHeader}"/>
                     <TextBox x:Name="HexBox" FontFamily="Consolas" KeyDown="OnHexKeyDown"
                              LostFocus="OnHexCommit"/>
 

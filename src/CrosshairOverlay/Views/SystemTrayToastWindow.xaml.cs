@@ -6,6 +6,7 @@ using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using CrosshairOverlay.Interop;
 using CrosshairOverlay.Localization;
+using CrosshairOverlay.Services.System;
 
 namespace CrosshairOverlay.Views;
 
@@ -57,9 +58,11 @@ public partial class SystemTrayToastWindow : Window
 
         Opacity = 1;
         BeginAnimation(OpacityProperty,
-            new DoubleAnimation(0, 1, EntranceDuration) { FillBehavior = FillBehavior.Stop });
+            UiAnimationFrameRate.Configure(new DoubleAnimation(0, 1, EntranceDuration)
+                { FillBehavior = FillBehavior.Stop }));
         SlideTransform.BeginAnimation(System.Windows.Media.TranslateTransform.YProperty,
-            new DoubleAnimation(10, 0, EntranceDuration) { FillBehavior = FillBehavior.Stop });
+            UiAnimationFrameRate.Configure(new DoubleAnimation(10, 0, EntranceDuration)
+                { FillBehavior = FillBehavior.Stop }));
         _dismissTimer.Start();
     }
 
@@ -91,7 +94,7 @@ public partial class SystemTrayToastWindow : Window
         if (_closing) return;
         _closing = true;
 
-        var animation = new DoubleAnimation(1, 0, ExitDuration);
+        var animation = UiAnimationFrameRate.Configure(new DoubleAnimation(1, 0, ExitDuration));
         animation.Completed += (_, _) => Close();
         BeginAnimation(OpacityProperty, animation);
     }

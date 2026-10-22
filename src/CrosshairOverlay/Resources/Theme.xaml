@@ -133,10 +133,14 @@
                         </ContentPresenter>
                     </Border>
                     <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                                <Condition Property="ctl:SmoothScrollBehavior.IsScrolling" Value="False"/>
+                            </MultiTrigger.Conditions>
                             <Setter TargetName="Root" Property="Background" Value="#1400ED64"/>
                             <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource AccentBright}"/>
-                        </Trigger>
+                        </MultiTrigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="Root" Property="Background" Value="#2800ED64"/>
                         </Trigger>
@@ -179,10 +183,14 @@
                         </ContentPresenter>
                     </Border>
                     <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                                <Condition Property="ctl:SmoothScrollBehavior.IsScrolling" Value="False"/>
+                            </MultiTrigger.Conditions>
                             <Setter TargetName="Root" Property="Background" Value="{StaticResource AccentBright}"/>
                             <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource AccentBright}"/>
-                        </Trigger>
+                        </MultiTrigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="Root" Property="Background" Value="{StaticResource Accent}"/>
                         </Trigger>
@@ -444,7 +452,7 @@
                                           ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"/>
                         <Popup x:Name="PART_Popup" AllowsTransparency="True" Placement="Bottom"
                                IsOpen="{TemplateBinding IsDropDownOpen}" Focusable="False"
-                               PopupAnimation="Fade">
+                               PopupAnimation="None">
                             <Border Background="{StaticResource CardBg}"
                                     BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1"
                                     CornerRadius="{StaticResource RadiusCard}" Margin="0,4,0,0"
@@ -487,17 +495,21 @@
                 <ControlTemplate TargetType="ListBoxItem">
                     <Border x:Name="Root" Background="Transparent"
                             CornerRadius="{StaticResource RadiusInput}"
-                            Padding="10,8" BorderThickness="0,0,0,0">
+                            Padding="4,8" BorderThickness="0,0,0,0">
                         <Grid>
                             <Border x:Name="Bar" Width="3" HorizontalAlignment="Left" CornerRadius="2"
-                                    Background="Transparent" Margin="-6,0,0,0"/>
-                            <ContentPresenter/>
+                                    Background="Transparent"/>
+                            <ContentPresenter Margin="6,0,6,0"/>
                         </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                                <Condition Property="ctl:SmoothScrollBehavior.IsScrolling" Value="False"/>
+                            </MultiTrigger.Conditions>
                             <Setter TargetName="Root" Property="Background" Value="#14FFFFFF"/>
-                        </Trigger>
+                        </MultiTrigger>
                         <Trigger Property="IsSelected" Value="True">
                             <Setter TargetName="Root" Property="Background" Value="#2600ED64"/>
                             <Setter TargetName="Bar" Property="Background" Value="{StaticResource AccentBright}"/>
@@ -540,7 +552,11 @@
                         </Grid.RowDefinitions>
 
                         <TabPanel x:Name="HeaderPanel" Grid.Row="0" IsItemsHost="True" Panel.ZIndex="1"
-                                  Margin="0,0,0,-1" KeyboardNavigation.TabIndex="1" Background="Transparent"/>
+                                  KeyboardNavigation.TabIndex="1" Background="Transparent">
+                            <TabPanel.RenderTransform>
+                                <TranslateTransform Y="1"/>
+                            </TabPanel.RenderTransform>
+                        </TabPanel>
 
                         <Border x:Name="Container" Grid.Row="1"
                                 Background="{TemplateBinding Background}"
@@ -659,18 +675,27 @@
     -->
     <Style TargetType="ScrollViewer">
         <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="UseLayoutRounding" Value="True"/>
+        <Setter Property="IsDeferredScrollingEnabled" Value="False"/>
     </Style>
 
-    <!-- Apply only to page-level scrollers; text boxes and combo popups keep their own scrolling rules. -->
+    <!-- Only page scrollers are eased. The virtualized preset catalog keeps its own scroll mechanics. -->
     <Style x:Key="PanelScrollViewer" TargetType="ScrollViewer" BasedOn="{StaticResource {x:Type ScrollViewer}}">
         <Setter Property="CanContentScroll" Value="False"/>
         <Setter Property="Focusable" Value="False"/>
         <Setter Property="ctl:WheelScrollAssist.FixedPixelWheel" Value="True"/>
+        <Setter Property="ctl:SmoothScrollBehavior.IsEnabled" Value="True"/>
         <Setter Property="HorizontalScrollBarVisibility" Value="Disabled"/>
         <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
         <Setter Property="IsDeferredScrollingEnabled" Value="False"/>
         <Setter Property="SnapsToDevicePixels" Value="True"/>
         <Setter Property="UseLayoutRounding" Value="True"/>
+        <Style.Triggers>
+            <Trigger Property="CanContentScroll" Value="True">
+                <Setter Property="ctl:SmoothScrollBehavior.IsEnabled" Value="False"/>
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
     <Style TargetType="ScrollBar">
@@ -941,7 +966,7 @@
                         <TextBlock TextWrapping="Wrap"
                                    Foreground="{TemplateBinding Foreground}"
                                    FontSize="{TemplateBinding FontSize}"
-                                   Text="{Binding Content, RelativeSource={RelativeSource TemplatedParent}}"/>
+                                   Text="{Binding Content, RelativeSource={RelativeSource TemplatedParent}, Mode=OneWay}"/>
                     </Border>
                 </ControlTemplate>
             </Setter.Value>
