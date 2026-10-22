@@ -1,5 +1,8 @@
 ﻿using System.IO;
+using System.IO.Compression;
 using CrosshairOverlay.Core.Models;
+using System.Windows.Threading;
+using CrosshairOverlay.Services.Overlay;
 using CrosshairOverlay.Services.Storage;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
@@ -24,6 +27,43 @@ public class PresetRepositoryTests : IDisposable
         _paths.EnsureCreated();
 
         _repository = new PresetRepository(_paths, new CustomImageStore(_paths, NullLogger<CustomImageStore>.Instance), NullLogger<PresetRepository>.Instance);
+    }
+
+    [Fact]
+    public async Task ZipBackup_RestoresSettingsPresetsAndImagesWithoutStalePresets()
+    {
+        var profile = CrosshairProfile.CreateDefault();
+        await AtomicFile.WriteJsonAtomicAsync(_paths.SettingsFilePath, AppSettings.CreateDefault());
+        await _repository.SaveAsync(profile);
+        var images = Path.Combine(_root, "CustomImages");
+        Directory.CreateDirectory(images);
+        File.WriteAllText(Path.Combine(images, "scope.png"), "image");
+        var archive = Path.Combine(_root, "backup.zip");
+
+        DataBackupArchive.Create(_paths, archive);
+        File.WriteAllText(_paths.SettingsFilePath, "broken");
+        var stale = Path.Combine(_paths.PresetsDirectory, Guid.NewGuid() + ".json");
+        File.WriteAllText(stale, "stale");
+        File.Delete(Path.Combine(images, "scope.png"));
+
+        DataBackupArchive.Restore(_paths, archive);
+
+        Assert.NotNull(await AtomicFile.LoadJsonAsync<AppSettings>(_paths.SettingsFilePath));
+        Assert.True(File.Exists(Path.Combine(_paths.PresetsDirectory, profile.Id + ".json")));
+        Assert.False(File.Exists(stale));
+        Assert.True(File.Exists(Path.Combine(images, "scope.png")));
+    }
+
+    [Fact]
+    public void ZipBackup_RejectsPathTraversalBeforeWriting()
+    {
+        var archive = Path.Combine(_root, "malicious.zip");
+        using (var zip = ZipFile.Open(archive, ZipArchiveMode.Create))
+        using (var writer = new StreamWriter(zip.CreateEntry("../settings.json").Open()))
+            writer.Write("{}");
+
+        Assert.Throws<InvalidDataException>(() => DataBackupArchive.Restore(_paths, archive));
+        Assert.False(File.Exists(_paths.SettingsFilePath));
     }
 
     [Fact]
@@ -103,6 +143,68 @@ public class PresetRepositoryTests : IDisposable
         await _repository.SaveAsync(CrosshairProfile.CreateDefault());
 
         Assert.Empty(Directory.GetFiles(_paths.PresetsDirectory, "*.tmp"));
+    }
+
+    [Fact]
+    public async Task FileChinhBiHong_PhuHoiBanCuVaKhongGhiDeBackupTot()
+    {
+        var preset = CrosshairProfile.CreateDefault();
+        preset.Name = "Previous";
+        await _repository.SaveAsync(preset);
+        preset.Name = "Current";
+        await _repository.SaveAsync(preset);
+        var path = Path.Combine(_paths.PresetsDirectory, $"{preset.Id:D}.json");
+
+        await File.WriteAllTextAsync(path, string.Empty);
+        Assert.Equal("Previous", (await _repository.GetAsync(preset.Id))?.Name);
+
+        await _repository.SaveAsync(preset);
+        Assert.Equal("Previous", (await AtomicFile.LoadJsonAsync<CrosshairProfile>(path + ".bak"))?.Name);
+        Assert.Equal("Current", (await _repository.GetAsync(preset.Id))?.Name);
+
+        await _repository.DeleteAsync(preset.Id);
+        Assert.Null(await _repository.GetAsync(preset.Id));
+        Assert.False(File.Exists(path + ".bak"));
+    }
+
+    [Fact]
+    public async Task HaiBanSettingsHong_DungMacDinhAnToan()
+    {
+        await File.WriteAllTextAsync(_paths.SettingsFilePath, "{");
+        await File.WriteAllTextAsync(_paths.SettingsFilePath + ".bak", string.Empty);
+        using var settings = new AppSettingsService(_paths, NullLogger<AppSettingsService>.Instance);
+
+        await settings.LoadAsync();
+
+        Assert.True(settings.Current.OverlayEnabled);
+        Assert.NotEmpty(settings.Current.Hotkeys);
+    }
+
+    [Fact]
+    public async Task FlushSettings_ChoPhepLuuTiepSauKhiChuyenThuMuc()
+    {
+        using var settings = new AppSettingsService(_paths, NullLogger<AppSettingsService>.Instance);
+        settings.Current.Language = "en";
+        settings.RequestSave();
+        await settings.FlushAsync();
+
+        settings.Current.Language = "vi";
+        settings.RequestSave();
+        await settings.FlushAsync();
+
+        Assert.Equal("vi", (await AtomicFile.LoadJsonAsync<AppSettings>(_paths.SettingsFilePath))?.Language);
+    }
+
+    [Fact]
+    public void DongHoOled_DungKhiOverlayAn()
+    {
+        using var timer = new OledPixelShiftTimer(Dispatcher.CurrentDispatcher, (_, _) => { },
+            TimeSpan.FromMinutes(2));
+        timer.Configure(enabled: true, visible: true);
+        Assert.True(timer.IsRunning);
+
+        timer.Configure(enabled: true, visible: false);
+        Assert.False(timer.IsRunning);
     }
 
     [Fact]

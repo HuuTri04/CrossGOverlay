@@ -16,6 +16,17 @@ public class CrosshairRendererTests
     private static CrosshairRenderOptions Options(double dpi = 1d, bool snap = true) =>
         new(dpi, snap, 2000d);
 
+    [Fact]
+    public void GlobalScale_ChangesOverlaySizeWithoutChangingPreset()
+    {
+        var profile = CrosshairProfile.CreateDefault();
+        var normal = _renderer.Measure(profile, new CrosshairRenderOptions(GlobalScale: 1d));
+        var enlarged = _renderer.Measure(profile, new CrosshairRenderOptions(GlobalScale: 1.5d));
+
+        Assert.True(enlarged.Width > normal.Width);
+        Assert.Equal(1d, profile.Scale);
+    }
+
     [Theory]
     [InlineData(1.0)]
     [InlineData(1.25)]

@@ -8,6 +8,5 @@ publish/
 TestResults/
 tests/CrosshairOverlay.Tests/
 *.log
-/LOG.md
 /README1.MD
 /ARCHITECTURE.md
