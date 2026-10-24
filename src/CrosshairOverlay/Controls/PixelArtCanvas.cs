@@ -15,6 +15,10 @@ public sealed class PixelArtCanvas : FrameworkElement
     private bool _drawing;
     private bool _eraseWithRight;
     private (int X, int Y) _lastCell;
+    private DrawingGroup? _guideDrawing;
+    private Size _guideSize;
+    private int _guideGridSize;
+    private bool _guideShowsCenter;
 
     public PixelArtCanvas()
     {
@@ -62,21 +66,48 @@ public sealed class PixelArtCanvas : FrameworkElement
         if (Bitmap is not null) context.DrawImage(Bitmap, bounds);
         if (GridSize <= 0) return;
 
-        var cellWidth = ActualWidth / GridSize;
-        var cellHeight = ActualHeight / GridSize;
-        for (var index = 1; index < GridSize; index++)
+        context.DrawDrawing(GetGuideDrawing());
+    }
+
+    // Pixel writes invalidate the canvas, but its grid changes only with size or guide settings.
+    // Keep those drawing commands frozen instead of rebuilding every line during a brush stroke.
+    private DrawingGroup GetGuideDrawing()
+    {
+        var size = RenderSize;
+        var gridSize = GridSize;
+        var showCenter = ShowCenterGuide;
+        if (_guideDrawing is not null && _guideSize == size &&
+            _guideGridSize == gridSize && _guideShowsCenter == showCenter)
+            return _guideDrawing;
+
+        var guides = new DrawingGroup();
+        using (var guideContext = guides.Open())
         {
-            context.DrawLine(GridPen, new Point(index * cellWidth, 0),
-                new Point(index * cellWidth, ActualHeight));
-            context.DrawLine(GridPen, new Point(0, index * cellHeight),
-                new Point(ActualWidth, index * cellHeight));
+            var cellWidth = size.Width / gridSize;
+            var cellHeight = size.Height / gridSize;
+            for (var index = 1; index < gridSize; index++)
+            {
+                guideContext.DrawLine(GridPen, new Point(index * cellWidth, 0),
+                    new Point(index * cellWidth, size.Height));
+                guideContext.DrawLine(GridPen, new Point(0, index * cellHeight),
+                    new Point(size.Width, index * cellHeight));
+            }
+
+            if (showCenter)
+            {
+                guideContext.DrawLine(CenterPen, new Point(size.Width / 2, 0),
+                    new Point(size.Width / 2, size.Height));
+                guideContext.DrawLine(CenterPen, new Point(0, size.Height / 2),
+                    new Point(size.Width, size.Height / 2));
+            }
         }
 
-        if (!ShowCenterGuide) return;
-        context.DrawLine(CenterPen, new Point(ActualWidth / 2, 0),
-            new Point(ActualWidth / 2, ActualHeight));
-        context.DrawLine(CenterPen, new Point(0, ActualHeight / 2),
-            new Point(ActualWidth, ActualHeight / 2));
+        guides.Freeze();
+        _guideDrawing = guides;
+        _guideSize = size;
+        _guideGridSize = gridSize;
+        _guideShowsCenter = showCenter;
+        return guides;
     }
 
     protected override void OnMouseDown(MouseButtonEventArgs e)

@@ -16,6 +16,8 @@ namespace CrosshairOverlay.Services.Overlay;
 internal sealed class CrosshairVisualHost : FrameworkElement
 {
     private Drawing? _drawing;
+    private TranslateTransform? _centerTransform;
+    private Size _centerTransformSize;
 
     public CrosshairVisualHost()
     {
@@ -62,7 +64,15 @@ internal sealed class CrosshairVisualHost : FrameworkElement
         if (size.Width <= 0 || size.Height <= 0) return;
 
         // Hợp đồng của ICrosshairRenderer: gốc (0,0) của Drawing là TÂM crosshair.
-        drawingContext.PushTransform(new TranslateTransform(size.Width / 2d, size.Height / 2d));
+        if (_centerTransform is null || _centerTransformSize != size)
+        {
+            var transform = new TranslateTransform(size.Width / 2d, size.Height / 2d);
+            transform.Freeze();
+            _centerTransform = transform;
+            _centerTransformSize = size;
+        }
+
+        drawingContext.PushTransform(_centerTransform);
         drawingContext.DrawDrawing(_drawing);
         drawingContext.Pop();
     }
