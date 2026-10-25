@@ -120,6 +120,27 @@ public sealed class AppBackgroundTests
     }
 
     [Fact]
+    public async Task PreBlur_ResultKeepsPixelsAfterPooledBuffersAreReused()
+    {
+        var pixels = new byte[64 * 64 * 4];
+        for (var i = 0; i < pixels.Length; i++) pixels[i] = (byte)(i % 251);
+        var source = BitmapSource.Create(64, 64, 96, 96, PixelFormats.Pbgra32,
+            null, pixels, 64 * 4);
+        source.Freeze();
+
+        var first = await ImageBlurHelper.CreatePreBlurredBitmapAsync(source, 7);
+        var expected = new byte[pixels.Length];
+        first.CopyPixels(expected, 64 * 4, 0);
+        for (var i = 0; i < 12; i++)
+            await ImageBlurHelper.CreatePreBlurredBitmapAsync(source, 1 + i);
+        var actual = new byte[pixels.Length];
+        first.CopyPixels(actual, 64 * 4, 0);
+
+        Assert.True(first.IsFrozen);
+        Assert.Equal(expected, actual);
+    }
+
+    [Fact]
     public void SliderField_DisplaysAndParsesPercentAndPixelSuffixes()
     {
         Exception? failure = null;
@@ -127,6 +148,7 @@ public sealed class AppBackgroundTests
         {
             try
             {
+                _ = ThemeFixture.Load();
                 var slider = new SliderField { UnitSuffix = "%", Value = 18d };
                 Assert.Equal("18%", slider.Text);
                 slider.Text = "25%";

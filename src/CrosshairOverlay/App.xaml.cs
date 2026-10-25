@@ -31,10 +31,18 @@ public partial class App : Application
         app.RequestShutdownCore(exitCode);
     }
 
-    private void RequestShutdownCore(int exitCode)
+    private async void RequestShutdownCore(int exitCode)
     {
-        _bootstrapper?.Shutdown(closeApplication: false);
-        Shutdown(exitCode);
+        try
+        {
+            if (_bootstrapper is not null)
+                await _bootstrapper.ShutdownAsync(closeApplication: false);
+        }
+        catch (Exception ex)
+        {
+            global::System.Diagnostics.Trace.TraceError($"Shutdown failed: {ex}");
+        }
+        finally { Shutdown(exitCode); }
     }
 
     protected override void OnExit(ExitEventArgs e)

@@ -21,7 +21,7 @@
                 PreviewKeyDown="OnSliderPreviewKeyDown"
                 Minimum="{Binding Minimum, ElementName=Root, Mode=OneWay}"
                 Maximum="{Binding Maximum, ElementName=Root, Mode=OneWay}"
-                Value="{Binding Value, ElementName=Root, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=10}"/>
+                Value="{Binding Value, ElementName=Root, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=15}"/>
 
         <!--
             Ô nhập số. Bind vào Text chứ không bind thẳng vào Value — bind số kèm định dạng sẽ

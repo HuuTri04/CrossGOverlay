@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 using CrosshairOverlay.Core.Abstractions;
 using CrosshairOverlay.Core.Models;
 using CrosshairOverlay.Localization;
+using CrosshairOverlay.Services.System;
 
 namespace CrosshairOverlay.ViewModels;
 
@@ -115,7 +116,7 @@ public sealed partial class CrosshairEditorViewModel : ObservableObject, IDispos
     {
         try
         {
-            return await Task.Run(() => DecodePreview(path));
+            return await Task.Run(() => AppBackgroundImageLoader.Decode(path, maxDecodedSide: 1600));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException
                                    or ArgumentException or InvalidOperationException
@@ -125,19 +126,6 @@ public sealed partial class CrosshairEditorViewModel : ObservableObject, IDispos
                 Tr.Format("Preview_ImageError", ex.Message), isError: true);
             return null;
         }
-    }
-
-    private static BitmapSource DecodePreview(string path)
-    {
-        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-        var bitmap = new BitmapImage();
-        bitmap.BeginInit();
-        bitmap.CacheOption = BitmapCacheOption.OnLoad;
-        bitmap.DecodePixelWidth = 1600;
-        bitmap.StreamSource = stream;
-        bitmap.EndInit();
-        bitmap.Freeze();
-        return bitmap;
     }
 
     /// <summary>Hai chế độ: tâm ngắm tiêu chuẩn, hoặc dùng hình ảnh.</summary>
@@ -226,7 +214,7 @@ public sealed partial class CrosshairEditorViewModel : ObservableObject, IDispos
         SavePreviewOptions();
     }
 
-    /// <summary>Persist the infrequent preview choice immediately via the atomic writer.</summary>
+    /// <summary>Persist the preview choice immediately; the writer opens the file off the UI thread.</summary>
     private void SavePreviewOptions() => _ = _settings.SaveAsync();
 
     partial void OnProfileChanged(CrosshairProfile? oldValue, CrosshairProfile? newValue)

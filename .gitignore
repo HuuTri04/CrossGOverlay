@@ -14,6 +14,8 @@ tests/CrosshairOverlay.Tests/
 !/tests/CrosshairOverlay.Tests/PixelArtCodeTests.cs
 !/tests/CrosshairOverlay.Tests/GamingGcLatencyServiceTests.cs
 !/tests/CrosshairOverlay.Tests/SmoothScrollBehaviorTests.cs
+!/tests/CrosshairOverlay.Tests/ReliabilityRegressionTests.cs
+!/tests/CrosshairOverlay.Tests/CrosshairLayersTests.cs
 *.log
 /README1.MD
 /ARCHITECTURE.md

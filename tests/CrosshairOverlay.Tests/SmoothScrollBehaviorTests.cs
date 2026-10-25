@@ -27,13 +27,29 @@ public sealed class SmoothScrollBehaviorTests
         Assert.Equal(1d, SmoothScrollBehavior.EaseOutCubic(2));
     }
 
+    [Theory]
+    [InlineData(10d, 10.49d, false)]
+    [InlineData(10d, 10.5d, true)]
+    [InlineData(10d, 9.5d, true)]
+    public void TinyOffsetsDoNotScheduleAnotherLayoutPass(double current, double target, bool expected) =>
+        Assert.Equal(expected, SmoothScrollBehavior.HasVisibleMovement(current, target));
+
+    [Theory]
+    [InlineData(144, false, 144)]
+    [InlineData(144, true, 60)]
+    [InlineData(60, true, 60)]
+    [InlineData(45, false, 60)]
+    public void BackdropLimitsOnlyTheScrollAnimationCadence(int requested, bool backdrop, int expected) =>
+        Assert.Equal(TimeSpan.FromSeconds(1d / expected),
+            SmoothScrollBehavior.FrameIntervalFor(requested, backdrop));
+
     [Fact]
     public void UiCadenceClampsSettingsAndConfiguresAppAnimations()
     {
         var settings = new AppSettings();
         Assert.Equal(144, settings.UiTargetFps);
         settings.UiTargetFps = 45;
-        Assert.Equal(60, settings.UiTargetFps);
+        Assert.Equal(144, settings.UiTargetFps);
         settings.UiTargetFps = 200;
         Assert.Equal(144, settings.UiTargetFps);
 

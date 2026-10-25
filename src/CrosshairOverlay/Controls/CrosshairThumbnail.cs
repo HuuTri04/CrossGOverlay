@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Media;
 using CrosshairOverlay.Core.Abstractions;
 using CrosshairOverlay.Core.Models;
+using CrosshairOverlay.Services.Rendering;
 
 namespace CrosshairOverlay.Controls;
 
@@ -118,6 +119,10 @@ public sealed class CrosshairThumbnail : FrameworkElement
 
             var size = renderer.Measure(profile, options);
             var drawing = renderer.Build(profile, options);
+
+            // Catalog cards are still images. A GIF renderer starts a frame timer; keeping
+            // that timer in a cached thumbnail would retain a recycled card indefinitely.
+            DrawingAnimations.Stop(drawing);
 
             // Áp ĐÚNG quyết định khử răng cưa mà overlay dùng.
             var group = new DrawingGroup();

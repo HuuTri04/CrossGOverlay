@@ -22,9 +22,13 @@ public sealed class CrosshairRenderer : ICrosshairRenderer
     /// được khi người dùng đang kéo slider. Có giới hạn dung lượng: xem <see cref="ImageCache"/>.
     /// </summary>
     private readonly ImageCache _imageCache = new();
+    private readonly PresetGeometryBuilder _geometry = new();
+    private readonly FrozenPaintCache _paint = new();
 
     /// <summary>Số ảnh và dung lượng đang giữ trong cache — cho kiểm thử và chẩn đoán.</summary>
     internal (int Count, long Bytes) ImageCacheUsage => (_imageCache.Count, _imageCache.Bytes);
+    internal int GeometryCacheCount => _geometry.Count;
+    internal (int Brushes, int Pens) PaintCacheCount => _paint.Count;
 
     /// <param name="images">
     /// Kho ảnh để đổi đường dẫn tương đối trong preset ra file thật. Không có kho (trong test) thì
@@ -97,6 +101,9 @@ public sealed class CrosshairRenderer : ICrosshairRenderer
             }
             else
             {
+                // Compile the arm paths once. The outline and core use the same frozen geometry.
+                var innerArms = _geometry.BuildArms(plan, plan.InnerLines);
+                var outerArms = _geometry.BuildArms(plan, plan.OuterLines);
                 // Thứ tự: Viền → (vòng) → Chấm giữa → Nhánh trong → Nhánh ngoài.
                 //
                 // Vẽ TOÀN BỘ viền trước, rồi mới tới lõi. Nếu vẽ xen kẽ theo từng phần tử,
@@ -106,14 +113,14 @@ public sealed class CrosshairRenderer : ICrosshairRenderer
                 {
                     DrawRing(dc, plan, outlinePass: true);
                     DrawDot(dc, plan, outlinePass: true);
-                    DrawLineLayer(dc, plan, plan.InnerLines, outlinePass: true);
-                    DrawLineLayer(dc, plan, plan.OuterLines, outlinePass: true);
+                    DrawLineLayer(dc, plan, plan.InnerLines, innerArms, outlinePass: true);
+                    DrawLineLayer(dc, plan, plan.OuterLines, outerArms, outlinePass: true);
                 }
 
                 DrawRing(dc, plan, outlinePass: false);
                 DrawDot(dc, plan, outlinePass: false);
-                DrawLineLayer(dc, plan, plan.InnerLines, outlinePass: false);
-                DrawLineLayer(dc, plan, plan.OuterLines, outlinePass: false);
+                DrawLineLayer(dc, plan, plan.InnerLines, innerArms, outlinePass: false);
+                DrawLineLayer(dc, plan, plan.OuterLines, outerArms, outlinePass: false);
             }
         }
 
@@ -399,7 +406,8 @@ public sealed class CrosshairRenderer : ICrosshairRenderer
     /// thì trên màn hình chỉ thấy bốn khung đen.
     /// </para>
     /// </remarks>
-    private static void DrawLineLayer(DrawingContext dc, RenderPlan plan, LineLayerPlan layer, bool outlinePass)
+    private void DrawLineLayer(DrawingContext dc, RenderPlan plan, LineLayerPlan layer,
+        PresetGeometryBuilder.Arms arms, bool outlinePass)
     {
         if (!layer.Show) return;
 
@@ -427,50 +435,14 @@ public sealed class CrosshairRenderer : ICrosshairRenderer
         var faded = opacity < 0.999d;
         if (faded) dc.PushOpacity(opacity);
 
-        if (plan.ArmsDiagonal)
-            DrawDiagonalLines(dc, plan, layer, pen);
-        else
-            DrawStraightLines(dc, plan, layer, pen, verticalPen);
+        if (arms.Diagonal is not null) dc.DrawGeometry(null, pen, arms.Diagonal);
+        if (arms.Vertical is not null) dc.DrawGeometry(null, verticalPen, arms.Vertical);
+        if (arms.Horizontal is not null) dc.DrawGeometry(null, pen, arms.Horizontal);
 
         if (faded) dc.Pop();
     }
 
-    private static void DrawStraightLines(DrawingContext dc, RenderPlan plan, LineLayerPlan layer, Pen pen, Pen verticalPen)
-    {
-        var align = plan.ToDip(layer.Align);
-        var verticalAlign = plan.ToDip(layer.VerticalAlign);
-        var start = plan.ToDip(layer.StartPx);
-        var end = plan.ToDip(layer.EndPx);
-        var verticalEnd = plan.ToDip(layer.VerticalEndPx);
-
-        if (layer.ShowTop) dc.DrawLine(verticalPen, new Point(verticalAlign, -start), new Point(verticalAlign, -verticalEnd));
-        if (layer.ShowBottom) dc.DrawLine(verticalPen, new Point(verticalAlign, start), new Point(verticalAlign, verticalEnd));
-        if (layer.ShowLeft) dc.DrawLine(pen, new Point(-start, align), new Point(-end, align));
-        if (layer.ShowRight) dc.DrawLine(pen, new Point(start, align), new Point(end, align));
-    }
-
-    private static void DrawDiagonalLines(DrawingContext dc, RenderPlan plan, LineLayerPlan layer, Pen pen)
-    {
-        // Nhánh chéo không thể bám lưới pixel, nên bỏ qua Align hoàn toàn.
-        const double Diag = 0.70710678118654752d; // cos(45°)
-
-        void Diagonal(bool show, int sx, int sy)
-        {
-            if (!show) return;
-            dc.DrawLine(
-                pen,
-                new Point(plan.ToDip(layer.StartPx * Diag * sx), plan.ToDip(layer.StartPx * Diag * sy)),
-                new Point(plan.ToDip(layer.EndPx * Diag * sx), plan.ToDip(layer.EndPx * Diag * sy)));
-        }
-
-        // Với hình X, bốn cờ hướng được ánh xạ theo chiều kim đồng hồ từ góc trên-trái.
-        Diagonal(layer.ShowTop, -1, -1);
-        Diagonal(layer.ShowRight, +1, -1);
-        Diagonal(layer.ShowBottom, +1, +1);
-        Diagonal(layer.ShowLeft, -1, +1);
-    }
-
-    private static void DrawRing(DrawingContext dc, RenderPlan plan, bool outlinePass)
+    private void DrawRing(DrawingContext dc, RenderPlan plan, bool outlinePass)
     {
         if (!plan.ShowRing) return;
 
@@ -511,7 +483,7 @@ public sealed class CrosshairRenderer : ICrosshairRenderer
             dc.DrawEllipse(null, pen, center, r, r);
     }
 
-    private static void DrawDot(DrawingContext dc, RenderPlan plan, bool outlinePass)
+    private void DrawDot(DrawingContext dc, RenderPlan plan, bool outlinePass)
     {
         if (!plan.ShowDot) return;
 
@@ -566,25 +538,10 @@ public sealed class CrosshairRenderer : ICrosshairRenderer
     private static Rect RectAround(Point center, double halfSide) =>
         new(center.X - halfSide, center.Y - halfSide, halfSide * 2d, halfSide * 2d);
 
-    private static SolidColorBrush CreateBrush(Color color, double opacity)
-    {
-        var brush = new SolidColorBrush(color) { Opacity = Clamp01(opacity) };
-        brush.Freeze();
-        return brush;
-    }
+    private SolidColorBrush CreateBrush(Color color, double opacity) => _paint.Brush(color, opacity);
 
-    private static Pen CreatePen(Color color, double opacity, double thicknessDip, bool roundedCaps)
-    {
-        var cap = roundedCaps ? PenLineCap.Round : PenLineCap.Flat;
-        var pen = new Pen(CreateBrush(color, opacity), Math.Max(0.1d, thicknessDip))
-        {
-            StartLineCap = cap,
-            EndLineCap = cap,
-            LineJoin = PenLineJoin.Miter,
-        };
-        pen.Freeze();
-        return pen;
-    }
+    private Pen CreatePen(Color color, double opacity, double thicknessDip, bool roundedCaps) =>
+        _paint.Pen(color, opacity, thicknessDip, roundedCaps);
 
     private static double Clamp01(double value) =>
         double.IsNaN(value) ? 1d : Math.Clamp(value, 0d, 1d);

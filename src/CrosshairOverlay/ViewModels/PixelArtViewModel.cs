@@ -53,7 +53,31 @@ public sealed partial class PixelArtViewModel : ObservableObject
 
     public bool IsEraserSelected => Tool == PixelTool.Eraser;
 
-    [ObservableProperty] private int _gridSize = 24;
+    private int _gridSize = 24;
+    public int GridSize
+    {
+        get => _gridSize;
+        set
+        {
+            if (!PixelArtCode.IsSupportedSize(value) || value == _gridSize) return;
+
+            var oldSize = _gridSize;
+            var resized = new uint[value * value];
+            var count = Math.Min(oldSize, value);
+            var sourceStart = (oldSize - count) / 2;
+            var targetStart = (value - count) / 2;
+            for (var row = 0; row < count; row++)
+                Array.Copy(_pixels, (sourceStart + row) * oldSize + sourceStart,
+                    resized, (targetStart + row) * value + targetStart, count);
+
+            var bitmap = CreateBitmap(value, resized);
+            _pixels = resized;
+            Bitmap = bitmap;
+            SetProperty(ref _gridSize, value);
+            OnPropertyChanged(nameof(Bitmap));
+            RefreshShareCode();
+        }
+    }
     [ObservableProperty] private PixelTool _tool = PixelTool.Brush;
     [ObservableProperty] private bool _showCenterGuide = true;
     [ObservableProperty] private string _customHex = "#00FF00";
@@ -65,25 +89,6 @@ public sealed partial class PixelArtViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(IsBrushSelected));
         OnPropertyChanged(nameof(IsEraserSelected));
-    }
-
-    partial void OnGridSizeChanged(int value)
-    {
-        if (!PixelArtCode.IsSupportedSize(value)) return;
-
-        var oldSize = (int)Math.Sqrt(_pixels.Length);
-        var resized = new uint[value * value];
-        var count = Math.Min(oldSize, value);
-        var sourceStart = (oldSize - count) / 2;
-        var targetStart = (value - count) / 2;
-        for (var row = 0; row < count; row++)
-            Array.Copy(_pixels, (sourceStart + row) * oldSize + sourceStart,
-                resized, (targetStart + row) * value + targetStart, count);
-
-        _pixels = resized;
-        Bitmap = CreateBitmap(value, resized);
-        OnPropertyChanged(nameof(Bitmap));
-        RefreshShareCode();
     }
 
     [RelayCommand] private void UseBrush() => Tool = PixelTool.Brush;

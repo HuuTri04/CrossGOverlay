@@ -98,6 +98,9 @@ internal sealed class OverlayWindow : Window
     public bool ReassertTopmost()
     {
         if (Handle == 0 || !IsVisible) return false;
+#if DEBUG
+        OverlayRenderDiagnostics.Positioned();
+#endif
         return NativeMethods.SetWindowPos(
             Handle, Win32Constants.HWND_TOPMOST,
             0, 0, 0, 0,

@@ -72,7 +72,7 @@ public sealed partial class AppSettings : ObservableObject
     public int UiTargetFps
     {
         get => _uiTargetFps;
-        set => SetProperty(ref _uiTargetFps, Math.Clamp(value, 60, 144));
+        set => SetProperty(ref _uiTargetFps, value is >= 60 and <= 144 ? value : 144);
     }
 
     private int _uiTargetFps = 144;

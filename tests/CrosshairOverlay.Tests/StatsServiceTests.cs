@@ -41,7 +41,7 @@ public sealed class StatsServiceTests
             Assert.Equal(today, snapshot.Days[0].Day);
             Assert.Equal(3, snapshot.Days[0].SwitchCount);
 
-            service.ClearAllStats();
+            await service.ClearAllStatsAsync();
             Assert.Empty(service.Snapshot().Days);
             var saved = JsonSerializer.Deserialize<StatsHistoryData>(await File.ReadAllTextAsync(path));
             Assert.NotNull(saved);
@@ -70,7 +70,7 @@ public sealed class StatsServiceTests
             Assert.Single(service.Snapshot().Days);
             service.AutoCleanupOldData = true;
             Assert.Empty(service.Snapshot().Days);
-            service.SaveNow();
+            await service.SaveNowAsync();
             var saved = JsonSerializer.Deserialize<StatsHistoryData>(await File.ReadAllTextAsync(path));
             Assert.NotNull(saved);
             Assert.True(saved.AutoCleanupOldData);
@@ -109,7 +109,7 @@ public sealed class StatsServiceTests
             Assert.True(today.TotalSeconds > 0);
             Assert.False(File.Exists(path));
 
-            service.SaveNow();
+            await service.SaveNowAsync();
             Assert.True(File.Exists(path));
         }
         finally { Directory.Delete(root, recursive: true); }

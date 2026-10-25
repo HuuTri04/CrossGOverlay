@@ -683,34 +683,69 @@ internal sealed class AppBootstrapper
     /// </remarks>
     public void Shutdown(bool closeApplication = true)
     {
-        if (_shutdownStarted) return;
-        _shutdownStarted = true;
+        if (!TryBeginShutdown(out var provider)) return;
+        if (provider is not null)
+        {
+            // Fallback for a direct Application.Shutdown() that bypassed RequestShutdown.
+            TryDuringExit("ghi preset", () => provider.GetRequiredService<IPresetLibrary>().FlushAsync().GetAwaiter().GetResult());
+            TryDuringExit("ghi cài đặt", () => provider.GetRequiredService<IAppSettingsService>().FlushAsync().GetAwaiter().GetResult());
+            TryDuringExit("ghi thống kê", () => provider.GetRequiredService<StatsService>().SaveNowAsync().GetAwaiter().GetResult());
+            TryDuringExit("ghi nhật ký API cửa sổ", () => provider.GetRequiredService<AuditLoggerService>().Flush());
+        }
+        FinishShutdown(provider, closeApplication);
+    }
 
-        if (_provider is { } provider)
+    /// <summary>Normal tray/hotkey exit: disk flushes do not block the WPF dispatcher.</summary>
+    public async Task ShutdownAsync(bool closeApplication = true)
+    {
+        if (!TryBeginShutdown(out var provider)) return;
+        if (provider is not null)
+        {
+            await TryDuringExitAsync("ghi preset", () => provider.GetRequiredService<IPresetLibrary>().FlushAsync());
+            await TryDuringExitAsync("ghi cài đặt", () => provider.GetRequiredService<IAppSettingsService>().FlushAsync());
+            await TryDuringExitAsync("ghi thống kê", () => provider.GetRequiredService<StatsService>().SaveNowAsync());
+            await TryDuringExitAsync("ghi nhật ký API cửa sổ", () => Task.Run(
+                () => provider.GetRequiredService<AuditLoggerService>().Flush()));
+        }
+        FinishShutdown(provider, closeApplication);
+    }
+
+    private bool TryBeginShutdown(out ServiceProvider? provider)
+    {
+        provider = null;
+        if (_shutdownStarted) return false;
+        _shutdownStarted = true;
+        provider = _provider;
+        var services = provider;
+
+        if (services is not null)
         {
             // Stop producers before flushing. No new callbacks may enqueue writes after this point.
             if (_backgroundServicesStarted)
             {
                 TryDuringExit("ngắt OBS", () =>
                 {
-                    var obs = provider.GetRequiredService<ObsWebSocketService>();
+                    var obs = services.GetRequiredService<ObsWebSocketService>();
                     obs.CaptureChanged -= OnObsCaptureChanged;
                     obs.Dispose();
                 });
-                TryDuringExit("gỡ hook vũ khí", () => provider.GetRequiredService<WeaponAutoSwitchService>().Dispose());
-                TryDuringExit("dừng theo dõi game", () => provider.GetRequiredService<IProfileAutoSwitcher>().Stop());
-                TryDuringExit("dừng timer hành vi", () => provider.GetRequiredService<Services.Overlay.OverlayBehaviorController>().Dispose());
+                TryDuringExit("gỡ hook vũ khí", () => services.GetRequiredService<WeaponAutoSwitchService>().Dispose());
+                TryDuringExit("dừng theo dõi game", () => services.GetRequiredService<IProfileAutoSwitcher>().Stop());
+                TryDuringExit("dừng timer hành vi", () => services.GetRequiredService<Services.Overlay.OverlayBehaviorController>().Dispose());
             }
             if (_overlayStarted)
-                TryDuringExit("dừng timer overlay", () => provider.GetRequiredService<IOverlayController>().SetVisible(false));
+                TryDuringExit("dừng timer overlay", () => services.GetRequiredService<IOverlayController>().SetVisible(false));
             if (_backgroundServicesStarted)
-                TryDuringExit("gỡ hotkey và Raw Input", () => provider.GetRequiredService<IHotkeyService>().Dispose());
+                TryDuringExit("gỡ hotkey và Raw Input", () => services.GetRequiredService<IHotkeyService>().Dispose());
 
-            TryDuringExit("ghi preset", () => provider.GetRequiredService<IPresetLibrary>().FlushAsync().GetAwaiter().GetResult());
-            TryDuringExit("ghi cài đặt", () => provider.GetRequiredService<IAppSettingsService>().FlushAsync().GetAwaiter().GetResult());
-            TryDuringExit("ghi thống kê", () => provider.GetRequiredService<StatsService>().SaveNow());
-            TryDuringExit("ghi nhật ký API cửa sổ", () => provider.GetRequiredService<AuditLoggerService>().Flush());
+        }
+        return true;
+    }
 
+    private void FinishShutdown(ServiceProvider? provider, bool closeApplication)
+    {
+        if (provider is not null)
+        {
             if (_rgbSyncService is not null)
                 TryDuringExit("đóng RGB", _rgbSyncService.Disconnect);
 
@@ -732,6 +767,12 @@ internal sealed class AppBootstrapper
         _logging?.Dispose();
         _logging = null;
         if (closeApplication) _app.Shutdown();
+    }
+
+    private async Task TryDuringExitAsync(string step, Func<Task> action)
+    {
+        try { await action(); }
+        catch (Exception ex) { _log?.LogError(ex, "Lỗi khi thoát ở bước {Step}.", step); }
     }
 
     private void TryDuringExit(string step, Action action)

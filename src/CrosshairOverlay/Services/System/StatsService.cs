@@ -18,7 +18,7 @@ public sealed class StatsService : IDisposable
     private readonly string _filePath;
     private readonly string _legacyPath;
     private readonly object _gate = new();
-    private readonly object _writeGate = new();
+    private readonly SemaphoreSlim _writeLock = new(1, 1);
     private StatsHistoryData _data = new();
     private Timer? _saveTimer;
     private DateTimeOffset _segmentStart;
@@ -116,6 +116,7 @@ public sealed class StatsService : IDisposable
             Accumulate(DateTimeOffset.Now);
             _visible = e.IsVisible;
             if (_visible || _dirty) ArmSave();
+            else DisarmSaveIfIdle();
         }
     }
 
@@ -204,18 +205,31 @@ public sealed class StatsService : IDisposable
         _saveTimer.Change(SaveInterval, Timeout.InfiniteTimeSpan);
     }
 
+    private void DisarmSaveIfIdle()
+    {
+        if (_visible || _dirty || !_saveArmed || _saveTimer is null) return;
+        _saveTimer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+        _saveArmed = false;
+    }
+
     private void OnSaveTimer(object? state)
     {
         lock (_gate) _saveArmed = false;
-        try { SaveNow(); }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        { _logger.LogWarning(ex, "Could not save usage statistics."); }
-        lock (_gate) if (_started && (_visible || _dirty)) ArmSave();
+        _ = SaveOnTimerAsync();
     }
 
-    public void SaveNow()
+    private async Task SaveOnTimerAsync()
     {
-        lock (_writeGate)
+        try { await SaveNowAsync().ConfigureAwait(false); }
+        catch (Exception ex)
+        { _logger.LogWarning(ex, "Could not save usage statistics."); }
+        finally { lock (_gate) if (_started && (_visible || _dirty)) ArmSave(); }
+    }
+
+    public async Task SaveNowAsync(CancellationToken cancellationToken = default)
+    {
+        await _writeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
         {
             StatsHistoryData copy;
             lock (_gate)
@@ -226,18 +240,25 @@ public sealed class StatsService : IDisposable
                 copy = CloneData();
                 _dirty = false;
             }
-            try { AtomicFile.WriteJsonAtomicAsync(_filePath, copy).GetAwaiter().GetResult(); }
+            try
+            {
+                await Task.Run(() => AtomicFile.WriteJsonAtomicAsync(_filePath, copy, cancellationToken),
+                    cancellationToken).ConfigureAwait(false);
+                lock (_gate) DisarmSaveIfIdle();
+            }
             catch
             {
                 lock (_gate) _dirty = true;
                 throw;
             }
         }
+        finally { _writeLock.Release(); }
     }
 
-    public void ClearAllStats()
+    public async Task ClearAllStatsAsync(CancellationToken cancellationToken = default)
     {
-        lock (_writeGate)
+        await _writeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
         {
             StatsHistoryData empty;
             lock (_gate)
@@ -245,11 +266,22 @@ public sealed class StatsService : IDisposable
                 empty = new StatsHistoryData { AutoCleanupOldData = _data.AutoCleanupOldData };
                 _data = empty;
                 _segmentStart = DateTimeOffset.Now;
-                _dirty = true;
+                // Later usage events may mark the new history dirty during the async write.
+                _dirty = false;
             }
-            AtomicFile.WriteJsonAtomicAsync(_filePath, empty).GetAwaiter().GetResult();
-            lock (_gate) _dirty = false;
+            try
+            {
+                await Task.Run(() => AtomicFile.WriteJsonAtomicAsync(_filePath, empty, cancellationToken),
+                    cancellationToken).ConfigureAwait(false);
+                lock (_gate) DisarmSaveIfIdle();
+            }
+            catch
+            {
+                lock (_gate) _dirty = true;
+                throw;
+            }
         }
+        finally { _writeLock.Release(); }
     }
 
     private StatsHistoryData CloneData() => new()
@@ -265,13 +297,18 @@ public sealed class StatsService : IDisposable
 
     public void Dispose()
     {
-        if (!_started) return;
+        Timer? timer;
+        lock (_gate)
+        {
+            if (!_started) return;
+            _started = false;
+            _saveArmed = false;
+            timer = _saveTimer;
+            _saveTimer = null;
+        }
         _library.ActiveChanged -= OnActiveChanged;
         _overlay.VisibilityChanged -= OnVisibilityChanged;
-        _saveTimer?.Dispose();
-        _saveTimer = null;
-        SaveNow();
-        _started = false;
+        timer?.Dispose();
     }
 }
 

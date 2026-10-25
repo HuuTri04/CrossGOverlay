@@ -132,13 +132,12 @@ public sealed class HotkeyService : IHotkeyService
         if (_hwnd != 0) throw new InvalidOperationException("HotkeyService đã được gắn vào một cửa sổ.");
         if (hwnd == 0) throw new ArgumentException("HWND không hợp lệ.", nameof(hwnd));
 
-        _hwnd = hwnd;
-
         var source = HwndSource.FromHwnd(hwnd)
             ?? throw new InvalidOperationException("Không lấy được HwndSource từ HWND đã cho.");
 
         _hook = WndProc;
         source.AddHook(_hook);
+        _hwnd = hwnd;
 
         // Cửa sổ này chỉ nhận WM_HOTKEY. KHÔNG đăng ký Raw Input ở đây — xem SetRawMouse.
     }

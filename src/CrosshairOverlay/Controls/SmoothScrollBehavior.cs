@@ -16,6 +16,7 @@ public static class SmoothScrollBehavior
 {
     private const double PixelsPerNotch = 64d;
     private const double DurationMilliseconds = 200d;
+    private const double VisibleOffsetThreshold = 0.5d;
     private static readonly ConditionalWeakTable<ScrollViewer, ScrollState> States = new();
 
     public static readonly DependencyProperty IsEnabledProperty = DependencyProperty.RegisterAttached(
@@ -25,6 +26,17 @@ public static class SmoothScrollBehavior
     public static bool GetIsEnabled(DependencyObject element) => (bool)element.GetValue(IsEnabledProperty);
 
     public static void SetIsEnabled(DependencyObject element, bool value) => element.SetValue(IsEnabledProperty, value);
+
+    // General settings contains many non-virtualized cards over a translucent backdrop.
+    // Bound on that one viewer only: fewer layout passes per wheel notch while the image is visible.
+    public static readonly DependencyProperty UseBackdropFrameBudgetProperty = DependencyProperty.RegisterAttached(
+        "UseBackdropFrameBudget", typeof(bool), typeof(SmoothScrollBehavior), new PropertyMetadata(false));
+
+    public static bool GetUseBackdropFrameBudget(DependencyObject element) =>
+        (bool)element.GetValue(UseBackdropFrameBudgetProperty);
+
+    public static void SetUseBackdropFrameBudget(DependencyObject element, bool value) =>
+        element.SetValue(UseBackdropFrameBudgetProperty, value);
 
     private static readonly DependencyPropertyKey IsScrollingPropertyKey =
         DependencyProperty.RegisterAttachedReadOnly(
@@ -55,6 +67,12 @@ public static class SmoothScrollBehavior
         var remaining = 1d - Math.Clamp(progress, 0d, 1d);
         return 1d - remaining * remaining * remaining;
     }
+
+    internal static TimeSpan FrameIntervalFor(int targetFps, bool backdropVisible) =>
+        TimeSpan.FromSeconds(1d / Math.Min(Math.Clamp(targetFps, 60, 144), backdropVisible ? 60 : 144));
+
+    internal static bool HasVisibleMovement(double current, double target) =>
+        Math.Abs(target - current) >= VisibleOffsetThreshold;
 
     private static void OnIsEnabledChanged(DependencyObject element, DependencyPropertyChangedEventArgs args)
     {
@@ -114,7 +132,7 @@ public static class SmoothScrollBehavior
             // Input remains ahead of animation ticks if the UI thread is busy.
             _timer = new DispatcherTimer(DispatcherPriority.Background, viewer.Dispatcher)
             {
-                Interval = UiAnimationFrameRate.FrameInterval,
+                Interval = FrameInterval(),
             };
             _timer.Tick += OnTick;
         }
@@ -127,11 +145,15 @@ public static class SmoothScrollBehavior
         {
             var target = CalculateTarget(IsRunning ? Target : _viewer.VerticalOffset,
                 delta, _viewer.ScrollableHeight);
-            if (IsRunning && Math.Abs(target - Target) < 0.01d) return;
+            if (IsRunning && !HasVisibleMovement(Target, target))
+            {
+                if (!HasVisibleMovement(_viewer.VerticalOffset, target)) Stop();
+                return;
+            }
 
             _from = _viewer.VerticalOffset;
             Target = target;
-            if (Math.Abs(Target - _from) < 0.5d)
+            if (!HasVisibleMovement(_from, Target))
             {
                 Stop();
                 return;
@@ -139,13 +161,13 @@ public static class SmoothScrollBehavior
 
             _startedAt = Stopwatch.GetTimestamp();
             _viewer.SetValue(IsScrollingPropertyKey, true);
-            _timer.Interval = UiAnimationFrameRate.FrameInterval;
+            _timer.Interval = FrameInterval();
             _timer.Start();
         }
 
         private void OnTick(object? sender, EventArgs args)
         {
-            var interval = UiAnimationFrameRate.FrameInterval;
+            var interval = FrameInterval();
             if (_timer.Interval != interval) _timer.Interval = interval;
             if (!_viewer.IsVisible || _viewer.ScrollableHeight <= 0.5d)
             {
@@ -154,17 +176,31 @@ public static class SmoothScrollBehavior
             }
 
             Target = Math.Clamp(Target, 0d, _viewer.ScrollableHeight);
+            if (!HasVisibleMovement(_viewer.VerticalOffset, Target))
+            {
+                Stop();
+                return;
+            }
             var progress = Stopwatch.GetElapsedTime(_startedAt).TotalMilliseconds / DurationMilliseconds;
             if (progress >= 1d)
             {
-                _viewer.ScrollToVerticalOffset(Target);
+                ScrollIfVisible(Target);
                 Stop();
                 return;
             }
 
             var next = _from + (Target - _from) * EaseOutCubic(progress);
-            if (Math.Abs(next - _viewer.VerticalOffset) >= 0.1d)
-                _viewer.ScrollToVerticalOffset(next);
+            ScrollIfVisible(next);
+            if ((Target <= VisibleOffsetThreshold && _viewer.VerticalOffset <= VisibleOffsetThreshold)
+                || (Target >= _viewer.ScrollableHeight - VisibleOffsetThreshold
+                    && _viewer.VerticalOffset >= _viewer.ScrollableHeight - VisibleOffsetThreshold))
+                Stop();
+        }
+
+        private void ScrollIfVisible(double offset)
+        {
+            if (HasVisibleMovement(_viewer.VerticalOffset, offset))
+                _viewer.ScrollToVerticalOffset(offset);
         }
 
         public void Stop()
@@ -173,5 +209,8 @@ public static class SmoothScrollBehavior
             _timer.Stop();
             _viewer.SetValue(IsScrollingPropertyKey, false);
         }
+
+        private TimeSpan FrameInterval() =>
+            FrameIntervalFor(UiAnimationFrameRate.TargetFps, GetUseBackdropFrameBudget(_viewer));
     }
 }

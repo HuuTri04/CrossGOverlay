@@ -87,13 +87,13 @@ public sealed partial class StatsViewModel(StatsService? service, IDialogService
     }
 
     [RelayCommand]
-    private void ClearStats()
+    private async Task ClearStatsAsync()
     {
         if (service is null) return;
         if (!dialogs.Confirm(Tr.Get("Stats_Clear"), Tr.Get("Stats_ClearConfirm"))) return;
         try
         {
-            service.ClearAllStats();
+            await service.ClearAllStatsAsync();
             Refresh();
         }
         catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException)

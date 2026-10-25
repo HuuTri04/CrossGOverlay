@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using System.IO;
 using System.Windows.Media.Imaging;
 using System.Security.Principal;
+using System.Windows.Threading;
 using CommunityToolkit.Mvvm.Input;
 using CrosshairOverlay.Core.Abstractions;
 using CrosshairOverlay.Core.Models;
@@ -35,7 +36,11 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
     private int _backgroundRenderVersion;
     private CancellationTokenSource? _backgroundRenderCancellation;
     private BitmapSource? _sourceBackgroundImage;
+    private (string Path, long Length, DateTime LastWriteUtc)? _backgroundCacheKey;
+    private double _processedBlurRadius = double.NaN;
+    private DispatcherTimer? _backgroundCacheExpiryTimer;
     private bool _backgroundViewActive;
+    private static readonly TimeSpan BackgroundCacheLifetime = TimeSpan.FromSeconds(30);
 
     private bool _disposed;
 
@@ -93,20 +98,70 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
 
     public bool HasAppBackground => AppBackgroundImage is not null && _settings.Current.AppBgOpacity > 0d;
 
-    /// <summary>Release decoded and processed bitmaps while the settings window is not displayed.</summary>
+    /// <summary>Keep one processed backdrop briefly while Settings is hidden, without rendering it.</summary>
     public void SetBackgroundViewActive(bool active)
     {
         if (_disposed || _backgroundViewActive == active) return;
         _backgroundViewActive = active;
         if (active)
         {
+            _backgroundCacheExpiryTimer?.Stop();
+            var path = _settings.Current.CustomAppBgPath;
+            if (_sourceBackgroundImage is not null && _backgroundCacheKey is not null
+                && _backgroundCacheKey == GetBackgroundCacheKey(path))
+            {
+                if (AppBackgroundImage is null || _processedBlurRadius != _settings.Current.AppBgBlurRadius)
+                    _ = RenderBackgroundAsync(debounce: false, reportError: false);
+                return;
+            }
+            ReleaseBackgroundCache();
             _ = LoadSavedAppBackgroundAsync(_settings.Current.CustomAppBgPath);
             return;
         }
 
         Interlocked.Increment(ref _backgroundLoadVersion);
         CancelBackgroundRender();
+        if (_sourceBackgroundImage is null) return;
+        _backgroundCacheExpiryTimer ??= CreateBackgroundCacheExpiryTimer();
+        _backgroundCacheExpiryTimer.Stop();
+        _backgroundCacheExpiryTimer.Start();
+    }
+
+    private DispatcherTimer CreateBackgroundCacheExpiryTimer()
+    {
+        var timer = new DispatcherTimer(DispatcherPriority.Background)
+        {
+            Interval = BackgroundCacheLifetime,
+        };
+        timer.Tick += OnBackgroundCacheExpired;
+        return timer;
+    }
+
+    private void OnBackgroundCacheExpired(object? sender, EventArgs e)
+    {
+        _backgroundCacheExpiryTimer?.Stop();
+        if (!_backgroundViewActive) ReleaseBackgroundCache();
+    }
+
+    private static (string Path, long Length, DateTime LastWriteUtc)? GetBackgroundCacheKey(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return null;
+        try
+        {
+            var file = new FileInfo(path);
+            return file.Exists ? (path, file.Length, file.LastWriteTimeUtc) : null;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            return null;
+        }
+    }
+
+    private void ReleaseBackgroundCache()
+    {
         _sourceBackgroundImage = null;
+        _backgroundCacheKey = null;
+        _processedBlurRadius = double.NaN;
         AppBackgroundImage = null;
     }
 
@@ -156,6 +211,7 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
 
         CancelBackgroundRender();
         _sourceBackgroundImage = image;
+        _backgroundCacheKey = GetBackgroundCacheKey(path);
         _settings.Current.CustomAppBgPath = path;
         _settings.RequestSave();
         await RenderBackgroundAsync(debounce: false, reportError: true);
@@ -166,8 +222,8 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
     {
         Interlocked.Increment(ref _backgroundLoadVersion);
         CancelBackgroundRender();
-        _sourceBackgroundImage = null;
-        AppBackgroundImage = null;
+        _backgroundCacheExpiryTimer?.Stop();
+        ReleaseBackgroundCache();
         _settings.Current.CustomAppBgPath = null;
         AppBgOpacityPercent = AppSettings.DefaultAppBgOpacity * 100d;
         AppBgBlurRadius = AppSettings.DefaultAppBgBlurRadius;
@@ -183,6 +239,7 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
             && _settings.Current.CustomAppBgPath == path)
         {
             _sourceBackgroundImage = image;
+            _backgroundCacheKey = GetBackgroundCacheKey(path);
             await RenderBackgroundAsync(debounce: false, reportError: false);
         }
     }
@@ -216,7 +273,10 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
                 source, _settings.Current.AppBgBlurRadius, cancellation.Token);
             if (!_disposed && _backgroundViewActive && !cancellation.IsCancellationRequested
                 && version == _backgroundRenderVersion && ReferenceEquals(source, _sourceBackgroundImage))
+            {
                 AppBackgroundImage = rendered;
+                _processedBlurRadius = _settings.Current.AppBgBlurRadius;
+            }
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { }
         catch (Exception ex)
@@ -694,8 +754,11 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
         _disposed = true;
         Interlocked.Increment(ref _backgroundLoadVersion);
         CancelBackgroundRender();
-        _sourceBackgroundImage = null;
-        AppBackgroundImage = null;
+        _backgroundCacheExpiryTimer?.Stop();
+        if (_backgroundCacheExpiryTimer is not null)
+            _backgroundCacheExpiryTimer.Tick -= OnBackgroundCacheExpired;
+        _backgroundCacheExpiryTimer = null;
+        ReleaseBackgroundCache();
         ObsPassword = string.Empty;
         IsPasswordVisible = false;
 

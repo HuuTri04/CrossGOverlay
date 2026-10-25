@@ -1,5 +1,7 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Windows;
+using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CrosshairOverlay.Core.Abstractions;
@@ -7,6 +9,15 @@ using CrosshairOverlay.Core.Models;
 using CrosshairOverlay.Localization;
 
 namespace CrosshairOverlay.ViewModels;
+
+public sealed record GameDetectionDiagnostics(
+    string Process, string Title, string DisplayMode, string Match,
+    bool IsWaitingForGame, bool ProcessNameBlocked)
+{
+    public static GameDetectionDiagnostics Empty => new(
+        Tr.Get("Games_None"), Tr.Get("Games_None"), Tr.Get("Games_None"),
+        Tr.Get("Games_None"), true, false);
+}
 
 /// <summary>ViewModel cho tab "Game": liên kết tiến trình game với preset.</summary>
 public sealed partial class GameProfilesViewModel : ObservableObject, IDisposable
@@ -19,6 +30,9 @@ public sealed partial class GameProfilesViewModel : ObservableObject, IDisposabl
     private readonly IForegroundWindowWatcher _watcher;
     private readonly IGameProfileMatcher _matcher;
     private readonly IRunningApplicationScanner _scanner;
+    private readonly object _diagnosticsGate = new();
+    private ForegroundWindowInfo _pendingDiagnostics = ForegroundWindowInfo.Empty;
+    private bool _diagnosticsQueued;
 
     private bool _disposed;
 
@@ -85,15 +99,14 @@ public sealed partial class GameProfilesViewModel : ObservableObject, IDisposabl
 
     // ---- bảng chẩn đoán, cập nhật mỗi khi cửa sổ foreground đổi ----
 
-    [ObservableProperty] private string _detectedProcess = Tr.Get("Games_None");
-    [ObservableProperty] private string _detectedTitle = Tr.Get("Games_None");
-    [ObservableProperty] private string _detectedDisplayMode = Tr.Get("Games_None");
-    [ObservableProperty] private string _detectedMatch = Tr.Get("Games_None");
+    private GameDetectionDiagnostics _diagnostics = GameDetectionDiagnostics.Empty;
 
-    [ObservableProperty] private bool _isWaitingForGame = true;
-
-    /// <summary>Không đọc được tên file thực thi — gần như luôn vì tiến trình chạy quyền admin.</summary>
-    [ObservableProperty] private bool _processNameBlocked;
+    /// <summary>One notification per foreground change instead of six separate UI bindings.</summary>
+    public GameDetectionDiagnostics Diagnostics
+    {
+        get => _diagnostics;
+        private set => SetProperty(ref _diagnostics, value);
+    }
 
     public bool AutoSwitchEnabled
     {
@@ -149,6 +162,30 @@ public sealed partial class GameProfilesViewModel : ObservableObject, IDisposabl
         // hữu ích, và sẽ xoá mất thứ người dùng đang muốn đọc.
         if (e.Current.IsOwnProcess) return;
 
+        // Native callbacks may arrive off-thread in tests or on alternate watcher backends.
+        // Diagnostics are non-urgent; leave input and rendering ahead of this UI update.
+        if (Application.Current?.Dispatcher is { } dispatcher && !dispatcher.CheckAccess())
+        {
+            if (dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished) return;
+            lock (_diagnosticsGate)
+            {
+                _pendingDiagnostics = e.Current;
+                if (_diagnosticsQueued) return;
+                _diagnosticsQueued = true;
+            }
+            dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
+            {
+                ForegroundWindowInfo latest;
+                lock (_diagnosticsGate)
+                {
+                    latest = _pendingDiagnostics;
+                    _diagnosticsQueued = false;
+                }
+                if (!_disposed) UpdateDiagnostics(latest);
+            }));
+            return;
+        }
+
         UpdateDiagnostics(e.Current);
     }
 
@@ -158,25 +195,18 @@ public sealed partial class GameProfilesViewModel : ObservableObject, IDisposabl
 
         if (!window.IsValid)
         {
-            IsWaitingForGame = true;
-            DetectedProcess = none;
-            DetectedTitle = none;
-            DetectedDisplayMode = none;
-            DetectedMatch = none;
-            ProcessNameBlocked = false;
+            Diagnostics = new GameDetectionDiagnostics(none, none, none, none, true, false);
             return;
         }
 
-        IsWaitingForGame = false;
-        ProcessNameBlocked = window.ProcessNameUnavailable;
-
-        DetectedProcess = ProcessNameBlocked
+        var blocked = window.ProcessNameUnavailable;
+        var process = blocked
             ? Tr.Get("Games_Blocked")
             : string.IsNullOrEmpty(window.ProcessName) ? none : window.ProcessName;
 
-        DetectedTitle = string.IsNullOrEmpty(window.WindowTitle) ? none : window.WindowTitle;
+        var title = string.IsNullOrEmpty(window.WindowTitle) ? none : window.WindowTitle;
 
-        DetectedDisplayMode = Tr.Get(window.Fullscreen switch
+        var displayMode = Tr.Get(window.Fullscreen switch
         {
             FullscreenKind.Borderless => "Display_Borderless",
             FullscreenKind.LikelyExclusive => "Display_LikelyExclusive",
@@ -184,7 +214,8 @@ public sealed partial class GameProfilesViewModel : ObservableObject, IDisposabl
         });
 
         var match = _matcher.Match(window, _settings.Current.GameProfiles);
-        DetectedMatch = match?.Name ?? Tr.Get("Games_NoMatch");
+        Diagnostics = new GameDetectionDiagnostics(process, title, displayMode,
+            match?.Name ?? Tr.Get("Games_NoMatch"), false, blocked);
     }
 
     // ------------------------------------------------------------------ tạo profile mới

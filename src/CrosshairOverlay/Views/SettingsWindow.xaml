@@ -73,10 +73,10 @@
                 <CheckBox Content="{loc:Loc Editor_Show}" Margin="0,6,0,4"
                           IsChecked="{Binding Enabled, Mode=TwoWay}"/>
                 <ctl:SliderField Label="{loc:Loc Editor_Opacity}" Range="{x:Static lim:CrosshairLimits.Opacity}"
-                                 Value="{Binding Opacity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=10}"/>
+                                 Value="{Binding Opacity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                 <!-- Tách độ dài dọc thì thanh này chỉ còn là độ dài NGANG — đổi nhãn cho khỏi hiểu nhầm. -->
                 <ctl:SliderField Range="{x:Static lim:CrosshairLimits.LineLength}"
-                                 Value="{Binding Length, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=10}">
+                                 Value="{Binding Length, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
                     <ctl:SliderField.Style>
                         <Style TargetType="ctl:SliderField">
                             <Setter Property="Label" Value="{loc:Loc Editor_Length}"/>
@@ -91,19 +91,19 @@
                 <CheckBox Content="{loc:Loc Editor_SeparateVertical}" Margin="0,4,0,4"
                           IsChecked="{Binding SeparateVerticalLength, Mode=TwoWay}"/>
                 <ctl:SliderField Label="{loc:Loc Editor_VerticalLength}" Range="{x:Static lim:CrosshairLimits.LineLength}"
-                                 Value="{Binding VerticalLength, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=10}"
+                                 Value="{Binding VerticalLength, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  Visibility="{Binding SeparateVerticalLength,
                                               Converter={StaticResource BoolToVisibility}, Mode=OneWay}"/>
                 <ctl:SliderField Label="{loc:Loc Editor_Thickness}" Range="{x:Static lim:CrosshairLimits.LineThickness}"
-                                 Value="{Binding Thickness, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=10}"/>
+                                 Value="{Binding Thickness, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                 <CheckBox Content="{loc:Loc Editor_SeparateVerticalThickness}" Margin="0,4,0,4"
                           IsChecked="{Binding SeparateVerticalThickness, Mode=TwoWay}"/>
                 <ctl:SliderField Label="{loc:Loc Editor_VerticalThickness}" Range="{x:Static lim:CrosshairLimits.LineThickness}"
-                                 Value="{Binding VerticalThickness, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=10}"
+                                 Value="{Binding VerticalThickness, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  Visibility="{Binding SeparateVerticalThickness,
                                               Converter={StaticResource BoolToVisibility}, Mode=OneWay}"/>
                 <ctl:SliderField Label="{loc:Loc Editor_Offset}" Range="{x:Static lim:CrosshairLimits.LineOffset}"
-                                 Value="{Binding Offset, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=10}"/>
+                                 Value="{Binding Offset, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                 <CheckBox Content="{loc:Loc Editor_RoundedCaps}" Margin="0,8,0,4"
                           IsChecked="{Binding RoundedCaps, Mode=TwoWay}"/>
                 <!-- 2 cột: bốn nút gạt trên một hàng không đủ chỗ trong cột chỉnh sửa. -->
@@ -181,12 +181,12 @@
 
                                         <ctl:SliderField Label="{loc:Loc Editor_Opacity}" Range="{x:Static lim:CrosshairLimits.Opacity}"
                                                          Margin="0,8,0,0"
-                                                         Value="{Binding Editor.Profile.Opacity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=10}"/>
+                                                         Value="{Binding Editor.Profile.Opacity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                         <ctl:SliderField Label="{loc:Loc Editor_Scale}" Range="{x:Static lim:CrosshairLimits.Scale}"
-                                                         Value="{Binding Editor.Profile.Scale, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=10}"/>
+                                                         Value="{Binding Editor.Profile.Scale, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                     </StackPanel>
                                     <ctl:SliderField Label="{loc:Loc Editor_Rotation}" Range="{x:Static lim:CrosshairLimits.Rotation}"
-                                                     Value="{Binding Editor.Profile.Rotation, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=10}"/>
+                                                     Value="{Binding Editor.Profile.Rotation, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
 
                                     <!-- ===== Tâm giữa → Nhánh trong → Nhánh ngoài: đúng thứ tự renderer vẽ ===== -->
                                     <Expander Header="{loc:Loc Editor_CenterDot}" Style="{StaticResource SettingsExpander}"
@@ -198,9 +198,9 @@
                                             <CheckBox Content="{loc:Loc Editor_Show}" Margin="0,6,0,4"
                                                       IsChecked="{Binding Editor.Profile.CenterDot.Enabled, Mode=TwoWay}"/>
                                             <ctl:SliderField Label="{loc:Loc Editor_Opacity}" Range="{x:Static lim:CrosshairLimits.Opacity}"
-                                                             Value="{Binding Editor.Profile.CenterDot.Opacity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=10}"/>
+                                                             Value="{Binding Editor.Profile.CenterDot.Opacity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                             <ctl:SliderField Label="{loc:Loc Editor_Size}" Range="{x:Static lim:CrosshairLimits.DotSize}"
-                                                             Value="{Binding Editor.Profile.CenterDot.Size, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=10}"/>
+                                                             Value="{Binding Editor.Profile.CenterDot.Size, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                             <CheckBox Content="{loc:Loc Editor_UseProfileColor}" Margin="0,8,0,4"
                                                       IsChecked="{Binding Editor.Profile.CenterDot.UseProfileColor, Mode=TwoWay}"/>
                                             <ctl:ColorPickerButton
@@ -227,9 +227,9 @@
                                         <CheckBox Content="{loc:Loc Editor_ShowRing}" Margin="0,0,0,6"
                                                   IsChecked="{Binding Editor.Profile.Ring.Enabled, Mode=TwoWay}"/>
                                         <ctl:SliderField Label="{loc:Loc Editor_Radius}" Range="{x:Static lim:CrosshairLimits.RingRadius}"
-                                                         Value="{Binding Editor.Profile.Ring.Radius, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=10}"/>
+                                                         Value="{Binding Editor.Profile.Ring.Radius, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                         <ctl:SliderField Label="{loc:Loc Editor_Thickness}" Range="{x:Static lim:CrosshairLimits.RingThickness}"
-                                                         Value="{Binding Editor.Profile.Ring.Thickness, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=10}"/>
+                                                         Value="{Binding Editor.Profile.Ring.Thickness, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                         <CheckBox Content="{loc:Loc Editor_Filled}" Margin="0,8,0,0"
                                                   IsChecked="{Binding Editor.Profile.Ring.Filled, Mode=TwoWay}"/>
                                     </StackPanel>
@@ -240,9 +240,9 @@
                                         <CheckBox Content="{loc:Loc Editor_ShowOutline}" Margin="0,0,0,6"
                                                   IsChecked="{Binding Editor.Profile.Outline.Enabled, Mode=TwoWay}"/>
                                         <ctl:SliderField Label="{loc:Loc Editor_Thickness}" Range="{x:Static lim:CrosshairLimits.OutlineThickness}"
-                                                         Value="{Binding Editor.Profile.Outline.Thickness, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=10}"/>
+                                                         Value="{Binding Editor.Profile.Outline.Thickness, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                         <ctl:SliderField Label="{loc:Loc Editor_Opacity}" Range="{x:Static lim:CrosshairLimits.Opacity}"
-                                                         Value="{Binding Editor.Profile.Outline.Opacity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=10}"/>
+                                                         Value="{Binding Editor.Profile.Outline.Opacity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                         <ctl:ColorPickerButton Margin="0,6,0,0"
                                             SelectedColor="{Binding Editor.Profile.Outline.Color, Mode=TwoWay}"/>
                                     </StackPanel>
@@ -255,10 +255,10 @@
                                                   IsChecked="{Binding Editor.Profile.Shadow.Enabled, Mode=TwoWay}"/>
                                         <ctl:SliderField Label="{loc:Loc Editor_ShadowBlur}"
                                                          Range="{x:Static lim:CrosshairLimits.ShadowBlur}"
-                                                         Value="{Binding Editor.Profile.Shadow.BlurRadius, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=10}"/>
+                                                         Value="{Binding Editor.Profile.Shadow.BlurRadius, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                         <ctl:SliderField Label="{loc:Loc Editor_Opacity}"
                                                          Range="{x:Static lim:CrosshairLimits.Opacity}"
-                                                         Value="{Binding Editor.Profile.Shadow.Opacity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=10}"/>
+                                                         Value="{Binding Editor.Profile.Shadow.Opacity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                         <ctl:ColorPickerButton Margin="0,6,0,0"
                                             SelectedColor="{Binding Editor.Profile.Shadow.Color, Mode=TwoWay}"/>
                                     </StackPanel>
@@ -281,13 +281,13 @@
 
                                             <ctl:SliderField Label="{loc:Loc Editor_ImageScale}" Range="{x:Static lim:CrosshairLimits.ImageScale}"
                                                              Margin="0,10,0,0"
-                                                             Value="{Binding Editor.Profile.Image.Scale, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=10}"/>
+                                                             Value="{Binding Editor.Profile.Image.Scale, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                             <ctl:SliderField Label="{loc:Loc Editor_Opacity}" Range="{x:Static lim:CrosshairLimits.Opacity}"
-                                                             Value="{Binding Editor.Profile.Image.Opacity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=10}"/>
+                                                             Value="{Binding Editor.Profile.Image.Opacity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                             <ctl:SliderField Label="{loc:Loc Editor_ImageOffsetX}" Range="{x:Static lim:CrosshairLimits.ImageOffset}"
-                                                             Value="{Binding Editor.Profile.Image.OffsetX, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=10}"/>
+                                                             Value="{Binding Editor.Profile.Image.OffsetX, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                             <ctl:SliderField Label="{loc:Loc Editor_ImageOffsetY}" Range="{x:Static lim:CrosshairLimits.ImageOffset}"
-                                                             Value="{Binding Editor.Profile.Image.OffsetY, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=10}"/>
+                                                             Value="{Binding Editor.Profile.Image.OffsetY, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
 
                                             <UniformGrid Columns="2" Margin="0,8,0,0">
                                                 <Button Content="{loc:Loc Editor_ResetImageOffset}"
@@ -306,9 +306,9 @@
                                                 Converter={StaticResource BoolToVisibility}, Mode=OneWay}">
                                     <TextBlock Text="{loc:Loc Editor_Position}" Style="{StaticResource SectionHeader}"/>
                                     <ctl:SliderField Label="{loc:Loc Editor_OffsetX}" Range="{x:Static lim:CrosshairLimits.Offset}"
-                                                     Value="{Binding Editor.Profile.OffsetX, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=10}"/>
+                                                     Value="{Binding Editor.Profile.OffsetX, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                     <ctl:SliderField Label="{loc:Loc Editor_OffsetY}" Range="{x:Static lim:CrosshairLimits.Offset}"
-                                                     Value="{Binding Editor.Profile.OffsetY, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=10}"/>
+                                                     Value="{Binding Editor.Profile.OffsetY, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                     <UniformGrid Columns="2" Margin="0,8,0,0">
                                         <Button Content="{loc:Loc Editor_ResetOffset}"
                                                 Command="{Binding Editor.ResetOffsetCommand}" Margin="0,0,3,0"/>
@@ -323,7 +323,8 @@
         </DataTemplate>
     </Window.Resources>
 
-    <Grid ClipToBounds="True">
+    <Grid x:Name="MainRootGrid" ClipToBounds="True" Focusable="True"
+          FocusVisualStyle="{x:Null}" KeyboardNavigation.IsTabStop="False">
         <!-- The source is pre-blurred and frozen off-thread; no effect or extra bitmap cache in the visual tree. -->
         <Grid x:Name="BackgroundLayer" IsHitTestVisible="False" Focusable="False">
             <Grid.Style>
@@ -492,7 +493,7 @@
                                     <Slider x:Name="PreviewZoomSlider" Grid.Column="1" Margin="12,0"
                                             Minimum="1" Maximum="16" SmallChange="1"
                                             VerticalAlignment="Center"
-                                            Value="{Binding Editor.PreviewZoom, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=10}"/>
+                                            Value="{Binding Editor.PreviewZoom, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=15}"/>
 
                                     <StackPanel Grid.Column="2" Orientation="Horizontal">
                                         <CheckBox Content="{loc:Loc Preview_Checkerboard}" Margin="0,0,16,0"
@@ -541,7 +542,8 @@
             <TabItem Header="{loc:Loc Tab_General}" Content="{Binding}">
                 <TabItem.ContentTemplate>
                     <DataTemplate>
-                <ScrollViewer Style="{StaticResource PanelScrollViewer}">
+                <ScrollViewer Style="{StaticResource PanelScrollViewer}"
+                              ctl:SmoothScrollBehavior.UseBackdropFrameBudget="{Binding General.HasAppBackground, Mode=OneWay}">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -606,7 +608,7 @@
                                                  Range="{x:Static lim:CrosshairLimits.Scale}"
                                                  LabelColumnWidth="170" SmallChange="0.01"
                                                  Margin="0,12,0,0"
-                                                 Value="{Binding General.GlobalScale, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=10}"/>
+                                                 Value="{Binding General.GlobalScale, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
 
                                 <StackPanel Orientation="Horizontal" Margin="0,16,0,2">
                                     <CheckBox Style="{StaticResource ToggleSwitch}"
@@ -658,7 +660,7 @@
                                             Minimum="60" Maximum="144" TickFrequency="1"
                                             IsSnapToTickEnabled="True" SmallChange="1" LargeChange="10"
                                             Focusable="True" IsTabStop="True" VerticalAlignment="Center"
-                                            Value="{Binding General.UiTargetFps, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=10}"/>
+                                            Value="{Binding General.UiTargetFps, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=15}"/>
                                     <Border Grid.Column="2" Background="#111D27" BorderBrush="#1F2D37"
                                             BorderThickness="1" CornerRadius="4" Height="28" Margin="8,0,0,0">
                                         <TextBlock FontSize="12" FontWeight="SemiBold" Foreground="#00ED64"
@@ -797,9 +799,13 @@
                                                             <Setter TargetName="EyeSlash" Property="Visibility" Value="Collapsed"/>
                                                             <Setter TargetName="EyeSlash" Property="Stroke" Value="{StaticResource AccentBright}"/>
                                                         </Trigger>
-                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                        <MultiTrigger>
+                                                            <MultiTrigger.Conditions>
+                                                                <Condition Property="IsMouseOver" Value="True"/>
+                                                                <Condition Property="ctl:SmoothScrollBehavior.IsScrolling" Value="False"/>
+                                                            </MultiTrigger.Conditions>
                                                             <Setter TargetName="EyeButton" Property="Background" Value="#2D2D2D"/>
-                                                        </Trigger>
+                                                        </MultiTrigger>
                                                         <Trigger Property="IsKeyboardFocused" Value="True">
                                                             <Setter TargetName="EyeButton" Property="Background" Value="#2D2D2D"/>
                                                         </Trigger>
@@ -910,12 +916,12 @@
                                                          LabelColumnWidth="116" SmallChange="1" UnitSuffix="%"
                                                          Range="{x:Static lim:AppSettings.AppBgOpacityPercentRange}"
                                                          Margin="0,0,8,0"
-                                                         Value="{Binding General.AppBgOpacityPercent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=10}"/>
+                                                         Value="{Binding General.AppBgOpacityPercent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                         <ctl:SliderField Label="{loc:Loc AppBg_Blur}"
                                                          LabelColumnWidth="116" SmallChange="1" UnitSuffix="px"
                                                          Range="{x:Static lim:AppSettings.AppBgBlurRadiusRange}"
                                                          Margin="8,0,0,0"
-                                                         Value="{Binding General.AppBgBlurRadius, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=10}"/>
+                                                         Value="{Binding General.AppBgBlurRadius, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                     </UniformGrid>
                                 </StackPanel>
                             </Border>
@@ -1378,7 +1384,7 @@
                                                 <Style TargetType="Ellipse">
                                                     <Setter Property="Visibility" Value="Collapsed"/>
                                                     <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding Games.IsWaitingForGame}" Value="True">
+                                                        <DataTrigger Binding="{Binding Games.Diagnostics.IsWaitingForGame}" Value="True">
                                                             <Setter Property="Visibility" Value="Visible"/>
                                                             <DataTrigger.EnterActions>
                                                                 <BeginStoryboard Name="WaitingPulse">
@@ -1413,31 +1419,31 @@
                                                    Style="{StaticResource FieldLabel}" Margin="0,3"/>
                                         <TextBlock Grid.Row="0" Grid.Column="1" Margin="0,3" TextWrapping="Wrap"
                                                    FontFamily="Consolas" FontSize="11.5"
-                                                   Text="{Binding Games.DetectedProcess, Mode=OneWay}"/>
+                                                   Text="{Binding Games.Diagnostics.Process, Mode=OneWay}"/>
 
                                         <TextBlock Grid.Row="1" Grid.Column="0" Text="{loc:Loc Games_WindowTitle}"
                                                    Style="{StaticResource FieldLabel}" Margin="0,3"/>
                                         <TextBlock Grid.Row="1" Grid.Column="1" Margin="0,3" TextWrapping="Wrap"
                                                    FontFamily="Consolas" FontSize="11.5"
-                                                   Text="{Binding Games.DetectedTitle, Mode=OneWay}"/>
+                                                   Text="{Binding Games.Diagnostics.Title, Mode=OneWay}"/>
 
                                         <TextBlock Grid.Row="2" Grid.Column="0" Text="{loc:Loc Games_DisplayMode}"
                                                    Style="{StaticResource FieldLabel}" Margin="0,3"/>
                                         <TextBlock Grid.Row="2" Grid.Column="1" Margin="0,3" TextWrapping="Wrap"
                                                    FontFamily="Consolas" FontSize="11.5"
-                                                   Text="{Binding Games.DetectedDisplayMode, Mode=OneWay}"/>
+                                                   Text="{Binding Games.Diagnostics.DisplayMode, Mode=OneWay}"/>
 
                                         <TextBlock Grid.Row="3" Grid.Column="0" Text="{loc:Loc Games_MatchedProfile}"
                                                    Style="{StaticResource FieldLabel}" Margin="0,3"/>
                                         <TextBlock Grid.Row="3" Grid.Column="1" Margin="0,3" TextWrapping="Wrap"
                                                    FontFamily="Consolas" FontSize="11.5"
                                                    Foreground="{StaticResource AccentBright}"
-                                                   Text="{Binding Games.DetectedMatch, Mode=OneWay}"/>
+                                                   Text="{Binding Games.Diagnostics.Match, Mode=OneWay}"/>
                                     </Grid>
 
                                     <TextBlock TextWrapping="Wrap" Margin="0,12,0,0" FontSize="11.5"
                                                Foreground="{StaticResource Warning}"
-                                               Visibility="{Binding Games.ProcessNameBlocked,
+                                               Visibility="{Binding Games.Diagnostics.ProcessNameBlocked,
                                                             Converter={StaticResource BoolToVisibility}, Mode=OneWay}"
                                                Text="{loc:Loc Games_AdminWarning}"/>
                                 </StackPanel>

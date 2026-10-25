@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
@@ -29,54 +30,68 @@ internal static class ImageBlurHelper
 
         var converted = new FormatConvertedBitmap(source, PixelFormats.Pbgra32, null, 0);
         converted.Freeze();
-        var input = new byte[length];
-        var horizontal = new byte[length];
-        var output = new byte[length];
-        converted.CopyPixels(input, stride, 0);
-
-        // Sliding sums keep work linear in pixel count, independent of blur radius.
-        var divisor = radius * 2 + 1;
-        Span<int> sums = stackalloc int[4];
-        for (var y = 0; y < height; y++)
+        byte[]? input = null;
+        byte[]? horizontal = null;
+        byte[]? output = null;
+        try
         {
+            input = ArrayPool<byte>.Shared.Rent(length);
+            horizontal = ArrayPool<byte>.Shared.Rent(length);
+            output = ArrayPool<byte>.Shared.Rent(length);
+            converted.CopyPixels(input, stride, 0);
             cancellationToken.ThrowIfCancellationRequested();
-            var row = y * stride;
-            sums.Clear();
-            for (var k = -radius; k <= radius; k++)
-                AddPixel(input, row + Math.Clamp(k, 0, width - 1) * 4, sums, 1);
+
+            // Sliding sums keep work linear in pixel count, independent of blur radius.
+            var divisor = radius * 2 + 1;
+            Span<int> sums = stackalloc int[4];
+            for (var y = 0; y < height; y++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var row = y * stride;
+                sums.Clear();
+                for (var k = -radius; k <= radius; k++)
+                    AddPixel(input, row + Math.Clamp(k, 0, width - 1) * 4, sums, 1);
+
+                for (var x = 0; x < width; x++)
+                {
+                    var offset = row + x * 4;
+                    for (var channel = 0; channel < 4; channel++)
+                        horizontal[offset + channel] = (byte)(sums[channel] / divisor);
+                    AddPixel(input, row + Math.Clamp(x - radius, 0, width - 1) * 4, sums, -1);
+                    AddPixel(input, row + Math.Clamp(x + radius + 1, 0, width - 1) * 4, sums, 1);
+                }
+            }
 
             for (var x = 0; x < width; x++)
             {
-                var offset = row + x * 4;
-                for (var channel = 0; channel < 4; channel++)
-                    horizontal[offset + channel] = (byte)(sums[channel] / divisor);
-                AddPixel(input, row + Math.Clamp(x - radius, 0, width - 1) * 4, sums, -1);
-                AddPixel(input, row + Math.Clamp(x + radius + 1, 0, width - 1) * 4, sums, 1);
-            }
-        }
+                cancellationToken.ThrowIfCancellationRequested();
+                sums.Clear();
+                for (var k = -radius; k <= radius; k++)
+                    AddPixel(horizontal, Math.Clamp(k, 0, height - 1) * stride + x * 4, sums, 1);
 
-        for (var x = 0; x < width; x++)
-        {
+                for (var y = 0; y < height; y++)
+                {
+                    var offset = y * stride + x * 4;
+                    for (var channel = 0; channel < 4; channel++)
+                        output[offset + channel] = (byte)(sums[channel] / divisor);
+                    AddPixel(horizontal, Math.Clamp(y - radius, 0, height - 1) * stride + x * 4, sums, -1);
+                    AddPixel(horizontal, Math.Clamp(y + radius + 1, 0, height - 1) * stride + x * 4, sums, 1);
+                }
+            }
+
             cancellationToken.ThrowIfCancellationRequested();
-            sums.Clear();
-            for (var k = -radius; k <= radius; k++)
-                AddPixel(horizontal, Math.Clamp(k, 0, height - 1) * stride + x * 4, sums, 1);
-
-            for (var y = 0; y < height; y++)
-            {
-                var offset = y * stride + x * 4;
-                for (var channel = 0; channel < 4; channel++)
-                    output[offset + channel] = (byte)(sums[channel] / divisor);
-                AddPixel(horizontal, Math.Clamp(y - radius, 0, height - 1) * stride + x * 4, sums, -1);
-                AddPixel(horizontal, Math.Clamp(y + radius + 1, 0, height - 1) * stride + x * 4, sums, 1);
-            }
+            // BitmapSource.Create copies the pixel bytes; the frozen bitmap never owns a rented array.
+            var result = BitmapSource.Create(width, height, source.DpiX, source.DpiY,
+                PixelFormats.Pbgra32, null, output, stride);
+            result.Freeze();
+            return result;
         }
-
-        cancellationToken.ThrowIfCancellationRequested();
-        var result = BitmapSource.Create(width, height, source.DpiX, source.DpiY,
-            PixelFormats.Pbgra32, null, output, stride);
-        result.Freeze();
-        return result;
+        finally
+        {
+            if (output is not null) ArrayPool<byte>.Shared.Return(output);
+            if (horizontal is not null) ArrayPool<byte>.Shared.Return(horizontal);
+            if (input is not null) ArrayPool<byte>.Shared.Return(input);
+        }
     }
 
     private static void AddPixel(byte[] pixels, int offset, Span<int> sums, int sign)

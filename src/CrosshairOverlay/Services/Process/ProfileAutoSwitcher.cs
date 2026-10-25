@@ -1,6 +1,7 @@
 ﻿using CrosshairOverlay.Core.Abstractions;
 using CrosshairOverlay.Core.Models;
 using CrosshairOverlay.Services.System;
+using System.Windows.Threading;
 using Microsoft.Extensions.Logging;
 
 namespace CrosshairOverlay.Services.Process;
@@ -19,6 +20,7 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
     private readonly IAppSettingsService _settings;
     private readonly GamingGcLatencyService? _gcLatency;
     private readonly ILogger<ProfileAutoSwitcher> _logger;
+    private readonly Dispatcher _dispatcher;
 
     /// <summary>
     /// Preset người dùng chọn tay, để trả về khi rời khỏi game. Nếu không nhớ, thoát game xong
@@ -65,6 +67,7 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
         _settings = settings;
         _gcLatency = gcLatency;
         _logger = logger;
+        _dispatcher = Dispatcher.CurrentDispatcher;
     }
 
     public bool IsEnabled
@@ -131,6 +134,15 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
 
     private void OnForegroundChanged(object? sender, ForegroundWindowChangedEventArgs e)
     {
+        if (!_dispatcher.CheckAccess())
+        {
+            if (!_dispatcher.HasShutdownStarted && !_dispatcher.HasShutdownFinished)
+                _dispatcher.BeginInvoke(DispatcherPriority.Normal,
+                    new Action(() => OnForegroundChanged(sender, e)));
+            return;
+        }
+        if (!_started || _disposed) return;
+
         var window = e.Current;
 
         // Cửa sổ của chính ứng dụng, thường là Settings. GIỮ NGUYÊN profile game đang áp dụng:
@@ -241,6 +253,15 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
     /// </remarks>
     private void OnTrackedWindowClosed(object? sender, ForegroundWindowInfo closed)
     {
+        if (!_dispatcher.CheckAccess())
+        {
+            if (!_dispatcher.HasShutdownStarted && !_dispatcher.HasShutdownFinished)
+                _dispatcher.BeginInvoke(DispatcherPriority.Normal,
+                    new Action(() => OnTrackedWindowClosed(sender, closed)));
+            return;
+        }
+        if (!_started || _disposed) return;
+
         if (_testProcessName is not null && closed.ProcessId != 0 && closed.ProcessId == _testProcessId)
         {
             _logger.LogInformation("Đóng cửa sổ test {Process}, kết thúc phiên test tâm ngắm.", closed.ProcessName);

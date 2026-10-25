@@ -74,7 +74,10 @@ public sealed class AppSettingsService : IAppSettingsService
         await _writeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            await AtomicFile.WriteJsonAtomicAsync(_paths.SettingsFilePath, Current, cancellationToken)
+            // File creation and Flush(flushToDisk:true) are synchronous inside the atomic
+            // writer. Keep those portions off the dispatcher even when WaitAsync completes inline.
+            await Task.Run(() => AtomicFile.WriteJsonAtomicAsync(
+                _paths.SettingsFilePath, Current, cancellationToken), cancellationToken)
                 .ConfigureAwait(false);
 
             _logger.LogDebug("Đã lưu settings.json.");
@@ -164,6 +167,13 @@ public sealed class AppSettingsService : IAppSettingsService
         settings.PresetOrder ??= [];
         settings.Hotkeys ??= [];
         settings.GameProfiles ??= [];
+
+        // System.Text.Json permits null elements even in non-nullable collections.
+        // A hand-edited file containing Hotkeys:[null] used to crash startup below.
+        for (var i = settings.Hotkeys.Count - 1; i >= 0; i--)
+            if (settings.Hotkeys[i] is null) settings.Hotkeys.RemoveAt(i);
+        for (var i = settings.GameProfiles.Count - 1; i >= 0; i--)
+            if (settings.GameProfiles[i] is null) settings.GameProfiles.RemoveAt(i);
 
         if (settings.Hotkeys.Count == 0)
         {

@@ -1,7 +1,11 @@
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Documents;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Media3D;
 using System.Windows.Threading;
 using CrosshairOverlay.Core.Abstractions;
 using CrosshairOverlay.Core.Models;
@@ -63,6 +67,9 @@ public partial class SettingsWindow : Window
         _tray = tray;
         _logger = logger;
         DataContext = viewModel;
+        // Bubble phase: label/slider/button handlers run first. Only a click that reached a
+        // non-interactive surface moves keyboard focus away from the previous input control.
+        MouseDown += OnBackgroundMouseDown;
         Loaded += (_, _) => UpdateVisibleTabServices();
         IsVisibleChanged += (_, _) => UpdateVisibleTabServices();
         StateChanged += (_, _) => UpdateVisibleTabServices();
@@ -87,6 +94,35 @@ public partial class SettingsWindow : Window
         if (e.ChangedButton != MouseButton.Left) return;
         PreviewZoomSlider.Focus();
         e.Handled = true;
+    }
+
+    private void OnBackgroundMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.Handled || e.ChangedButton != MouseButton.Left ||
+            Keyboard.FocusedElement is null || ReferenceEquals(Keyboard.FocusedElement, MainRootGrid) ||
+            e.OriginalSource is not DependencyObject clicked || IsInteractiveTarget(clicked))
+            return;
+
+        // Focusing a stable sink also raises LostFocus on the old TextBox/PasswordBox so
+        // pending edits are committed. WPF updates IsMouseOver from the real pointer position.
+        MainRootGrid.Focus();
+    }
+
+    private bool IsInteractiveTarget(DependencyObject clicked)
+    {
+        for (DependencyObject? current = clicked;
+             current is not null && !ReferenceEquals(current, MainRootGrid);
+             current = current is Visual or Visual3D
+                 ? VisualTreeHelper.GetParent(current) ?? LogicalTreeHelper.GetParent(current)
+                 : LogicalTreeHelper.GetParent(current))
+        {
+            if (current is ButtonBase or TextBoxBase or PasswordBox or Slider or ScrollBar or
+                ComboBox or ListBoxItem or MenuItem or Hyperlink ||
+                current is Label { Target: not null })
+                return true;
+        }
+
+        return false;
     }
 
     /// <summary>

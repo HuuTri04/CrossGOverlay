@@ -49,4 +49,42 @@ public sealed class GamingGcLatencyServiceTests
 
         Assert.Equal(GCLatencyMode.Batch, mode);
     }
+
+    [Fact]
+    public void HeapGuardLeavesLowLatencyUntilNextGameSession()
+    {
+        var mode = GCLatencyMode.Interactive;
+        var heapBytes = GamingGcLatencyService.ManagedHeapLimitBytes;
+        var writes = 0;
+        using var service = new GamingGcLatencyService(() => mode,
+            value => { mode = value; writes++; }, () => heapBytes);
+
+        service.SetActive(true);
+        service.CheckMemoryPressure();
+        Assert.Equal(GCLatencyMode.SustainedLowLatency, mode);
+
+        heapBytes++;
+        service.CheckMemoryPressure();
+        Assert.Equal(GCLatencyMode.Interactive, mode);
+        service.SetActive(true);
+        Assert.Equal(2, writes);
+
+        service.SetActive(false);
+        heapBytes = GamingGcLatencyService.ManagedHeapLimitBytes;
+        service.SetActive(true);
+        Assert.Equal(GCLatencyMode.SustainedLowLatency, mode);
+        Assert.Equal(3, writes);
+    }
+
+    [Fact]
+    public void HighHeapAtGameEntrySkipsLowLatencyMode()
+    {
+        var mode = GCLatencyMode.Interactive;
+        using var service = new GamingGcLatencyService(() => mode, value => mode = value,
+            () => GamingGcLatencyService.ManagedHeapLimitBytes + 1);
+
+        service.SetActive(true);
+        service.CheckMemoryPressure();
+        Assert.Equal(GCLatencyMode.Interactive, mode);
+    }
 }

@@ -15,10 +15,11 @@ namespace CrosshairOverlay.Services.Overlay;
 public sealed class OverlayController : IOverlayController, IOverlayRuntimeFeatures, IOverlayZOrder, IOverlayForegroundTarget
 {
     /// <summary>
-    /// Chu kỳ khẳng định lại vị trí topmost. Game vào fullscreen hoặc app khác bật topmost
-    /// có thể đẩy overlay xuống dưới; đây là cách sửa rẻ và thụ động — không đụng gì tới game.
+    /// Check topmost quickly after a window transition, then use a longer idle interval once
+    /// several checks find no covering window. Foreground events still reassert immediately.
     /// </summary>
     private static readonly TimeSpan TopmostReassertInterval = TimeSpan.FromSeconds(1.5);
+    private static readonly TimeSpan IdleTopmostReassertInterval = TimeSpan.FromSeconds(5);
 
     private readonly ICrosshairRenderer _renderer;
     private readonly IMonitorService _monitors;
@@ -49,6 +50,7 @@ public sealed class OverlayController : IOverlayController, IOverlayRuntimeFeatu
 
     /// <summary>Đọc từ thread pool nên phải volatile.</summary>
     private volatile bool _topmostActive;
+    private int _topmostStableChecks;
 
     private CrosshairProfile? _profile;
     private MonitorInfo? _monitor;
@@ -66,6 +68,9 @@ public sealed class OverlayController : IOverlayController, IOverlayRuntimeFeatu
 
     /// <summary>Kích thước hình lần dựng gần nhất (DIP) — để đặt lại vị trí mà không phải dựng lại.</summary>
     private Size _lastContentSize;
+    private (int X, int Y, int Width, int Height)? _lastPlacement;
+    private (global::System.Windows.Media.Color Color, double Radius, double Opacity)? _shadowKey;
+    private global::System.Windows.Media.Effects.DropShadowEffect? _shadowEffect;
 
     private bool _visible;
     private bool _suppressed;
@@ -164,6 +169,7 @@ public sealed class OverlayController : IOverlayController, IOverlayRuntimeFeatu
 
         if (visible)
         {
+            _lastPlacement = null; // A hidden window may have been repositioned by the shell.
             // ShowActivated=false + WS_EX_NOACTIVATE ⇒ Show() không kéo focus khỏi game.
             _window!.Show();
             _window.EnsureClickThroughStyles();
@@ -174,6 +180,7 @@ public sealed class OverlayController : IOverlayController, IOverlayRuntimeFeatu
             _rebuildThrottle.Flush();
 
             _topmostActive = true;
+            Interlocked.Exchange(ref _topmostStableChecks, 0);
             _topmostTimer!.Change(TopmostReassertInterval, TopmostReassertInterval);
         }
         else
@@ -197,6 +204,10 @@ public sealed class OverlayController : IOverlayController, IOverlayRuntimeFeatu
     {
         if (DispatchToUi(ReassertTopmost)) return;
         if (_disposed || !_visible || _window is null) return;
+
+        Interlocked.Exchange(ref _topmostStableChecks, 0);
+        try { _topmostTimer?.Change(TopmostReassertInterval, TopmostReassertInterval); }
+        catch (ObjectDisposedException) { return; }
 
         if (!_window.ReassertTopmost())
             _logger.LogDebug("Không đưa được overlay lên topmost (Win32 error {Error}).",
@@ -358,7 +369,7 @@ public sealed class OverlayController : IOverlayController, IOverlayRuntimeFeatu
     /// Báo rằng hình đã cũ và cần dựng lại.
     /// </summary>
     /// <remarks>
-    /// Dựng lại KHÔNG rẻ: đo hình, dựng lại toàn bộ Geometry rồi gọi <c>SetWindowPos</c>. Kéo
+    /// Dựng lại KHÔNG rẻ: đo hình, dựng lại Geometry và có thể gọi <c>SetWindowPos</c>. Kéo
     /// một thanh trượt có thể bắn ra cả nghìn yêu cầu mỗi giây, nên chúng đi qua bộ chặn theo
     /// nhịp khung hình — xem <see cref="RenderThrottle"/> để biết vì sao xếp hàng ở
     /// <see cref="DispatcherPriority.Render"/> không đủ.
@@ -400,15 +411,26 @@ public sealed class OverlayController : IOverlayController, IOverlayRuntimeFeatu
             var drawing = _renderer.Build(_profile, options);
 
             _window.SetAliasedVectorEdges(_renderer.PrefersAliasedEdges(_profile));
-            _window.Host.Effect = _profile.Shadow.Enabled
-                ? new global::System.Windows.Media.Effects.DropShadowEffect
+            var shadow = _profile.Shadow;
+            if (shadow.Enabled)
+            {
+                var key = (shadow.Color, shadow.BlurRadius, shadow.Opacity);
+                if (_shadowKey != key)
                 {
-                    Color = _profile.Shadow.Color,
-                    BlurRadius = _profile.Shadow.BlurRadius,
-                    Opacity = _profile.Shadow.Opacity,
-                    ShadowDepth = 0d,
+                    var effect = new global::System.Windows.Media.Effects.DropShadowEffect
+                    {
+                        Color = key.Color,
+                        BlurRadius = key.BlurRadius,
+                        Opacity = key.Opacity,
+                        ShadowDepth = 0d,
+                    };
+                    effect.Freeze();
+                    _shadowEffect = effect;
+                    _shadowKey = key;
                 }
-                : null;
+            }
+            if (!ReferenceEquals(_window.Host.Effect, shadow.Enabled ? _shadowEffect : null))
+                _window.Host.Effect = shadow.Enabled ? _shadowEffect : null;
             _window.Host.SetDrawing(drawing);
             _lastContentSize = contentSize;
             ApplyPlacement(monitor, contentSize);
@@ -462,16 +484,23 @@ public sealed class OverlayController : IOverlayController, IOverlayRuntimeFeatu
         // Độ dịch chống lưu ảnh cộng SAU khi làm tròn: đúng 1 pixel vật lý, không bị làm tròn mất.
         var x = (int)Math.Round(center.X - (width / 2d) + offsetX) + _shiftX;
         var y = (int)Math.Round(center.Y - (height / 2d) + offsetY) + _shiftY;
+        var placement = (x, y, width, height);
+        // A color-only redraw does not need WM_WINDOWPOSCHANGED or a layout pass.
+        if (_lastPlacement == placement) return;
 
         _placing = true;
         try
         {
             var flags = Win32Constants.SWP_NOACTIVATE | Win32Constants.SWP_NOOWNERZORDER;
+#if DEBUG
+            OverlayRenderDiagnostics.Positioned();
+#endif
             if (!NativeMethods.SetWindowPos(hwnd, Win32Constants.HWND_TOPMOST, x, y, width, height, flags))
             {
                 _logger.LogWarning(
                     "SetWindowPos thất bại (Win32 error {Error}).", Marshal.GetLastWin32Error());
             }
+            else _lastPlacement = placement;
         }
         finally
         {
@@ -488,9 +517,28 @@ public sealed class OverlayController : IOverlayController, IOverlayRuntimeFeatu
 
         // Không có gì đè lên thì không làm gì. Gọi SetWindowPos vô điều kiện khiến cửa sổ layered
         // nhận WM_WINDOWPOSCHANGED và bị xử lý lại mỗi 1,5 giây dù không có gì thay đổi — đo thực
-        // tế đó là phần lớn chi phí của overlay lúc rảnh.
-        if (!IsCoveredByAnotherWindow(hwnd)) return;
+        // tế đó là phần lớn chi phí của overlay lúc rảnh. Sau bốn lượt ổn định, giãn về 5 giây.
+        if (!IsCoveredByAnotherWindow(hwnd))
+        {
+            if (Interlocked.Increment(ref _topmostStableChecks) == 4 && _topmostActive)
+            {
+                try { _topmostTimer?.Change(IdleTopmostReassertInterval, IdleTopmostReassertInterval); }
+                catch (ObjectDisposedException) { }
+            }
+            return;
+        }
 
+        Interlocked.Exchange(ref _topmostStableChecks, 0);
+        if (_topmostActive)
+        {
+            try { _topmostTimer?.Change(TopmostReassertInterval, TopmostReassertInterval); }
+            catch (ObjectDisposedException) { return; }
+        }
+        if (!_topmostActive) return;
+
+#if DEBUG
+        OverlayRenderDiagnostics.Positioned();
+#endif
         NativeMethods.SetWindowPos(
             hwnd,
             Win32Constants.HWND_TOPMOST,
@@ -533,6 +581,7 @@ public sealed class OverlayController : IOverlayController, IOverlayRuntimeFeatu
     private void OnDisplayConfigurationChanged(object? sender, EventArgs e)
     {
         _logger.LogDebug("Cấu hình màn hình đổi, canh lại overlay.");
+        _lastPlacement = null;
         Invalidate();
     }
 
@@ -541,6 +590,7 @@ public sealed class OverlayController : IOverlayController, IOverlayRuntimeFeatu
         // Cửa sổ vừa sang màn hình có DPI khác. Bỏ qua rect gợi ý của Windows và tự canh lại
         // theo tâm màn hình đích — _placing chặn vòng lặp đệ quy.
         if (_placing) return;
+        _lastPlacement = null;
 
         _logger.LogDebug(
             "DPI đổi {Old} → {New}, canh lại overlay.",

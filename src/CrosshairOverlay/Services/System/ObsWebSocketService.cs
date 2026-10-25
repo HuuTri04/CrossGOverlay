@@ -16,6 +16,7 @@ public sealed class ObsWebSocketService : IDisposable
     private readonly IAppSettingsService _settings;
     private readonly ILogger<ObsWebSocketService> _logger;
     private readonly Dispatcher _dispatcher;
+    private readonly Uri _endpoint;
     private CancellationTokenSource? _runCancellation;
     private string _password = string.Empty; // Session-only: never persisted to settings or logs.
     private bool _started;
@@ -23,10 +24,14 @@ public sealed class ObsWebSocketService : IDisposable
     private bool _recording;
 
     public ObsWebSocketService(IAppSettingsService settings, ILogger<ObsWebSocketService> logger)
+        : this(settings, logger, new Uri("ws://127.0.0.1:4455")) { }
+
+    internal ObsWebSocketService(IAppSettingsService settings, ILogger<ObsWebSocketService> logger, Uri endpoint)
     {
         _settings = settings;
         _logger = logger;
         _dispatcher = Dispatcher.CurrentDispatcher;
+        _endpoint = endpoint;
     }
 
     public bool IsCapturing => _streaming || _recording;
@@ -90,7 +95,7 @@ public sealed class ObsWebSocketService : IDisposable
                 try
                 {
                     using var socket = new ClientWebSocket();
-                    await socket.ConnectAsync(new Uri("ws://127.0.0.1:4455"), token);
+                    await socket.ConnectAsync(_endpoint, token);
                     using var hello = await ReadAsync(socket, token);
                     if (hello.RootElement.GetProperty("op").GetInt32() != 0) throw new InvalidDataException("OBS Hello missing");
                     var data = hello.RootElement.GetProperty("d");

@@ -17,6 +17,7 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
     private static readonly TimeSpan FallbackInterval = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan MetadataSettlePeriod = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan InitialMetadataRetry = TimeSpan.FromMilliseconds(200);
+    private static readonly TimeSpan MetadataCoalesceInterval = TimeSpan.FromMilliseconds(75);
 
     private readonly IMonitorService _monitors;
     private readonly ILogger<ForegroundWindowWatcher> _logger;
@@ -45,6 +46,7 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
     private readonly WaitOrTimerCallback _processExitCallback;
     private readonly Timer _fallbackTimer;
     private readonly Timer _settleTimer;
+    private readonly Timer _metadataRefreshTimer;
 
     // Published by the UI thread; the fallback timer only reads these immutable snapshots.
     private long _publishedHandle;
@@ -52,6 +54,7 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
     private int _publishedLeft, _publishedTop, _publishedRight, _publishedBottom;
     private long _retryMetadataUntilTicks;
     private int _refreshQueued;
+    private int _metadataRefreshPending;
     private volatile bool _started;
 
     private nint _hook;
@@ -91,6 +94,11 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
         _processExitCallback = OnTrackedProcessExitSignaled;
         _fallbackTimer = new Timer(OnFallbackTick, null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
         _settleTimer = new Timer(_ => QueueRefresh(), null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+        _metadataRefreshTimer = new Timer(_ =>
+        {
+            Interlocked.Exchange(ref _metadataRefreshPending, 0);
+            QueueRefresh();
+        }, null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
         Current = ForegroundWindowInfo.Empty;
         LastExternal = ForegroundWindowInfo.Empty;
     }
@@ -146,9 +154,12 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
 
     public void Stop()
     {
+        if (_disposed) return;
         _started = false;
         _fallbackTimer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
         _settleTimer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+        _metadataRefreshTimer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+        Interlocked.Exchange(ref _metadataRefreshPending, 0);
         Untrack();
 
         if (_hook != 0) NativeMethods.UnhookWinEvent(_hook);
@@ -254,15 +265,16 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
         // đụng tới overlay và thư viện preset, không nên chạy lồng trong lúc hệ thống đang báo sự kiện.
         if (eventType == Win32Constants.EVENT_SYSTEM_FOREGROUND)
         {
-            // Không dùng hwnd của sự kiện: đọc lại foreground lúc xử lý để luôn lấy trạng thái mới
-            // nhất, và coi cửa sổ đã ẩn/thu nhỏ là "không có foreground".
+            // A queued out-of-context event may already be stale. The next foreground event
+            // reports the new HWND; Refresh still reads the latest state on the UI thread.
+            if (hwnd != NativeMethods.GetForegroundWindow()) return;
             QueueRefresh();
             return;
         }
 
         if (eventType is Win32Constants.EVENT_OBJECT_LOCATIONCHANGE or Win32Constants.EVENT_OBJECT_NAMECHANGE)
         {
-            if (hwnd != 0 && hwnd == Current.Handle) QueueRefresh();
+            if (hwnd != 0 && hwnd == NativeMethods.GetForegroundWindow()) QueueMetadataRefresh();
             return;
         }
 
@@ -376,6 +388,15 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
         {
             Interlocked.Exchange(ref _refreshQueued, 0);
         }
+    }
+
+    private void QueueMetadataRefresh()
+    {
+        if (!_started || _disposed) return;
+        // Leading-edge throttle: a stream of title/location events gets one UI refresh every
+        // 75 ms instead of continuously resetting a debounce timer and starving updates.
+        if (Interlocked.Exchange(ref _metadataRefreshPending, 1) == 0)
+            _metadataRefreshTimer.Change(MetadataCoalesceInterval, Timeout.InfiniteTimeSpan);
     }
 
     private void RefreshQueued()
@@ -514,10 +535,11 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
     public void Dispose()
     {
         if (_disposed) return;
-        _disposed = true;
         Stop();
+        _disposed = true;
         _fallbackTimer.Dispose();
         _settleTimer.Dispose();
+        _metadataRefreshTimer.Dispose();
     }
 
     /// <summary>Bọc handle tiến trình (chỉ quyền SYNCHRONIZE) để thread pool chờ được.</summary>

@@ -92,6 +92,9 @@ public sealed class CrosshairPreview : FrameworkElement
 
             DrawingAnimations.Stop(_liveDrawing);
             _liveDrawing = null;
+            // The preview bitmap is derived from the preset and can be rebuilt on show.
+            // Do not keep this potentially large raster surface while Settings is hidden.
+            _cached = null;
             _dirty = true;
         };
 

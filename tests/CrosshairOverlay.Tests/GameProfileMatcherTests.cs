@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Threading;
 using System.Collections.ObjectModel;
 using System.Runtime;
 using CrosshairOverlay.Core.Abstractions;
@@ -234,6 +235,56 @@ public sealed class GameProfileActivationTests
         Assert.Equal(1, overlay.TopmostCalls); // No redundant z-order churn for title changes.
     }
 
+    [Fact]
+    public void BackgroundForegroundEventIsAppliedOnOwningDispatcher_AndStoppedEventIsIgnored()
+    {
+        Exception? failure = null;
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                var dispatcher = Dispatcher.CurrentDispatcher;
+                var ownerThread = Environment.CurrentManagedThreadId;
+                var watcher = new Watcher();
+                var preset = CrosshairProfile.CreateDefault();
+                var library = new Library(preset);
+                var overlay = new Overlay();
+                var settings = new Settings();
+                settings.Current.GameProfiles.Add(new GameProfile { Pattern = "game.exe", PresetId = preset.Id });
+                using var switcher = new ProfileAutoSwitcher(watcher, new GameProfileMatcher(), library,
+                    overlay, settings, NullLogger<ProfileAutoSwitcher>.Instance);
+                var game = new ForegroundWindowInfo(1234, 9999, "game.exe", @"C:\Games\game.exe", "Game",
+                    new Rect(0, 0, 1280, 720), FullscreenKind.None);
+
+                switcher.Start();
+                Task.Run(() => watcher.Publish(game)).GetAwaiter().GetResult();
+                Assert.Null(library.Active); // The worker only queued the UI operation.
+                DrainDispatcher(dispatcher);
+                Assert.Same(preset, library.Active);
+                Assert.Equal(ownerThread, library.ActiveThreadId);
+
+                library.ClearActive();
+                Task.Run(() => watcher.Publish(game)).GetAwaiter().GetResult();
+                switcher.Stop();
+                DrainDispatcher(dispatcher);
+                Assert.Null(library.Active); // A queued event cannot revive a stopped service.
+            }
+            catch (Exception ex) { failure = ex; }
+            finally { Dispatcher.CurrentDispatcher.InvokeShutdown(); }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join();
+        if (failure is not null) throw new Xunit.Sdk.XunitException(failure.ToString());
+    }
+
+    private static void DrainDispatcher(Dispatcher dispatcher)
+    {
+        var frame = new DispatcherFrame();
+        dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() => frame.Continue = false));
+        Dispatcher.PushFrame(frame);
+    }
+
     private sealed class Watcher : IForegroundWindowWatcher
     {
         public ForegroundWindowInfo Current { get; private set; } = ForegroundWindowInfo.Empty;
@@ -259,9 +310,16 @@ public sealed class GameProfileActivationTests
             Presets = new ReadOnlyObservableCollection<CrosshairProfile>(new ObservableCollection<CrosshairProfile> { preset });
         public ReadOnlyObservableCollection<CrosshairProfile> Presets { get; }
         public CrosshairProfile? Active { get; private set; }
+        public int ActiveThreadId { get; private set; }
         public event EventHandler? ActiveChanged;
         public event EventHandler? OrderChanged { add { } remove { } }
-        public void SetActive(CrosshairProfile profile) { Active = profile; ActiveChanged?.Invoke(this, EventArgs.Empty); }
+        public void SetActive(CrosshairProfile profile)
+        {
+            Active = profile;
+            ActiveThreadId = Environment.CurrentManagedThreadId;
+            ActiveChanged?.Invoke(this, EventArgs.Empty);
+        }
+        public void ClearActive() => Active = null;
         public Task InitializeAsync(Guid id, IReadOnlyList<Guid>? order = null, CancellationToken token = default) => Task.CompletedTask;
         public void StepActive(int direction) => throw new NotSupportedException();
         public Task<CrosshairProfile> CreateAsync(CancellationToken token = default) => throw new NotSupportedException();

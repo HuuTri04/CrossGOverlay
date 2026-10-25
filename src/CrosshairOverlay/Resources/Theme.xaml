@@ -30,6 +30,7 @@
     <SolidColorBrush po:Freeze="True" x:Key="WindowBg" Color="{StaticResource LG.Black}"/>
     <SolidColorBrush po:Freeze="True" x:Key="PanelBg" Color="{StaticResource LG.Gray.Dark4}"/>
     <SolidColorBrush po:Freeze="True" x:Key="CardBg" Color="{StaticResource LG.Gray.Dark3}"/>
+    <SolidColorBrush po:Freeze="True" x:Key="BackdropCardBg" Color="#D9111B22"/>
     <SolidColorBrush po:Freeze="True" x:Key="BorderBrushSoft" Color="{StaticResource LG.Gray.Dark2}"/>
     <SolidColorBrush po:Freeze="True" x:Key="TrackBg" Color="{StaticResource LG.Gray.Dark2}"/>
 
@@ -290,9 +291,13 @@
                             <Setter TargetName="Knob" Property="HorizontalAlignment" Value="Right"/>
                             <Setter TargetName="Knob" Property="Fill" Value="{StaticResource TextPrimary}"/>
                         </Trigger>
-                        <Trigger Property="IsMouseOver" Value="True">
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                                <Condition Property="ctl:SmoothScrollBehavior.IsScrolling" Value="False"/>
+                            </MultiTrigger.Conditions>
                             <Setter TargetName="Track" Property="BorderBrush" Value="{StaticResource AccentBright}"/>
-                        </Trigger>
+                        </MultiTrigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
                             <Setter TargetName="Track" Property="BorderBrush" Value="{StaticResource AccentBright}"/>
                             <Setter TargetName="Track" Property="BorderThickness" Value="2"/>
@@ -331,9 +336,13 @@
                              Fill="{StaticResource AccentBright}"
                              Stroke="{StaticResource WindowBg}" StrokeThickness="2"/>
                     <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                                <Condition Property="ctl:SmoothScrollBehavior.IsScrolling" Value="False"/>
+                            </MultiTrigger.Conditions>
                             <Setter TargetName="Knob" Property="Fill" Value="{StaticResource LG.Green.Light2Brush}"/>
-                        </Trigger>
+                        </MultiTrigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="Knob" Property="Fill" Value="{StaticResource TextMuted}"/>
                         </Trigger>
@@ -344,7 +353,7 @@
     </Style>
 
     <Style TargetType="Slider">
-        <Setter Property="Height" Value="22"/>
+        <Setter Property="Height" Value="24"/>
         <Setter Property="Focusable" Value="True"/>
         <Setter Property="IsTabStop" Value="True"/>
         <Setter Property="SnapsToDevicePixels" Value="True"/>
@@ -398,10 +407,14 @@
                               StrokeEndLineCap="Round" StrokeStartLineCap="Round"/>
                     </Border>
                     <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                                <Condition Property="ctl:SmoothScrollBehavior.IsScrolling" Value="False"/>
+                            </MultiTrigger.Conditions>
                             <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource AccentBright}"/>
                             <Setter TargetName="Arrow" Property="Stroke" Value="{StaticResource AccentBright}"/>
-                        </Trigger>
+                        </MultiTrigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
@@ -762,10 +775,14 @@
                                             <ContentPresenter/>
                                         </Border>
                                         <ControlTemplate.Triggers>
-                                            <Trigger Property="IsMouseOver" Value="True">
+                                            <MultiTrigger>
+                                                <MultiTrigger.Conditions>
+                                                    <Condition Property="IsMouseOver" Value="True"/>
+                                                    <Condition Property="ctl:SmoothScrollBehavior.IsScrolling" Value="False"/>
+                                                </MultiTrigger.Conditions>
                                                 <Setter TargetName="HeaderBg" Property="Background"
                                                         Value="{StaticResource ExpanderHoverBg}"/>
-                                            </Trigger>
+                                            </MultiTrigger>
                                         </ControlTemplate.Triggers>
                                     </ControlTemplate>
                                 </ToggleButton.Template>
@@ -1016,7 +1033,7 @@
         <Style.Triggers>
             <DataTrigger Binding="{Binding DataContext.General.HasAppBackground, RelativeSource={RelativeSource AncestorType=Window}}"
                          Value="True">
-                <Setter Property="Background" Value="#D9111B22"/>
+                <Setter Property="Background" Value="{StaticResource BackdropCardBg}"/>
             </DataTrigger>
         </Style.Triggers>
     </Style>
@@ -1120,10 +1137,14 @@
                         </ContentPresenter>
                     </Border>
                     <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                                <Condition Property="ctl:SmoothScrollBehavior.IsScrolling" Value="False"/>
+                            </MultiTrigger.Conditions>
                             <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource AccentBright}"/>
                             <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
-                        </Trigger>
+                        </MultiTrigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
                             <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource AccentBright}"/>
                         </Trigger>

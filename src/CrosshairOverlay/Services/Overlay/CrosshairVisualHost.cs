@@ -18,6 +18,9 @@ internal sealed class CrosshairVisualHost : FrameworkElement
     private Drawing? _drawing;
     private TranslateTransform? _centerTransform;
     private Size _centerTransformSize;
+#if DEBUG
+    internal long DebugInvalidationCount { get; private set; }
+#endif
 
     public CrosshairVisualHost()
     {
@@ -42,7 +45,7 @@ internal sealed class CrosshairVisualHost : FrameworkElement
         if (RenderOptions.GetEdgeMode(this) == mode) return;
 
         RenderOptions.SetEdgeMode(this, mode);
-        InvalidateVisual();
+        RequestRender();
     }
 
     public void SetDrawing(Drawing? drawing)
@@ -53,11 +56,23 @@ internal sealed class CrosshairVisualHost : FrameworkElement
         Rendering.DrawingAnimations.Stop(_drawing);
 
         _drawing = drawing;
+        RequestRender();
+    }
+
+    private void RequestRender()
+    {
+#if DEBUG
+        OverlayRenderDiagnostics.Invalidated();
+        DebugInvalidationCount++;
+#endif
         InvalidateVisual();
     }
 
     protected override void OnRender(DrawingContext drawingContext)
     {
+#if DEBUG
+        OverlayRenderDiagnostics.Rendered();
+#endif
         if (_drawing is null) return;
 
         var size = RenderSize;
