@@ -1,0 +1,79 @@
+{
+  "SchemaVersion": 2,
+  "Id": "85bfdb57-ad25-4fa8-aa82-846a77f54b77",
+  "Opacity": 1,
+  "Scale": 1,
+  "Rotation": 0,
+  "OffsetX": 0,
+  "OffsetY": 0,
+  "Name": "Ring \u0026 Dot",
+  "Type": "Standard",
+  "Shape": "CircleDot",
+  "Color": "#FFFF3B30",
+  "CenterDot": {
+    "Size": 3,
+    "Opacity": 1,
+    "Enabled": true,
+    "UseProfileColor": true,
+    "Color": "#FF00FF00"
+  },
+  "InnerLines": {
+    "Opacity": 1,
+    "Length": 10,
+    "VerticalLength": 10,
+    "Thickness": 2,
+    "VerticalThickness": 2,
+    "Offset": 4,
+    "Enabled": true,
+    "SeparateVerticalLength": false,
+    "SeparateVerticalThickness": false,
+    "ShowTop": true,
+    "ShowBottom": true,
+    "ShowLeft": true,
+    "ShowRight": true,
+    "RoundedCaps": false
+  },
+  "OuterLines": {
+    "Opacity": 0.35,
+    "Length": 2,
+    "VerticalLength": 2,
+    "Thickness": 2,
+    "VerticalThickness": 2,
+    "Offset": 10,
+    "Enabled": false,
+    "SeparateVerticalLength": false,
+    "SeparateVerticalThickness": false,
+    "ShowTop": true,
+    "ShowBottom": true,
+    "ShowLeft": true,
+    "ShowRight": true,
+    "RoundedCaps": false
+  },
+  "Outline": {
+    "Thickness": 1,
+    "Opacity": 1,
+    "Enabled": true,
+    "Color": "#FF000000"
+  },
+  "Ring": {
+    "Radius": 11,
+    "Thickness": 2,
+    "Enabled": true,
+    "Filled": false
+  },
+  "Image": {
+    "Scale": 1,
+    "Opacity": 1,
+    "OffsetX": 0,
+    "OffsetY": 0,
+    "FilePath": null
+  },
+  "Shadow": {
+    "BlurRadius": 4,
+    "Opacity": 0.7,
+    "Enabled": false,
+    "Color": "#FF000000"
+  },
+  "CreatedUtc": "2026-10-25T15:57:37.0782044+00:00",
+  "ModifiedUtc": "2026-10-25T15:57:37.1338096+00:00"
+}

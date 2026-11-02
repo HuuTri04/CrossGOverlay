@@ -19,3 +19,8 @@ tests/CrosshairOverlay.Tests/
 *.log
 /README1.MD
 /ARCHITECTURE.md
+/benchmarks/results/app-data/
+/benchmarks/tools/
+/benchmarks/results/vmmap/
+/benchmarks/results/profiling-app-data/
+/benchmarks/results/etl/

@@ -32,7 +32,6 @@ public sealed class CrosshairPreview : FrameworkElement
     private static readonly Brush Checkerboard = CreateCheckerboard();
 
     private static readonly Brush MarkerFallback = Frozen(new SolidColorBrush(Color.FromRgb(0x00, 0xED, 0x64)));
-    private ImageBrush? _customBackdrop;
     private CrosshairProfile? _hookedProfile;
 
     private BitmapSource? _cached;
@@ -170,12 +169,7 @@ public sealed class CrosshairPreview : FrameworkElement
 
     private static void OnCustomBackgroundChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-        var preview = (CrosshairPreview)d;
-        preview._customBackdrop = e.NewValue is ImageSource source
-            ? new ImageBrush(source) { Stretch = Stretch.UniformToFill }
-            : null;
-        if (preview._customBackdrop?.CanFreeze == true) preview._customBackdrop.Freeze();
-        preview.InvalidateVisual();
+        ((CrosshairPreview)d).InvalidateVisual();
     }
 
     // ---------------------------------------------------------------- thay đổi
@@ -243,9 +237,13 @@ public sealed class CrosshairPreview : FrameworkElement
         if (size.Width <= 0 || size.Height <= 0) return;
 
         var area = new Rect(0, 0, size.Width, size.Height);
-        dc.DrawRectangle(_customBackdrop ?? (UseDarkBackground ? DarkBackdrop : LightBackdrop), null, area);
+        // The custom photo is a separate Image behind this visual so it can use HighQuality
+        // scaling without softening the pixel-accurate crosshair bitmap drawn below.
+        dc.DrawRectangle(CustomBackgroundImage is null
+            ? (UseDarkBackground ? DarkBackdrop : LightBackdrop)
+            : Brushes.Transparent, null, area);
 
-        if (_customBackdrop is null && ShowCheckerboard) dc.DrawRectangle(Checkerboard, null, area);
+        if (CustomBackgroundImage is null && ShowCheckerboard) dc.DrawRectangle(Checkerboard, null, area);
 
         var cx = Math.Round(size.Width / 2d);
         var cy = Math.Round(size.Height / 2d);

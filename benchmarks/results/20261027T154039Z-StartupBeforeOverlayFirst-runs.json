@@ -1,0 +1,72 @@
+﻿[
+    {
+        "Scenario":  "Startup",
+        "Run":  1,
+        "Pid":  43460,
+        "FirstHwndMs":  4262.49,
+        "SettingsFirstFrameMs":  947,
+        "FirstFrameLogObservedMs":  5409.91,
+        "SettingsWindowVisible":  true,
+        "AppInitializedMs":  3678.205,
+        "SettingsInitializedMs":  5361.947,
+        "SettingsFirstRenderPreciseMs":  5553.638,
+        "FirstInputPriorityDispatchMs":  5750.158,
+        "OverlayFirstDrawingMs":  6031.873
+    },
+    {
+        "Scenario":  "Startup",
+        "Run":  2,
+        "Pid":  45228,
+        "FirstHwndMs":  555.36,
+        "SettingsFirstFrameMs":  192,
+        "FirstFrameLogObservedMs":  762.16,
+        "SettingsWindowVisible":  true,
+        "AppInitializedMs":  206.146,
+        "SettingsInitializedMs":  731.192,
+        "SettingsFirstRenderPreciseMs":  846.964,
+        "FirstInputPriorityDispatchMs":  1013.772,
+        "OverlayFirstDrawingMs":  1162.984
+    },
+    {
+        "Scenario":  "Startup",
+        "Run":  3,
+        "Pid":  49948,
+        "FirstHwndMs":  564.96,
+        "SettingsFirstFrameMs":  735,
+        "FirstFrameLogObservedMs":  759.96,
+        "SettingsWindowVisible":  true,
+        "AppInitializedMs":  226.93,
+        "SettingsInitializedMs":  745.735,
+        "SettingsFirstRenderPreciseMs":  874.743,
+        "FirstInputPriorityDispatchMs":  1026.193,
+        "OverlayFirstDrawingMs":  1158.436
+    },
+    {
+        "Scenario":  "Startup",
+        "Run":  4,
+        "Pid":  41472,
+        "FirstHwndMs":  558.56,
+        "SettingsFirstFrameMs":  194,
+        "FirstFrameLogObservedMs":  756.29,
+        "SettingsWindowVisible":  true,
+        "AppInitializedMs":  199.335,
+        "SettingsInitializedMs":  728.194,
+        "SettingsFirstRenderPreciseMs":  830.51,
+        "FirstInputPriorityDispatchMs":  966.976,
+        "OverlayFirstDrawingMs":  1094.225
+    },
+    {
+        "Scenario":  "Startup",
+        "Run":  5,
+        "Pid":  44804,
+        "FirstHwndMs":  563.17,
+        "SettingsFirstFrameMs":  959,
+        "FirstFrameLogObservedMs":  726.89,
+        "SettingsWindowVisible":  true,
+        "AppInitializedMs":  198.551,
+        "SettingsInitializedMs":  710.959,
+        "SettingsFirstRenderPreciseMs":  811.826,
+        "FirstInputPriorityDispatchMs":  944.122,
+        "OverlayFirstDrawingMs":  1078.087
+    }
+]

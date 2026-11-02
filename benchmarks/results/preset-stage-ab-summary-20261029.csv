@@ -1,0 +1,5 @@
+﻿"Variant","Runs","SwitchesTotal","RenderedTotal","MedianOfRunT1ToT5P50Ms","MedianOfRunT1ToT5P95Ms","DeltaP50FromBaselineMs","MedianOfRunT3ToT2EndP50Ms","MedianOfRunT1ToT2StartP50Ms","MedianOfRunT2StartToT3P50Ms","MedianOfRunT2EndToT5P50Ms","MedianOfRunBootstrapperP50Ms","MedianOfRunSettingsVmP50Ms","MedianOfRunStatsP50Ms","MedianOfRunBringQueueP50Ms","RenderBeforeSetActiveEndTotal"
+"baseline","3","300","300","1.4427","2.23","0","8.3754","0.003","0.0007","-6.9646","5.8551","2.2942","0.0174","5.9312","300"
+"no-stats","3","300","300","1.3877","2.347","-0.055","8.2004","0.0031","0.0008","-6.7729","5.7263","2.3689",,"6.0316","300"
+"no-preview","3","300","300","1.4142","2.1876","-0.0285","5.8838","0.0022","0.0006","-4.4899","5.6674","0.1945","0.0098","0.8772","300"
+"no-bring","3","300","300","1.4785","2.2183","0.0358","8.1816","0.003","0.0008","-6.7703","5.7728","2.3114","0.0155",,"300"

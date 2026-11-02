@@ -1,0 +1,99 @@
+﻿{
+    "StartupRunsJson":  ".\\benchmarks\\results\\20261025T161013Z-Startup-runs.json",
+    "SamplesCsv":  ".\\benchmarks\\results\\20261025T161042Z-IdleHidden-samples.csv",
+    "Startup":  {
+                    "Runs":  10,
+                    "FirstFrameMeanMs":  1050.3,
+                    "FirstFrameMedianMs":  1043.5,
+                    "FirstFrameP95Ms":  1241,
+                    "FirstFrameMinMs":  961,
+                    "FirstFrameMaxMs":  1241,
+                    "ValuesMs":  [
+                                     1241,
+                                     1001,
+                                     988,
+                                     1056,
+                                     1070,
+                                     961,
+                                     1080,
+                                     1074,
+                                     1001,
+                                     1031
+                                 ]
+                },
+    "Samples":  {
+                    "Runs":  3,
+                    "Count":  1800,
+                    "CpuMeanPercent":  0,
+                    "CpuMaxPercent":  0,
+                    "WorkingSetMeanMB":  296.79066,
+                    "PrivateMeanMB":  219.64259,
+                    "PrivateMaxMB":  223.086,
+                    "PerRun":  [
+                                   {
+                                       "Run":  1,
+                                       "Samples":  600,
+                                       "CpuMeanPercent":  0,
+                                       "CpuMaxPercent":  0,
+                                       "WorkingSetMeanMB":  297.62106,
+                                       "WorkingSetStartMB":  300.238,
+                                       "WorkingSetEndMB":  298.312,
+                                       "PrivateMeanMB":  220.02987,
+                                       "PrivateStartMB":  222.734,
+                                       "PrivateEndMB":  220.227,
+                                       "HandlesStart":  711,
+                                       "HandlesEnd":  702,
+                                       "GdiStart":  50,
+                                       "GdiEnd":  50,
+                                       "UserStart":  39,
+                                       "UserEnd":  40
+                                   },
+                                   {
+                                       "Run":  2,
+                                       "Samples":  600,
+                                       "CpuMeanPercent":  0,
+                                       "CpuMaxPercent":  0,
+                                       "WorkingSetMeanMB":  295.28731,
+                                       "WorkingSetStartMB":  297.891,
+                                       "WorkingSetEndMB":  295.785,
+                                       "PrivateMeanMB":  219.50882,
+                                       "PrivateStartMB":  222.445,
+                                       "PrivateEndMB":  219.652,
+                                       "HandlesStart":  690,
+                                       "HandlesEnd":  684,
+                                       "GdiStart":  50,
+                                       "GdiEnd":  50,
+                                       "UserStart":  39,
+                                       "UserEnd":  37
+                                   },
+                                   {
+                                       "Run":  3,
+                                       "Samples":  600,
+                                       "CpuMeanPercent":  0,
+                                       "CpuMaxPercent":  0,
+                                       "WorkingSetMeanMB":  297.46361,
+                                       "WorkingSetStartMB":  300.512,
+                                       "WorkingSetEndMB":  297.992,
+                                       "PrivateMeanMB":  219.38909,
+                                       "PrivateStartMB":  223.086,
+                                       "PrivateEndMB":  219.547,
+                                       "HandlesStart":  720,
+                                       "HandlesEnd":  702,
+                                       "GdiStart":  50,
+                                       "GdiEnd":  50,
+                                       "UserStart":  41,
+                                       "UserEnd":  40
+                                   }
+                               ]
+                },
+    "NotMeasuredInThisInput":  [
+                                   "CPU wakeups",
+                                   "context switches",
+                                   "managed heap",
+                                   "GC pause",
+                                   "GPU VRAM",
+                                   "UI frame time",
+                                   "game FPS",
+                                   "Release render invalidations"
+                               ]
+}

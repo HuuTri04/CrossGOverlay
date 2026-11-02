@@ -19,10 +19,13 @@ namespace CrosshairOverlay.ViewModels;
 /// </remarks>
 public sealed partial class CrosshairEditorViewModel : ObservableObject, IDisposable
 {
+    private const int PreviewBackgroundMaxDecodedSide = 1280;
     private readonly IDialogService _dialogs;
     private readonly ICustomImageStore _images;
     private readonly IAppSettingsService _settings;
     private int _previewBackgroundVersion;
+    private CancellationTokenSource? _previewBackgroundLoadCancellation;
+    private bool _previewBackgroundViewActive;
     private bool _disposed;
 
     public CrosshairEditorViewModel(
@@ -36,8 +39,6 @@ public sealed partial class CrosshairEditorViewModel : ObservableObject, IDispos
         // Gán thẳng vào field: đây là ĐỌC giá trị đã lưu, không được kích hoạt lưu ngược lại.
         _showCheckerboard = settings.Current.PreviewShowCheckerboard;
         _useDarkPreviewBackground = settings.Current.PreviewShowDarkBackground;
-        _ = LoadSavedPreviewBackgroundAsync(settings.Current.CustomPreviewBgPath);
-
         Types = BuildTypes();
         Shapes = BuildShapes();
         TranslationSource.Instance.PropertyChanged += OnLanguageChanged;
@@ -66,6 +67,23 @@ public sealed partial class CrosshairEditorViewModel : ObservableObject, IDispos
     public bool ArePreviewBackdropOptionsEnabled => !HasCustomPreviewBackground;
     public bool IsCheckerboardBgVisible => !HasCustomPreviewBackground && ShowCheckerboard;
     public bool IsDarkBgVisible => !HasCustomPreviewBackground && UseDarkPreviewBackground;
+
+    /// <summary>Only retain the preview bitmap while Settings is visible.</summary>
+    public void SetPreviewBackgroundViewActive(bool active)
+    {
+        if (_disposed || _previewBackgroundViewActive == active) return;
+        _previewBackgroundViewActive = active;
+        if (active)
+        {
+            if (CustomPreviewBackgroundImage is null)
+                _ = LoadSavedPreviewBackgroundAsync(_settings.Current.CustomPreviewBgPath);
+            return;
+        }
+
+        Interlocked.Increment(ref _previewBackgroundVersion);
+        CancelPreviewBackgroundLoad();
+        CustomPreviewBackgroundImage = null;
+    }
 
     partial void OnCustomPreviewBackgroundImageChanged(BitmapSource? value)
     {
@@ -97,6 +115,7 @@ public sealed partial class CrosshairEditorViewModel : ObservableObject, IDispos
     private void ResetPreviewBackground()
     {
         Interlocked.Increment(ref _previewBackgroundVersion);
+        CancelPreviewBackgroundLoad();
         CustomPreviewBackgroundImage = null;
         _settings.Current.CustomPreviewBgPath = null;
         OnPropertyChanged(nameof(CanResetPreviewBackground));
@@ -108,16 +127,21 @@ public sealed partial class CrosshairEditorViewModel : ObservableObject, IDispos
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return;
         var version = _previewBackgroundVersion;
         var image = await TryDecodePreviewAsync(path, reportError: false);
-        if (!_disposed && version == _previewBackgroundVersion && _settings.Current.CustomPreviewBgPath == path)
+        if (!_disposed && _previewBackgroundViewActive && version == _previewBackgroundVersion
+            && _settings.Current.CustomPreviewBgPath == path)
             CustomPreviewBackgroundImage = image;
     }
 
     private async Task<BitmapSource?> TryDecodePreviewAsync(string path, bool reportError)
     {
+        var cancellation = new CancellationTokenSource();
+        Interlocked.Exchange(ref _previewBackgroundLoadCancellation, cancellation)?.Cancel();
         try
         {
-            return await Task.Run(() => AppBackgroundImageLoader.Decode(path, maxDecodedSide: 1600));
+            return await AppBackgroundImageLoader.DecodeAsync(
+                path, maxDecodedSide: PreviewBackgroundMaxDecodedSide, cancellation.Token);
         }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { return null; }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException
                                    or ArgumentException or InvalidOperationException
                                    or System.Runtime.InteropServices.COMException)
@@ -126,7 +150,15 @@ public sealed partial class CrosshairEditorViewModel : ObservableObject, IDispos
                 Tr.Format("Preview_ImageError", ex.Message), isError: true);
             return null;
         }
+        finally
+        {
+            Interlocked.CompareExchange(ref _previewBackgroundLoadCancellation, null, cancellation);
+            cancellation.Dispose();
+        }
     }
+
+    private void CancelPreviewBackgroundLoad() =>
+        Interlocked.Exchange(ref _previewBackgroundLoadCancellation, null)?.Cancel();
 
     /// <summary>Hai chế độ: tâm ngắm tiêu chuẩn, hoặc dùng hình ảnh.</summary>
     public IReadOnlyList<LocalizedOption<CrosshairType>> Types { get; }
@@ -315,6 +347,9 @@ public sealed partial class CrosshairEditorViewModel : ObservableObject, IDispos
     {
         if (_disposed) return;
         _disposed = true;
+        Interlocked.Increment(ref _previewBackgroundVersion);
+        CancelPreviewBackgroundLoad();
+        CustomPreviewBackgroundImage = null;
 
         TranslationSource.Instance.PropertyChanged -= OnLanguageChanged;
         if (Profile is not null) ProfileNotifications.Hook(Profile, OnProfilePartChanged, subscribe: false);

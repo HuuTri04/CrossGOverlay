@@ -16,7 +16,12 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
     private const int MaxPathLength = 1024;
     private static readonly TimeSpan FallbackInterval = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan MetadataSettlePeriod = TimeSpan.FromSeconds(5);
-    private static readonly TimeSpan InitialMetadataRetry = TimeSpan.FromMilliseconds(200);
+    // Relative intervals: verify at 100, 300, 800 and 1800 ms after an incomplete foreground HWND.
+    private static readonly TimeSpan[] MetadataRetryIntervals =
+    [
+        TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(200),
+        TimeSpan.FromMilliseconds(500), TimeSpan.FromMilliseconds(1000),
+    ];
     private static readonly TimeSpan MetadataCoalesceInterval = TimeSpan.FromMilliseconds(75);
 
     private readonly IMonitorService _monitors;
@@ -53,12 +58,16 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
     private string _publishedTitle = string.Empty;
     private int _publishedLeft, _publishedTop, _publishedRight, _publishedBottom;
     private long _retryMetadataUntilTicks;
+    private int _metadataRetryStep;
     private int _refreshQueued;
+    private int _reassertPending;
     private int _metadataRefreshPending;
     private volatile bool _started;
 
     private nint _hook;
     private nint _metadataHook;
+    private nint _showHook;
+    private nint _minimizeEndHook;
 
     /// <summary>
     /// Hai hook chỉ nghe TIẾN TRÌNH của cửa sổ đang <see cref="Track"/>: một cho thu nhỏ/khôi phục,
@@ -93,7 +102,7 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
         _trackedWindowDestroyed = OnTrackedWindowDestroyed;
         _processExitCallback = OnTrackedProcessExitSignaled;
         _fallbackTimer = new Timer(OnFallbackTick, null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
-        _settleTimer = new Timer(_ => QueueRefresh(), null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+        _settleTimer = new Timer(OnMetadataRetryTick, null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
         _metadataRefreshTimer = new Timer(_ =>
         {
             Interlocked.Exchange(ref _metadataRefreshPending, 0);
@@ -138,7 +147,16 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
             Win32Constants.EVENT_OBJECT_NAMECHANGE,
             0, _callback, 0, 0, Win32Constants.WINEVENT_OUTOFCONTEXT);
 
-        if (_hook == 0 || _metadataHook == 0)
+        // A game can show/restore its render HWND without another foreground event. Filter
+        // to the actual foreground HWND inside the native callback, before waking WPF.
+        _showHook = NativeMethods.SetWinEventHook(
+            Win32Constants.EVENT_OBJECT_SHOW, Win32Constants.EVENT_OBJECT_SHOW,
+            0, _callback, 0, 0, Win32Constants.WINEVENT_OUTOFCONTEXT);
+        _minimizeEndHook = NativeMethods.SetWinEventHook(
+            Win32Constants.EVENT_SYSTEM_MINIMIZEEND, Win32Constants.EVENT_SYSTEM_MINIMIZEEND,
+            0, _callback, 0, 0, Win32Constants.WINEVENT_OUTOFCONTEXT);
+
+        if (_hook == 0 || _metadataHook == 0 || _showHook == 0 || _minimizeEndHook == 0)
         {
             _logger.LogWarning("Không cài đủ WinEventHook — dùng kiểm tra foreground dự phòng mỗi giây.");
             _fallbackTimer.Change(FallbackInterval, FallbackInterval);
@@ -160,12 +178,18 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
         _settleTimer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
         _metadataRefreshTimer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
         Interlocked.Exchange(ref _metadataRefreshPending, 0);
+        Interlocked.Exchange(ref _reassertPending, 0);
+        Volatile.Write(ref _retryMetadataUntilTicks, 0);
         Untrack();
 
         if (_hook != 0) NativeMethods.UnhookWinEvent(_hook);
         if (_metadataHook != 0) NativeMethods.UnhookWinEvent(_metadataHook);
+        if (_showHook != 0) NativeMethods.UnhookWinEvent(_showHook);
+        if (_minimizeEndHook != 0) NativeMethods.UnhookWinEvent(_minimizeEndHook);
         _hook = 0;
         _metadataHook = 0;
+        _showHook = 0;
+        _minimizeEndHook = 0;
         _logger.LogInformation("Đã dừng theo dõi cửa sổ foreground.");
     }
 
@@ -278,6 +302,13 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
             return;
         }
 
+        if (eventType is Win32Constants.EVENT_OBJECT_SHOW or Win32Constants.EVENT_SYSTEM_MINIMIZEEND)
+        {
+            if (hwnd != 0 && hwnd == NativeMethods.GetForegroundWindow())
+                QueueRefresh(reassertTopmost: true);
+            return;
+        }
+
         // Còn lại là sự kiện từ tiến trình đang Track — tiến trình đó có thể có nhiều cửa sổ khác.
         // WINEVENT_OUTOFCONTEXT gọi callback trên chính thread đã đặt hook (UI thread), nên đọc
         // _tracked ở đây là an toàn.
@@ -314,12 +345,18 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
     /// foreground: <c>GetForegroundWindow</c> vẫn có thể trả nó về khi không cửa sổ nào khác nhận
     /// foreground, nhưng game ở trạng thái đó không còn trên màn hình.
     /// </summary>
-    private void Refresh()
+    public void Recheck()
+    {
+        if (!_dispatcher.CheckAccess()) { QueueRefresh(); return; }
+        Refresh();
+    }
+
+    private void Refresh(bool reassertTopmost = false)
     {
         if (_disposed || !_started) return;
 
         var hwnd = NativeMethods.GetForegroundWindow();
-        Update(IsOnScreen(hwnd) ? hwnd : 0);
+        Update(IsOnScreen(hwnd) ? hwnd : 0, reassertTopmost);
     }
 
     private static bool IsOnScreen(nint hwnd) =>
@@ -328,7 +365,7 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
         && NativeMethods.IsWindowVisible(hwnd)
         && !NativeMethods.IsIconic(hwnd);
 
-    private void Update(nint hwnd)
+    private void Update(nint hwnd, bool reassertTopmost)
     {
         if (_disposed) return;
 
@@ -342,15 +379,24 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
             Volatile.Write(ref _publishedRight, (int)info.Bounds.Right);
             Volatile.Write(ref _publishedBottom, (int)info.Bounds.Bottom);
             if (!info.IsValid || (!info.ProcessNameUnavailable && !string.IsNullOrEmpty(info.WindowTitle)))
+            {
                 Volatile.Write(ref _retryMetadataUntilTicks, 0);
+                _settleTimer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+            }
             else if (info.Handle != Current.Handle)
             {
                 Volatile.Write(ref _retryMetadataUntilTicks, DateTime.UtcNow.Add(MetadataSettlePeriod).Ticks);
-                _settleTimer.Change(InitialMetadataRetry, Timeout.InfiniteTimeSpan);
+                _metadataRetryStep = 0;
+                _settleTimer.Change(MetadataRetryIntervals[0], Timeout.InfiniteTimeSpan);
             }
 
             // The same HWND can gain its process path/title after the foreground event.
-            if (!HasChanged(Current, info)) return;
+            if (!HasChanged(Current, info))
+            {
+                if (reassertTopmost)
+                    ForegroundChanged?.Invoke(this, new ForegroundWindowChangedEventArgs(Current, info, true));
+                return;
+            }
 
             var previous = Current;
             Current = info;
@@ -363,7 +409,7 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
 
             _audit.Record("GetForegroundWindow", $"foreground changed; hwnd=0x{(long)info.Handle:X}; process={info.ProcessName}");
 
-            ForegroundChanged?.Invoke(this, new ForegroundWindowChangedEventArgs(previous, info));
+            ForegroundChanged?.Invoke(this, new ForegroundWindowChangedEventArgs(previous, info, reassertTopmost));
         }
         catch (Exception ex)
         {
@@ -375,9 +421,10 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
     internal static bool HasChanged(ForegroundWindowInfo previous, ForegroundWindowInfo current) =>
         previous != current;
 
-    private void QueueRefresh()
+    private void QueueRefresh(bool reassertTopmost = false)
     {
         if (!_started || _dispatcher.HasShutdownStarted) return;
+        if (reassertTopmost) Interlocked.Exchange(ref _reassertPending, 1);
         if (Interlocked.Exchange(ref _refreshQueued, 1) != 0) return;
 
         try
@@ -402,7 +449,20 @@ public sealed class ForegroundWindowWatcher : IForegroundWindowWatcher
     private void RefreshQueued()
     {
         Interlocked.Exchange(ref _refreshQueued, 0);
-        if (_started) Refresh();
+        var reassert = Interlocked.Exchange(ref _reassertPending, 0) != 0;
+        if (_started) Refresh(reassert);
+    }
+
+    private void OnMetadataRetryTick(object? state)
+    {
+        if (!_started || _disposed || DateTime.UtcNow.Ticks >= Volatile.Read(ref _retryMetadataUntilTicks)) return;
+        QueueRefresh();
+        var next = Interlocked.Increment(ref _metadataRetryStep);
+        if (next < MetadataRetryIntervals.Length && _started)
+        {
+            try { _settleTimer.Change(MetadataRetryIntervals[next], Timeout.InfiniteTimeSpan); }
+            catch (ObjectDisposedException) { /* Stop/Dispose raced with this timer callback. */ }
+        }
     }
 
     /// <summary>

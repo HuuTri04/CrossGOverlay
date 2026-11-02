@@ -16,8 +16,12 @@ namespace CrosshairOverlay.Services.Overlay;
 internal sealed class CrosshairVisualHost : FrameworkElement
 {
     private Drawing? _drawing;
+#if BENCHMARK
+    private long _benchmarkDrawingSwitchId;
+#endif
     private TranslateTransform? _centerTransform;
     private Size _centerTransformSize;
+    internal event Action<long>? FirstDrawingRendered;
 #if DEBUG
     internal long DebugInvalidationCount { get; private set; }
 #endif
@@ -56,6 +60,9 @@ internal sealed class CrosshairVisualHost : FrameworkElement
         Rendering.DrawingAnimations.Stop(_drawing);
 
         _drawing = drawing;
+#if BENCHMARK
+        _benchmarkDrawingSwitchId = Core.Diagnostics.BenchmarkPresetProbe.CurrentSwitchId;
+#endif
         RequestRender();
     }
 
@@ -90,5 +97,14 @@ internal sealed class CrosshairVisualHost : FrameworkElement
         drawingContext.PushTransform(_centerTransform);
         drawingContext.DrawDrawing(_drawing);
         drawingContext.Pop();
+#if BENCHMARK
+        Core.Diagnostics.BenchmarkPresetProbe.OverlayRendered(_benchmarkDrawingSwitchId);
+#endif
+
+        if (FirstDrawingRendered is { } handler)
+        {
+            FirstDrawingRendered = null;
+            handler(global::System.Diagnostics.Stopwatch.GetTimestamp());
+        }
     }
 }

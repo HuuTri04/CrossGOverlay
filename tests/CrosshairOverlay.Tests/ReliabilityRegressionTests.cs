@@ -28,6 +28,17 @@ public sealed class ReliabilityRegressionTests : IDisposable
 
     public ReliabilityRegressionTests() => Directory.CreateDirectory(_root);
 
+    [Fact]
+    public void WindowsNotificationLogoUsesOnlyAnExistingPhysicalFile()
+    {
+        Assert.Null(WindowsNotificationService.GetExistingLogoUri(_root));
+
+        var logo = WindowsNotificationService.GetExistingLogoUri(AppContext.BaseDirectory);
+        Assert.NotNull(logo);
+        Assert.True(logo.IsFile);
+        Assert.True(File.Exists(logo.LocalPath));
+    }
+
     public void Dispose()
     {
         try { Directory.Delete(_root, recursive: true); }

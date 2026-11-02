@@ -139,6 +139,9 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
     partial void OnSelectedPresetChanged(CrosshairProfile? value)
     {
         if (_syncingSelection || value is null) return;
+#if BENCHMARK
+        Core.Diagnostics.BenchmarkPresetProbe.RequestReceived("SettingsSelection", value.Id);
+#endif
         _library.SetActive(value);
     }
 
@@ -185,7 +188,13 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
     private void OnLanguageChanged(object? sender, global::System.ComponentModel.PropertyChangedEventArgs e) =>
         OnPropertyChanged(nameof(OverlayHint));
 
-    private void OnLibraryActiveChanged(object? sender, EventArgs e) => SyncFromLibrary();
+    private void OnLibraryActiveChanged(object? sender, EventArgs e)
+    {
+#if BENCHMARK
+        using var benchmarkScope = Core.Diagnostics.BenchmarkPresetProbe.Subscriber("T4b.SettingsViewModel");
+#endif
+        SyncFromLibrary();
+    }
 
     private void SyncFromLibrary()
     {
@@ -205,7 +214,10 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
 
         // Chỉ đồng bộ phần UI. Việc đẩy preset xuống overlay và ghi ActivePresetId do
         // composition root lo, vì preset có thể đổi khi cửa sổ này đang đóng.
-        Editor.Profile = active;
+#if BENCHMARK
+        if (!Core.Diagnostics.BenchmarkPresetProbe.SkipPreview)
+#endif
+            Editor.Profile = active;
     }
 
     [RelayCommand]

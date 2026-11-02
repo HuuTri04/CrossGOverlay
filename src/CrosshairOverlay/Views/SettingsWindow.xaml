@@ -353,7 +353,7 @@
             <Image Source="{Binding General.AppBackgroundImage, Mode=OneWay}"
                    IsHitTestVisible="False" Focusable="False"
                    Opacity="{Binding General.Settings.AppBgOpacity, Mode=OneWay}"
-                   Stretch="UniformToFill" RenderOptions.BitmapScalingMode="LowQuality"/>
+                   Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
         </Grid>
     <Grid Margin="18">
         <Grid.RowDefinitions>
@@ -455,23 +455,21 @@
                             <ContentControl DockPanel.Dock="Bottom" Style="{StaticResource Hint}" Margin="2,8,0,0"
                                             Content="{loc:Loc Preset_DragToReorder}"/>
 
-                            <ScrollViewer Style="{StaticResource PanelScrollViewer}">
-                                <!--
-                                    Phím Delete gọi ĐÚNG lệnh của nút "Xoá", nên vẫn qua hộp thoại
-                                    xác nhận — không có đường xoá tắt nào bỏ qua bước hỏi lại.
-                                    Kéo thả để đổi thứ tự (DragReorder): thứ tự lưu vào settings.json và là
-                                    thứ tự của phím tắt Preset kế tiếp / trước đó.
-                                -->
-                                <ListBox ItemsSource="{Binding Presets, Mode=OneWay}"
-                                         SelectedItem="{Binding SelectedPreset, Mode=TwoWay}"
-                                         DisplayMemberPath="Name"
-                                         SelectionChanged="OnPresetSelectionChanged"
-                                         ctl:DragReorder.MoveCommand="{Binding MovePresetToCommand}">
-                                    <ListBox.InputBindings>
-                                        <KeyBinding Key="Delete" Command="{Binding DeletePresetCommand}"/>
-                                    </ListBox.InputBindings>
-                                </ListBox>
-                            </ScrollViewer>
+                            <!-- ListBox tự cuộn trong viewport hữu hạn để tái sử dụng các dòng preset. -->
+                            <ListBox ItemsSource="{Binding Presets, Mode=OneWay}"
+                                     SelectedItem="{Binding SelectedPreset, Mode=TwoWay}"
+                                     DisplayMemberPath="Name"
+                                     ScrollViewer.CanContentScroll="True"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                     VirtualizingPanel.IsVirtualizing="True"
+                                     VirtualizingPanel.VirtualizationMode="Recycling"
+                                     VirtualizingPanel.ScrollUnit="Pixel"
+                                     SelectionChanged="OnPresetSelectionChanged"
+                                     ctl:DragReorder.MoveCommand="{Binding MovePresetToCommand}">
+                                <ListBox.InputBindings>
+                                    <KeyBinding Key="Delete" Command="{Binding DeletePresetCommand}"/>
+                                </ListBox.InputBindings>
+                            </ListBox>
                         </DockPanel>
                     </Border>
 
@@ -516,13 +514,20 @@
                                         IsEnabled="{Binding Editor.CanResetPreviewBackground, Mode=OneWay}"/>
                             </StackPanel>
 
-                            <ctl:CrosshairPreview
-                                Profile="{Binding Editor.Profile, Mode=OneWay}"
-                                Renderer="{Binding Editor.Renderer, Mode=OneWay}"
-                                Zoom="{Binding Editor.PreviewZoom, Mode=OneWay}"
-                                ShowCheckerboard="{Binding Editor.IsCheckerboardBgVisible, Mode=OneWay}"
-                                UseDarkBackground="{Binding Editor.IsDarkBgVisible, Mode=OneWay}"
-                                CustomBackgroundImage="{Binding Editor.CustomPreviewBackgroundImage, Mode=OneWay}"/>
+                            <Grid ClipToBounds="True">
+                                <Image Source="{Binding Editor.CustomPreviewBackgroundImage, Mode=OneWay}"
+                                       Visibility="{Binding Editor.HasCustomPreviewBackground,
+                                                    Converter={StaticResource BoolToVisibility}, Mode=OneWay}"
+                                       Stretch="UniformToFill" IsHitTestVisible="False" Focusable="False"
+                                       RenderOptions.BitmapScalingMode="HighQuality"/>
+                                <ctl:CrosshairPreview
+                                    Profile="{Binding Editor.Profile, Mode=OneWay}"
+                                    Renderer="{Binding Editor.Renderer, Mode=OneWay}"
+                                    Zoom="{Binding Editor.PreviewZoom, Mode=OneWay}"
+                                    ShowCheckerboard="{Binding Editor.IsCheckerboardBgVisible, Mode=OneWay}"
+                                    UseDarkBackground="{Binding Editor.IsDarkBgVisible, Mode=OneWay}"
+                                    CustomBackgroundImage="{Binding Editor.CustomPreviewBackgroundImage, Mode=OneWay}"/>
+                            </Grid>
                         </DockPanel>
                     </Border>
 
@@ -543,6 +548,7 @@
                 <TabItem.ContentTemplate>
                     <DataTemplate>
                 <ScrollViewer Style="{StaticResource PanelScrollViewer}"
+                              ScrollViewer.IsDeferredScrollingEnabled="{Binding General.HasAppBackground, Mode=OneWay}"
                               ctl:SmoothScrollBehavior.UseBackdropFrameBudget="{Binding General.HasAppBackground, Mode=OneWay}">
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -561,13 +567,12 @@
                                           DisplayMemberPath="Label" SelectedValuePath="Value"
                                           SelectedValue="{Binding General.MonitorMode, Mode=TwoWay}"/>
 
-                                <StackPanel Margin="0,10,0,0"
-                                            Visibility="{Binding General.ShowMonitorPicker,
-                                                         Converter={StaticResource BoolToVisibility}, Mode=OneWay}">
-                                    <ComboBox ItemsSource="{Binding General.AvailableMonitors, Mode=OneWay}"
-                                              SelectedItem="{Binding General.PinnedMonitor, Mode=TwoWay}"
-                                              DisplayMemberPath="DeviceName"/>
-                                </StackPanel>
+                                <ComboBox Margin="0,10,0,0"
+                                          Visibility="{Binding General.ShowMonitorPicker,
+                                                       Converter={StaticResource BoolToVisibility}, Mode=OneWay}"
+                                          ItemsSource="{Binding General.AvailableMonitors, Mode=OneWay}"
+                                          SelectedItem="{Binding General.PinnedMonitor, Mode=TwoWay}"
+                                          DisplayMemberPath="DeviceName"/>
 
                                 <Border Style="{StaticResource InnerCard}" Margin="0,12,0,0" Padding="12,8">
                                     <ItemsControl ItemsSource="{Binding General.AvailableMonitors, Mode=OneWay}">
@@ -877,15 +882,10 @@
                                               IsChecked="{Binding General.Settings.CheckForUpdates, Mode=TwoWay}"
                                               Command="{Binding General.PersistSettingsCommand}"/>
 
-                                    <Grid Margin="0,8,0,0">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-                                        <!-- Kết quả hiện bằng thông báo nhỏ ở góc cửa sổ, xem Toast bên dưới. -->
-                                        <Button Content="{loc:Loc Update_CheckNow}"
-                                                Command="{Binding General.CheckForUpdatesCommand}"/>
-                                    </Grid>
+                                    <!-- Kết quả hiện bằng thông báo nhỏ ở góc cửa sổ, xem Toast bên dưới. -->
+                                    <Button Content="{loc:Loc Update_CheckNow}" Margin="0,8,0,0"
+                                            HorizontalAlignment="Left"
+                                            Command="{Binding General.CheckForUpdatesCommand}"/>
                                 </StackPanel>
                             </Border>
 
@@ -951,8 +951,7 @@
                                                FontSize="11.5" Margin="0,2,0,0"
                                                Visibility="{Binding General.IsChangingStorage,
                                                             Converter={StaticResource BoolToVisibility}, Mode=OneWay}"/>
-                                    <Border Height="12"/>
-                                    <UniformGrid Columns="2" Margin="0,0,0,8">
+                                    <UniformGrid Columns="2" Margin="0,12,0,8">
                                         <Button Content="{loc:Loc Data_Backup}" Margin="0,0,5,0"
                                                 Command="{Binding General.BackupDataCommand}"/>
                                         <Button Content="{loc:Loc Data_Restore}" Margin="5,0,0,0"

@@ -1,0 +1,79 @@
+{
+  "SchemaVersion": 2,
+  "Id": "a7604f7e-f5f5-4678-95f4-047dd6b26d66",
+  "Opacity": 1,
+  "Scale": 1,
+  "Rotation": 0,
+  "OffsetX": 0,
+  "OffsetY": 0,
+  "Name": "Dual Lines",
+  "Type": "Standard",
+  "Shape": "Cross",
+  "Color": "#FFFFFFFF",
+  "CenterDot": {
+    "Size": 2,
+    "Opacity": 1,
+    "Enabled": true,
+    "UseProfileColor": true,
+    "Color": "#FF00FF00"
+  },
+  "InnerLines": {
+    "Opacity": 0.8,
+    "Length": 6,
+    "VerticalLength": 10,
+    "Thickness": 2,
+    "VerticalThickness": 2,
+    "Offset": 3,
+    "Enabled": true,
+    "SeparateVerticalLength": false,
+    "SeparateVerticalThickness": false,
+    "ShowTop": true,
+    "ShowBottom": true,
+    "ShowLeft": true,
+    "ShowRight": true,
+    "RoundedCaps": false
+  },
+  "OuterLines": {
+    "Opacity": 0.35,
+    "Length": 2,
+    "VerticalLength": 10,
+    "Thickness": 2,
+    "VerticalThickness": 2,
+    "Offset": 10,
+    "Enabled": true,
+    "SeparateVerticalLength": false,
+    "SeparateVerticalThickness": false,
+    "ShowTop": true,
+    "ShowBottom": true,
+    "ShowLeft": true,
+    "ShowRight": true,
+    "RoundedCaps": false
+  },
+  "Outline": {
+    "Thickness": 1,
+    "Opacity": 0.5,
+    "Enabled": true,
+    "Color": "#FF000000"
+  },
+  "Ring": {
+    "Radius": 12,
+    "Thickness": 2,
+    "Enabled": false,
+    "Filled": false
+  },
+  "Image": {
+    "Scale": 1,
+    "Opacity": 1,
+    "OffsetX": 0,
+    "OffsetY": 0,
+    "FilePath": null
+  },
+  "Shadow": {
+    "BlurRadius": 4,
+    "Opacity": 0.7,
+    "Enabled": false,
+    "Color": "#FF000000"
+  },
+  "CreatedUtc": "2026-10-25T15:57:37.0781749+00:00",
+  "ModifiedUtc": "2026-10-25T15:57:37.1313873+00:00"
+}

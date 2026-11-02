@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
 
     <!-- Cần UseWPF vì model dùng System.Windows.Media.Color và renderer dùng Drawing. -->
     <UseWPF>true</UseWPF>
@@ -16,6 +16,11 @@
 
     <!-- Dự án chính bật SelfContained cho publish; test thì không cần. -->
     <SelfContained>false</SelfContained>
+    <!-- The referenced application uses Windows App SDK notification projections. -->
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <WindowsAppSdkBootstrapInitialize>false</WindowsAppSdkBootstrapInitialize>
+    <WindowsAppSdkDeploymentManagerInitialize>false</WindowsAppSdkDeploymentManagerInitialize>
+    <WindowsAppSdkUndockedRegFreeWinRTInitialize>false</WindowsAppSdkUndockedRegFreeWinRTInitialize>
     <PublishSingleFile>false</PublishSingleFile>
   </PropertyGroup>
 

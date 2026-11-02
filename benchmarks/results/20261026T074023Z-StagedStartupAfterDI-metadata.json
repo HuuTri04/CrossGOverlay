@@ -1,0 +1,14 @@
+﻿{
+    "Scenario":  "Startup",
+    "Label":  "StagedStartupAfterDI",
+    "Runs":  10,
+    "DurationSecondsPerRun":  0,
+    "SampleIntervalMs":  1000,
+    "ProcessorCount":  16,
+    "ExePath":  "D:\\Crosshair\\src\\CrosshairOverlay\\bin\\x64\\Release\\net8.0-windows\\win-x64\\CrossGOverlay.exe",
+    "BenchmarkDataRoot":  "D:\\Crosshair\\benchmarks\\results\\app-data",
+    "ExeSha256":  "7DA83E403D86A05D2781EE03BFEB23E34235B2598045B9A8D24F60EC2B94C310",
+    "DateUtc":  "2026-10-26T07:40:38.5016183+00:00",
+    "FirstFrameSource":  "CrosshairOverlay.Views.SettingsWindow OnContentRendered log; FirstHwndMs may refer to the splash screen.",
+    "Note":  "CPU is normalized over all logical processors. Managed heap, GC pause, GPU and context switches require separate instrumentation."
+}

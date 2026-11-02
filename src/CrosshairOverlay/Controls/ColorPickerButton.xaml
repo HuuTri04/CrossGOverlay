@@ -1,6 +1,7 @@
 <UserControl x:Class="CrosshairOverlay.Controls.ColorPickerButton"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ctl="clr-namespace:CrosshairOverlay.Controls">
     <Grid>
         <Button x:Name="OpenButton" Click="OnOpenClick" Padding="6" HorizontalContentAlignment="Stretch">
             <StackPanel Orientation="Horizontal">
@@ -12,6 +13,7 @@
         </Button>
 
         <Popup x:Name="PickerPopup" StaysOpen="False" AllowsTransparency="True"
+               ctl:PopupScrollGuard.TrackPopup="True"
                Placement="Bottom" PlacementTarget="{Binding ElementName=OpenButton}"
                PopupAnimation="Fade">
             <Border Background="{StaticResource CardBg}" BorderBrush="{StaticResource BorderBrushSoft}"

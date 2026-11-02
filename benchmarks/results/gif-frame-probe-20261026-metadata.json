@@ -1,0 +1,8 @@
+﻿{
+    "ProbeDateUtc":  "2026-10-26T16:39:25.8530638+00:00",
+    "ManagedDllSha256":  "105A27B06438CB98AE84A35FD5236C2F7DE5F6545D7981FB31EC9E61434C1EE3",
+    "Fixture":  "Two-frame 64x64 GIF in isolated benchmark root",
+    "ProbeEnvironment":  "CROSSGOVERLAY_BENCHMARK_GIF_PROBE=1",
+    "ThresholdFrameTicks":  100,
+    "ResultCsv":  "benchmarks/results/gif-frame-probe-20261026.csv"
+}

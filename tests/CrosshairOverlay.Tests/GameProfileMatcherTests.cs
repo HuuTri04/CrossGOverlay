@@ -236,6 +236,29 @@ public sealed class GameProfileActivationTests
     }
 
     [Fact]
+    public void SameForegroundWindowShownAgain_ReassertsTopmostWithoutAltTab()
+    {
+        var watcher = new Watcher();
+        var preset = CrosshairProfile.CreateDefault();
+        var overlay = new Overlay();
+        var settings = new Settings();
+        settings.Current.ShowOnlyInMatchedGames = true;
+        settings.Current.GameProfiles.Add(new GameProfile { Pattern = "game.exe", PresetId = preset.Id });
+        using var switcher = new ProfileAutoSwitcher(watcher, new GameProfileMatcher(),
+            new Library(preset), overlay, settings, NullLogger<ProfileAutoSwitcher>.Instance);
+        switcher.Start();
+
+        var game = new ForegroundWindowInfo(1234, 9999, "game.exe", @"C:\Games\game.exe", "Game",
+            new Rect(0, 0, 1280, 720), FullscreenKind.None);
+        watcher.Publish(game);
+        Assert.Equal(1, overlay.TopmostCalls);
+
+        watcher.Publish(game, reassertTopmost: true);
+        Assert.True(overlay.IsVisible);
+        Assert.Equal(2, overlay.TopmostCalls);
+    }
+
+    [Fact]
     public void BackgroundForegroundEventIsAppliedOnOwningDispatcher_AndStoppedEventIsIgnored()
     {
         Exception? failure = null;
@@ -294,13 +317,14 @@ public sealed class GameProfileActivationTests
         public void Start() { }
         public void Stop() { }
         public void Track(ForegroundWindowInfo window) { }
+        public void Recheck() { }
         public void Dispose() { }
-        public void Publish(ForegroundWindowInfo window)
+        public void Publish(ForegroundWindowInfo window, bool reassertTopmost = false)
         {
             var previous = Current;
             Current = window;
             LastExternal = window;
-            ForegroundChanged?.Invoke(this, new ForegroundWindowChangedEventArgs(previous, window));
+            ForegroundChanged?.Invoke(this, new ForegroundWindowChangedEventArgs(previous, window, reassertTopmost));
         }
     }
 

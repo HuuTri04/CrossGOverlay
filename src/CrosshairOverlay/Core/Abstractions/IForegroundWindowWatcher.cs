@@ -29,6 +29,9 @@ public interface IForegroundWindowWatcher : IDisposable
 
     void Stop();
 
+    /// <summary>Read the current foreground HWND again after a game finishes creating its render window.</summary>
+    void Recheck() { }
+
     /// <summary>
     /// Theo dõi riêng một cửa sổ (thường là game đang khớp profile) để biết ngay khi nó bị đóng,
     /// ẩn hoặc thu nhỏ — kể cả khi Windows không trao foreground cho cửa sổ nào khác.
@@ -52,8 +55,10 @@ public interface IForegroundWindowWatcher : IDisposable
 
 public sealed class ForegroundWindowChangedEventArgs(
     ForegroundWindowInfo previous,
-    ForegroundWindowInfo current) : EventArgs
+    ForegroundWindowInfo current,
+    bool reassertTopmost = false) : EventArgs
 {
     public ForegroundWindowInfo Previous { get; } = previous;
     public ForegroundWindowInfo Current { get; } = current;
+    public bool ReassertTopmost { get; } = reassertTopmost;
 }

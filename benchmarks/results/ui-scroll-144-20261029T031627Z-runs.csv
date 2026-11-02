@@ -1,0 +1,2 @@
+﻿"UiTargetFps","Run","DurationSeconds","WheelMessagesSent","InitialScrollPercent","FinalScrollPercent","UniqueObservedOffsets","EtlPath","EtlCaptured","FrameTimeP95Ms","FrameTimeP99Ms","Note"
+"144","1","30","190","0","0","20","D:\Crosshair\benchmarks\results\etl\ui-scroll-144-20261029T031627Z-run1.etl","False",,,"Frame-time analysis requires supported WPF profiler/WPA."

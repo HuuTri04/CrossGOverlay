@@ -1,4 +1,5 @@
 ﻿using System.Runtime.CompilerServices;
+using System.IO;
 using System.Windows.Media;
 using System.Windows.Threading;
 
@@ -26,6 +27,13 @@ namespace CrosshairOverlay.Services.Rendering;
 internal static class DrawingAnimations
 {
     private static readonly ConditionalWeakTable<ImageDrawing, FramePlayer> Players = new();
+    private static readonly string? BenchmarkProbePath =
+        Environment.GetEnvironmentVariable("CROSSGOVERLAY_BENCHMARK_GIF_PROBE") == "1"
+        && Environment.GetEnvironmentVariable("CROSSGOVERLAY_BENCHMARK_ROOT") is { Length: > 0 } root
+            ? Path.Combine(root, "gif_probe.csv")
+            : null;
+    private static long s_benchmarkTicks;
+    private static long s_benchmarkFirstTick;
 
     /// <summary>
     /// Số bộ phát đang chạy trên luồng hiện tại. Bộ phát thuộc về luồng giao diện đã tạo ra nó, nên
@@ -97,6 +105,21 @@ internal static class DrawingAnimations
 
         private void OnTick(object? sender, EventArgs e)
         {
+            if (BenchmarkProbePath is { } path)
+            {
+                var count = Interlocked.Increment(ref s_benchmarkTicks);
+                if (count == 1) s_benchmarkFirstTick = global::System.Diagnostics.Stopwatch.GetTimestamp();
+                if (count == 100)
+                {
+                    var elapsed = global::System.Diagnostics.Stopwatch.GetElapsedTime(s_benchmarkFirstTick).TotalSeconds;
+                    _ = Task.Run(() =>
+                    {
+                        try { File.WriteAllText(path, $"FrameTicks,ElapsedSeconds{Environment.NewLine}{count},{elapsed:R}{Environment.NewLine}"); }
+                        catch (IOException) { }
+                        catch (UnauthorizedAccessException) { }
+                    });
+                }
+            }
             _index = (_index + 1) % _animation.Frames.Count;
             _image.ImageSource = _animation.Frames[_index];
 

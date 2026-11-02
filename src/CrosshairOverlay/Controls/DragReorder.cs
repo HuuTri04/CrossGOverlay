@@ -214,17 +214,25 @@ public static class DragReorder
 
     private static void AutoScroll(ListBox list, DragEventArgs e)
     {
-        // ListBox nằm trong một ScrollViewer bao ngoài (ScrollViewer riêng của nó không bị giới hạn chiều cao
-        // nên không cuộn): cuộn ScrollViewer gần nhất còn cuộn được.
-        for (DependencyObject? node = list; node is not null; node = VisualTreeHelper.GetParent(node))
-        {
-            if (node is not ScrollViewer viewer || viewer.ScrollableHeight <= 0) continue;
+        // The ListBox owns its viewport so virtualization remains active. Its internal
+        // ScrollViewer is available after the control template has been applied.
+        var viewer = FindScrollViewer(list);
+        if (viewer is null || viewer.ScrollableHeight <= 0) return;
 
-            var y = e.GetPosition(viewer).Y;
-            if (y < AutoScrollMargin && WheelScrollAssist.CanScroll(viewer, scrollDown: false)) viewer.LineUp();
-            else if (y > viewer.ViewportHeight - AutoScrollMargin && WheelScrollAssist.CanScroll(viewer, scrollDown: true)) viewer.LineDown();
-            return;
+        var y = e.GetPosition(viewer).Y;
+        if (y < AutoScrollMargin && WheelScrollAssist.CanScroll(viewer, scrollDown: false)) viewer.LineUp();
+        else if (y > viewer.ViewportHeight - AutoScrollMargin && WheelScrollAssist.CanScroll(viewer, scrollDown: true)) viewer.LineDown();
+    }
+
+    private static ScrollViewer? FindScrollViewer(DependencyObject root)
+    {
+        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
+        {
+            var child = VisualTreeHelper.GetChild(root, i);
+            if (child is ScrollViewer viewer) return viewer;
+            if (FindScrollViewer(child) is { } nested) return nested;
         }
+        return null;
     }
 
     private static ListBoxItem? ContainerFrom(ListBox list, DependencyObject? source)

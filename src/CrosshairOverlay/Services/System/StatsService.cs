@@ -95,6 +95,10 @@ public sealed class StatsService : IDisposable
 
     private void OnActiveChanged(object? sender, EventArgs e)
     {
+#if BENCHMARK
+        if (Core.Diagnostics.BenchmarkPresetProbe.SkipStats) return;
+        using var benchmarkScope = Core.Diagnostics.BenchmarkPresetProbe.Subscriber("T4c.StatsService");
+#endif
         lock (_gate)
         {
             Accumulate(DateTimeOffset.Now);

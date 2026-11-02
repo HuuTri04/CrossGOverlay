@@ -1,0 +1,7 @@
+﻿{
+    "SwitchesRequested":  1000,
+    "SettlingSeconds":  60,
+    "ExeSha256":  "7DA83E403D86A05D2781EE03BFEB23E34235B2598045B9A8D24F60EC2B94C310",
+    "ManagedDllSha256":  "18EE546EA21321EE38E9E5387D43C85B277FFBBF52E670801BE901DC6B438E7C",
+    "Interpretation":  "UI Automation Select() duration; not overlay present latency."
+}

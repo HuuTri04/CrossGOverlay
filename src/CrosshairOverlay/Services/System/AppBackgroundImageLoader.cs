@@ -11,8 +11,14 @@ internal static class AppBackgroundImageLoader
     private static readonly HashSet<string> Extensions =
         new(StringComparer.OrdinalIgnoreCase) { ".png", ".jpg", ".jpeg", ".webp" };
 
-    public static BitmapSource Decode(string path, int maxDecodedSide = MaxDecodedSide)
+    public static Task<BitmapSource> DecodeAsync(
+        string path, int maxDecodedSide = MaxDecodedSide, CancellationToken cancellationToken = default) =>
+        Task.Run(() => Decode(path, maxDecodedSide, cancellationToken), cancellationToken);
+
+    public static BitmapSource Decode(
+        string path, int maxDecodedSide = MaxDecodedSide, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (maxDecodedSide is < 1 or > MaxDecodedSide)
             throw new ArgumentOutOfRangeException(nameof(maxDecodedSide));
         if (!Extensions.Contains(Path.GetExtension(path)))
@@ -32,6 +38,7 @@ internal static class AppBackgroundImageLoader
             width = decoder.Frames[0].PixelWidth;
             height = decoder.Frames[0].PixelHeight;
         }
+        cancellationToken.ThrowIfCancellationRequested();
         if (width <= 0 || height <= 0 || width > 16384 || height > 16384)
             throw new InvalidDataException("Background image dimensions are unsupported.");
 
@@ -44,6 +51,7 @@ internal static class AppBackgroundImageLoader
         else if (height > maxDecodedSide) image.DecodePixelHeight = maxDecodedSide;
         image.StreamSource = stream;
         image.EndInit();
+        cancellationToken.ThrowIfCancellationRequested();
         image.Freeze();
         return image;
     }

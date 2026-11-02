@@ -1,0 +1,9 @@
+﻿{
+    "Scenario":  "Startup",
+    "Run":  1,
+    "Pid":  34780,
+    "FirstHwndMs":  625.81,
+    "SettingsFirstFrameMs":  769,
+    "FirstFrameLogObservedMs":  933.08,
+    "SettingsWindowVisible":  true
+}

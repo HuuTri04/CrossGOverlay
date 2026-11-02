@@ -4,8 +4,8 @@ using CrosshairOverlay.Core;
 using CrosshairOverlay.Core.Abstractions;
 using CrosshairOverlay.Localization;
 using CrosshairOverlay.ViewModels;
-using CrosshairOverlay.Views;
 using H.NotifyIcon;
+using H.NotifyIcon.Core;
 using Microsoft.Extensions.Logging;
 
 namespace CrosshairOverlay.Services.System;
@@ -18,7 +18,9 @@ public sealed class TrayIconController : ITrayIconController
     private TaskbarIcon? _icon;
     private TrayMenuViewModel? _menu;
     private global::System.Drawing.Icon? _currentIcon;
-    private SystemTrayToastWindow? _toast;
+    private WindowsNotificationService? _notifications;
+    private string? _lastNotification;
+    private DateTimeOffset _lastNotificationAt;
     private string _activePresetName = "—";
     private bool _overlayEnabled = true;
     private bool _overlayVisible = true;
@@ -69,6 +71,9 @@ public sealed class TrayIconController : ITrayIconController
 
         _icon.TrayMouseDoubleClick += (_, _) => OpenSettingsRequested?.Invoke(this, EventArgs.Empty);
         _icon.ForceCreate();
+        _notifications = new WindowsNotificationService(_logger,
+            () => OpenSettingsRequested?.Invoke(this, EventArgs.Empty));
+        _notifications.Initialize();
 
         AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
         AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
@@ -134,20 +139,34 @@ public sealed class TrayIconController : ITrayIconController
             return;
         }
 
+        if (string.IsNullOrWhiteSpace(message)) return;
+        var key = $"{title}\n{message}";
+        var now = DateTimeOffset.UtcNow;
+        if (key == _lastNotification && now - _lastNotificationAt < TimeSpan.FromSeconds(10)) return;
+
+        if (_notifications?.TryShow(title, message) == true)
+        {
+            _lastNotification = key;
+            _lastNotificationAt = now;
+            return;
+        }
+
         try
         {
-            _toast?.Close();
-            var toast = new SystemTrayToastWindow(title, message,
-                () => OpenSettingsRequested?.Invoke(this, EventArgs.Empty));
-            toast.Closed += (_, _) => { if (ReferenceEquals(_toast, toast)) _toast = null; };
-            _toast = toast;
-            toast.ShowToast();
+            // Native Shell_NotifyIcon fallback for elevated processes (unsupported by
+            // Windows App SDK). Never open a second WPF HWND over the game.
+            _icon.ShowNotification(title, message,
+                isWarning ? NotificationIcon.Warning : NotificationIcon.None,
+                customIconHandle: _currentIcon?.Handle,
+                largeIcon: true,
+                sound: false,
+                respectQuietTime: true);
+            _lastNotification = key;
+            _lastNotificationAt = now;
         }
         catch (Exception ex)
         {
-            _toast?.Close();
-            _toast = null;
-            _logger.LogDebug(ex, "Không hiển thị được thông báo khay tùy chỉnh.");
+            _logger.LogDebug(ex, "Không hiển thị được thông báo khay native.");
         }
     }
 
@@ -161,8 +180,8 @@ public sealed class TrayIconController : ITrayIconController
 
         TranslationSource.Instance.PropertyChanged -= OnLanguageChanged;
 
-        _toast?.Close();
-        _toast = null;
+        _notifications?.Dispose();
+        _notifications = null;
 
         _menu?.Dispose();
         _menu = null;

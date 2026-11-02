@@ -1,0 +1,3 @@
+﻿"Scenario","Count","Stage","TimestampUtc","Pid","VMMapPrivateMB","VMMapPrivateDataMB","VMMapManagedHeapMB","ProcessPrivateMB","WorkingSetMB","GpuSharedMB","GdiHandles","UserHandles","Pen","Brush","Bitmap","Font","Region","DC","AllGdi"
+"preset","100","before","2026-10-29T15:37:19.1431560+00:00","31760","203.711","94.016","29.035","194.215","280.914","105.445","47","44","0","3","4","3","12","5","47"
+"preset","100","after","2026-10-29T15:37:32.9485936+00:00","31760","260.492","149.648","34.215","266.688","360.742","161.379","87","44","0","3","4","3","52","5","87"

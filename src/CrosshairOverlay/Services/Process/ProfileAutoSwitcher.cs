@@ -1,5 +1,6 @@
 ﻿using CrosshairOverlay.Core.Abstractions;
 using CrosshairOverlay.Core.Models;
+using CrosshairOverlay.Interop;
 using CrosshairOverlay.Services.System;
 using System.Windows.Threading;
 using Microsoft.Extensions.Logging;
@@ -50,6 +51,14 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
     private bool _streamSuppressed;
     private bool _foregroundIsMatchedGame;
     private bool _disposed;
+    private CancellationTokenSource? _verification;
+    private int _verificationProcessId;
+    private nint _verificationWindow;
+    private static readonly TimeSpan[] VerificationIntervals =
+    [
+        TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(200),
+        TimeSpan.FromMilliseconds(500), TimeSpan.FromMilliseconds(1000),
+    ];
 
     public ProfileAutoSwitcher(
         IForegroundWindowWatcher watcher,
@@ -80,6 +89,7 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
 
             if (!value)
             {
+                CancelVerification();
                 _foregroundIsMatchedGame = false;
                 UpdateGcLatency();
                 RestoreManualPreset();
@@ -119,6 +129,7 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
         if (!_started) return;
 
         _started = false;
+        CancelVerification();
         _watcher.ForegroundChanged -= OnForegroundChanged;
         _watcher.TrackedWindowClosed -= OnTrackedWindowClosed;
         _overlay.VisibilityChanged -= OnOverlayVisibilityChanged;
@@ -150,6 +161,7 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
         // thủ công nếu tiến trình game đã thoát hẳn — kiểm tra một lần tại đây, không polling.
         if (window.IsOwnProcess)
         {
+            CancelVerification();
             _foregroundIsMatchedGame = false;
             UpdateGcLatency();
             if (ActiveGameProfile is not null && !IsMatchedProcessAlive()) ClearMatch();
@@ -158,6 +170,7 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
 
         if (IsTestTarget(window))
         {
+            CancelVerification();
             _foregroundIsMatchedGame = false;
             UpdateGcLatency();
             // Test tâm ngắm: người dùng muốn thấy preset ĐANG CHỈNH. Không đổi preset theo game
@@ -176,6 +189,7 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
 
         if (!IsEnabled)
         {
+            CancelVerification();
             _foregroundIsMatchedGame = false;
             UpdateGcLatency();
             return;
@@ -194,7 +208,8 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
         var needsTopmost = ActiveGameProfile?.Id != match.Id
             || _matchedProcessId != window.ProcessId
             || e.Previous.Handle != window.Handle
-            || !_overlay.IsVisible;
+            || !_overlay.IsVisible
+            || e.ReassertTopmost;
 
         ActiveGameProfile = match;
         _matchedProcessId = window.ProcessId;
@@ -209,6 +224,7 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
 
         if (match.Behavior == GameProfileBehavior.HideOverlay)
         {
+            CancelVerification();
             _foregroundIsMatchedGame = false;
             _logger.LogDebug("Game profile '{Name}' yêu cầu ẩn overlay.", match.Name);
             ApplyVisibility();
@@ -242,6 +258,74 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
             target.OnForegroundGameChanged(window.Handle);
         if (needsTopmost && _overlay.IsVisible && _overlay is IOverlayZOrder zOrder)
             zOrder.ReassertTopmost();
+        if (_overlay.IsVisible && !_streamSuppressed)
+            ScheduleVerification(window);
+    }
+
+    private void ScheduleVerification(ForegroundWindowInfo window)
+    {
+        // A repeated title/location event must not restart the four finite checkpoints.
+        if (_verification is not null && _verificationProcessId == window.ProcessId
+            && _verificationWindow == window.Handle) return;
+
+        CancelVerification();
+        _verificationProcessId = window.ProcessId;
+        _verificationWindow = window.Handle;
+        var source = new CancellationTokenSource();
+        _verification = source;
+        _ = VerifyRenderWindowAsync(window.ProcessId, source.Token);
+    }
+
+    private async Task VerifyRenderWindowAsync(int processId, CancellationToken token)
+    {
+        try
+        {
+            // Delays are relative: 100, 300, 800 and 1800 ms from the first match.
+            // No polling continues after this short startup window.
+            foreach (var interval in VerificationIntervals)
+            {
+                await Task.Delay(interval, token).ConfigureAwait(false);
+                if (_dispatcher.HasShutdownStarted || _dispatcher.HasShutdownFinished) return;
+
+                await _dispatcher.InvokeAsync(() =>
+                {
+                    if (token.IsCancellationRequested || !_started || _disposed) return;
+
+                    // Refresh first: the splash HWND may have been replaced without another
+                    // EVENT_SYSTEM_FOREGROUND. This can cancel/restart us for the new HWND.
+                    _watcher.Recheck();
+                    if (token.IsCancellationRequested) return;
+
+                    var foreground = _watcher.Current;
+                    if (foreground.Handle == 0 || foreground.ProcessId != processId
+                        || NativeMethods.GetForegroundWindow() != foreground.Handle
+                        || ActiveGameProfile is null || _matchedProcessId != processId
+                        || !_overlay.IsVisible || _streamSuppressed)
+                    {
+                        CancelVerification();
+                        return;
+                    }
+
+                    if (_overlay is IOverlayForegroundTarget target)
+                        target.OnForegroundGameChanged(foreground.Handle);
+                    if (_overlay is IOverlayZOrder zOrder)
+                        zOrder.ReassertTopmost();
+                }, DispatcherPriority.Render, token);
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch (InvalidOperationException) { /* Dispatcher is shutting down. */ }
+    }
+
+    private void CancelVerification()
+    {
+        var source = _verification;
+        _verification = null;
+        _verificationProcessId = 0;
+        _verificationWindow = 0;
+        if (source is null) return;
+        source.Cancel();
+        source.Dispose();
     }
 
     /// <summary>Cửa sổ game đang khớp vừa đóng, hoặc tiến trình game đã thoát.</summary>
@@ -278,6 +362,7 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
 
     private void ClearMatch()
     {
+        CancelVerification();
         _foregroundIsMatchedGame = false;
         ActiveGameProfile = null;
         _matchedProcessId = 0;
@@ -328,6 +413,7 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
     {
         if (_streamSuppressed == suppressed) return;
         _streamSuppressed = suppressed;
+        if (suppressed) CancelVerification();
         ApplyVisibility();
     }
 
@@ -340,6 +426,7 @@ public sealed class ProfileAutoSwitcher : IProfileAutoSwitcher
             ActiveGameProfile,
             _inTestWindow) && !_streamSuppressed);
         UpdateGcLatency();
+        if (!_overlay.IsVisible) CancelVerification();
     }
 
     public void BeginCrosshairTest(string processName)

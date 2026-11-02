@@ -1,0 +1,25 @@
+{
+  "runtimeOptions": {
+    "tfm": "net8.0",
+    "includedFrameworks": [
+      {
+        "name": "Microsoft.NETCore.App",
+        "version": "8.0.31"
+      },
+      {
+        "name": "Microsoft.WindowsDesktop.App",
+        "version": "8.0.31"
+      }
+    ],
+    "configProperties": {
+      "MVVMTOOLKIT_ENABLE_INOTIFYPROPERTYCHANGING_SUPPORT": true,
+      "System.GC.Concurrent": true,
+      "System.GC.Server": false,
+      "System.GC.RetainVM": true,
+      "System.Reflection.Metadata.MetadataUpdater.IsSupported": false,
+      "System.Runtime.Serialization.EnableUnsafeBinaryFormatterSerialization": true,
+      "System.Runtime.TieredCompilation": true,
+      "System.Runtime.TieredPGO": true
+    }
+  }
+}

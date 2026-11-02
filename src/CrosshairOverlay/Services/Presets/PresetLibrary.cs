@@ -62,8 +62,23 @@ public sealed class PresetLibrary : IPresetLibrary
         ArgumentNullException.ThrowIfNull(profile);
         if (ReferenceEquals(_active, profile)) return;
 
+#if BENCHMARK
+        var benchmarkSwitchId = Core.Diagnostics.BenchmarkPresetProbe.SetActiveStarted(profile.Id);
+        try
+        {
+#endif
         _active = profile;
+#if BENCHMARK
+        Core.Diagnostics.BenchmarkPresetProbe.Mark("T3.BeforeActiveChanged", benchmarkSwitchId);
+#endif
         ActiveChanged?.Invoke(this, EventArgs.Empty);
+#if BENCHMARK
+        }
+        finally
+        {
+            Core.Diagnostics.BenchmarkPresetProbe.Mark("T2.SetActiveEnd", benchmarkSwitchId);
+        }
+#endif
     }
 
     /// <summary>

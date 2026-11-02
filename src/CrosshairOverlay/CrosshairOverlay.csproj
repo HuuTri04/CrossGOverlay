@@ -2,8 +2,12 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <UseWPF>true</UseWPF>
+    <!-- Native Windows notifications in this unpackaged, self-contained WPF application. -->
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <!-- Stack-only UTF-16 buffers for the foreground Win32 fallback path. -->
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <UseWindowsForms>false</UseWindowsForms>
@@ -118,6 +122,9 @@
     <Resource Include="images\app.ico" />
     <Resource Include="images\BrandingLogo.ico" />
     <Resource Include="Resources\icon.png" />
+    <!-- Windows App SDK also projects loose assets into the referenced test output. -->
+    <Content Include="Resources\icon.png" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="images\app.source.png" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
@@ -147,10 +154,21 @@
 
     <!-- System tray icon (WPF-native, no WinForms dependency) -->
     <PackageReference Include="H.NotifyIcon.Wpf" Version="2.1.3" />
+    <!-- Notifications live in Foundation; avoid pulling WinUI, AI and ML into the WPF ZIP. -->
+    <PackageReference Include="Microsoft.WindowsAppSDK.Foundation" Version="1.8.260803002" />
+    <!-- Register() needs this runtime's native Insights resource in self-contained builds. -->
+    <PackageReference Include="Microsoft.WindowsAppSDK.Runtime" Version="1.8.260921001" />
 
     <!-- Dựng icon khay hệ thống bằng GDI+. Vốn đã là dependency bắc cầu của H.NotifyIcon,
          khai báo tường minh vì ta dùng trực tiếp. -->
     <PackageReference Include="System.Drawing.Common" Version="8.0.7" />
   </ItemGroup>
+
+  <Target Name="VerifyNativeNotificationAssets" AfterTargets="Publish">
+    <Error Condition="!Exists('$(PublishDir)Resources\icon.png')"
+           Text="Native notification icon is missing from the published application." />
+    <Error Condition="!Exists('$(PublishDir)Microsoft.WindowsAppRuntime.Insights.Resource.dll')"
+           Text="Windows App SDK notification runtime resource is missing from the published application." />
+  </Target>
 
 </Project>

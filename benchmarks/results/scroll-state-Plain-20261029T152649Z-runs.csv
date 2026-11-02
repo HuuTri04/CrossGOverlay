@@ -1,0 +1,2 @@
+﻿"Mode","UiTargetFps","Run","DurationSeconds","WheelMessagesSent","InitialScrollPercent","FinalScrollPercent","UniqueObservedOffsets","FrameTimeP95Ms","FrameTimeP99Ms","Note"
+"Plain","60","1","30","190","0","0","20",,,"Wheel dispatch timestamps only; exact ScrollToVerticalOffset and WPF layout duration require an app event provider."

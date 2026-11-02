@@ -1,0 +1,92 @@
+﻿[
+    {
+        "Scenario":  "Startup",
+        "Run":  1,
+        "Pid":  47612,
+        "FirstHwndMs":  944.52,
+        "SettingsFirstFrameMs":  1241,
+        "FirstFrameLogObservedMs":  1307.99,
+        "SettingsWindowVisible":  true
+    },
+    {
+        "Scenario":  "Startup",
+        "Run":  2,
+        "Pid":  59656,
+        "FirstHwndMs":  707.27,
+        "SettingsFirstFrameMs":  1001,
+        "FirstFrameLogObservedMs":  1013.89,
+        "SettingsWindowVisible":  true
+    },
+    {
+        "Scenario":  "Startup",
+        "Run":  3,
+        "Pid":  45736,
+        "FirstHwndMs":  722.26,
+        "SettingsFirstFrameMs":  988,
+        "FirstFrameLogObservedMs":  1013.29,
+        "SettingsWindowVisible":  true
+    },
+    {
+        "Scenario":  "Startup",
+        "Run":  4,
+        "Pid":  48752,
+        "FirstHwndMs":  797.78,
+        "SettingsFirstFrameMs":  1056,
+        "FirstFrameLogObservedMs":  1089.29,
+        "SettingsWindowVisible":  true
+    },
+    {
+        "Scenario":  "Startup",
+        "Run":  5,
+        "Pid":  54416,
+        "FirstHwndMs":  755.94,
+        "SettingsFirstFrameMs":  1070,
+        "FirstFrameLogObservedMs":  1103.53,
+        "SettingsWindowVisible":  true
+    },
+    {
+        "Scenario":  "Startup",
+        "Run":  6,
+        "Pid":  50340,
+        "FirstHwndMs":  689.3,
+        "SettingsFirstFrameMs":  961,
+        "FirstFrameLogObservedMs":  998.01,
+        "SettingsWindowVisible":  true
+    },
+    {
+        "Scenario":  "Startup",
+        "Run":  7,
+        "Pid":  55076,
+        "FirstHwndMs":  784.35,
+        "SettingsFirstFrameMs":  1080,
+        "FirstFrameLogObservedMs":  1104.91,
+        "SettingsWindowVisible":  true
+    },
+    {
+        "Scenario":  "Startup",
+        "Run":  8,
+        "Pid":  38416,
+        "FirstHwndMs":  772.34,
+        "SettingsFirstFrameMs":  1074,
+        "FirstFrameLogObservedMs":  1097.04,
+        "SettingsWindowVisible":  true
+    },
+    {
+        "Scenario":  "Startup",
+        "Run":  9,
+        "Pid":  31488,
+        "FirstHwndMs":  727.9,
+        "SettingsFirstFrameMs":  1001,
+        "FirstFrameLogObservedMs":  1030.22,
+        "SettingsWindowVisible":  true
+    },
+    {
+        "Scenario":  "Startup",
+        "Run":  10,
+        "Pid":  48068,
+        "FirstHwndMs":  754.97,
+        "SettingsFirstFrameMs":  1031,
+        "FirstFrameLogObservedMs":  1049.22,
+        "SettingsWindowVisible":  true
+    }
+]

@@ -119,6 +119,14 @@ public sealed class OverlayController : IOverlayController, IOverlayRuntimeFeatu
         var watch = global::System.Diagnostics.Stopwatch.StartNew();
 
         _window = new OverlayWindow();
+        if (Core.Diagnostics.StartupProfiler.Enabled)
+            _window.Host.FirstDrawingRendered += timestamp =>
+            {
+                var elapsed = Core.Diagnostics.StartupProfiler.ElapsedMs(timestamp);
+                _dispatcher.BeginInvoke(DispatcherPriority.Background,
+                    new Action(() => _logger.LogInformation(
+                        "BenchmarkTimeline OverlayFirstDrawing {Elapsed:0.###} ms.", elapsed)));
+            };
         var createdMs = watch.Elapsed.TotalMilliseconds;
 
         _window.EnsureHandle();          // áp extended styles TRƯỚC lần Show đầu tiên

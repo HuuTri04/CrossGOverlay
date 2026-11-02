@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -86,6 +87,70 @@ public sealed class AppBackgroundTests
             Assert.True(image.IsFrozen);
         }
         finally { File.Delete(path); }
+    }
+
+    [Fact]
+    public async Task LoaderAsync_Downsamples4KImage_AndReleasesFile()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "CrossGOverlay-background-" + Guid.NewGuid() + ".png");
+        try
+        {
+            const int width = 3840;
+            const int height = 2160;
+            var source = BitmapSource.Create(width, height, 96, 96, PixelFormats.Bgra32,
+                null, new byte[width * height * 4], width * 4);
+            var encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(source));
+            using (var stream = File.Create(path)) encoder.Save(stream);
+
+            var image = await AppBackgroundImageLoader.DecodeAsync(path);
+            Assert.Equal(1920, image.PixelWidth);
+            Assert.Equal(1080, image.PixelHeight);
+            Assert.True(image.IsFrozen);
+            var preview = await AppBackgroundImageLoader.DecodeAsync(path, maxDecodedSide: 1280);
+            Assert.Equal(1280, preview.PixelWidth);
+            Assert.Equal(720, preview.PixelHeight);
+            Assert.True(preview.IsFrozen);
+            using var exclusive = File.Open(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Fact]
+    public async Task LoaderAsync_HonorsCancellationBeforeOpeningFile()
+    {
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            AppBackgroundImageLoader.DecodeAsync("missing.png", cancellationToken: cancellation.Token));
+    }
+
+    [Fact]
+    public void PreviewDoesNotPaintOverTheSeparatePhotoLayer()
+    {
+        Exception? failure = null;
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                var photo = BitmapSource.Create(1, 1, 96, 96, PixelFormats.Bgra32,
+                    null, new byte[] { 0, 0, 255, 255 }, 4);
+                photo.Freeze();
+                var preview = new CrosshairPreview { CustomBackgroundImage = photo };
+                preview.Measure(new Size(32, 32));
+                preview.Arrange(new Rect(0, 0, 32, 32));
+                var rendered = new RenderTargetBitmap(32, 32, 96, 96, PixelFormats.Pbgra32);
+                rendered.Render(preview);
+                var pixels = new byte[32 * 32 * 4];
+                rendered.CopyPixels(pixels, 32 * 4, 0);
+                Assert.Equal(0, pixels[(2 * 32 + 2) * 4 + 3]);
+            }
+            catch (Exception ex) { failure = ex; }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join();
+        if (failure is not null) throw failure;
     }
 
     [Fact]

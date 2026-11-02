@@ -9,10 +9,12 @@ using System.Windows.Media.Media3D;
 using System.Windows.Threading;
 using CrosshairOverlay.Core.Abstractions;
 using CrosshairOverlay.Core.Models;
+using CrosshairOverlay.Controls;
 using CrosshairOverlay.Localization;
 using CrosshairOverlay.Services.System;
 using CrosshairOverlay.ViewModels;
 using CrosshairOverlay.Views.Dialogs;
+using Microsoft.Extensions.Logging;
 
 namespace CrosshairOverlay.Views;
 
@@ -70,6 +72,10 @@ public partial class SettingsWindow : Window
         // Bubble phase: label/slider/button handlers run first. Only a click that reached a
         // non-interactive surface moves keyboard focus away from the previous input control.
         MouseDown += OnBackgroundMouseDown;
+        AddHandler(Mouse.PreviewMouseWheelEvent,
+            new MouseWheelEventHandler(OnWindowPreviewMouseWheel), handledEventsToo: true);
+        AddHandler(ScrollViewer.ScrollChangedEvent,
+            new ScrollChangedEventHandler(OnWindowScrollChanged), handledEventsToo: true);
         Loaded += (_, _) => UpdateVisibleTabServices();
         IsVisibleChanged += (_, _) => UpdateVisibleTabServices();
         StateChanged += (_, _) => UpdateVisibleTabServices();
@@ -87,6 +93,20 @@ public partial class SettingsWindow : Window
             }
             (DataContext as IDisposable)?.Dispose();
         };
+        if (Core.Diagnostics.StartupProfiler.Enabled)
+        {
+            PreviewMouseDown += OnFirstBenchmarkMouseDown;
+            _logger.LogInformation("BenchmarkTimeline SettingsInitialized {Elapsed:0.###} ms.",
+                Core.Diagnostics.StartupProfiler.ElapsedMs());
+        }
+    }
+
+    private void OnFirstBenchmarkMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        PreviewMouseDown -= OnFirstBenchmarkMouseDown;
+        var receivedAt = global::System.Diagnostics.Stopwatch.GetTimestamp();
+        _logger.LogInformation("BenchmarkTimeline FirstMouseInputQpc {Timestamp} at {Elapsed:0.###} ms.",
+            receivedAt, Core.Diagnostics.StartupProfiler.ElapsedMs(receivedAt));
     }
 
     private void OnPreviewZoomLabelMouseDown(object sender, MouseButtonEventArgs e)
@@ -106,6 +126,22 @@ public partial class SettingsWindow : Window
         // Focusing a stable sink also raises LostFocus on the old TextBox/PasswordBox so
         // pending edits are committed. WPF updates IsMouseOver from the real pointer position.
         MainRootGrid.Focus();
+    }
+
+    private void OnWindowPreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        // Wheel events inside a dropdown's own HWND do not route through this window.
+        if (e.OriginalSource is Visual source &&
+            !ReferenceEquals(PresentationSource.FromVisual(source), PresentationSource.FromVisual(this))) return;
+        if (e.Delta != 0 && PopupScrollGuard.CloseFor(this)) MainRootGrid.Focus();
+    }
+
+    private void OnWindowScrollChanged(object sender, ScrollChangedEventArgs e)
+    {
+        if (e.VerticalChange == 0 && e.HorizontalChange == 0) return;
+        if (e.OriginalSource is not ScrollViewer viewer ||
+            !ReferenceEquals(PresentationSource.FromVisual(viewer), PresentationSource.FromVisual(this))) return;
+        if (PopupScrollGuard.CloseFor(this)) MainRootGrid.Focus();
     }
 
     private bool IsInteractiveTarget(DependencyObject clicked)
@@ -143,6 +179,9 @@ public partial class SettingsWindow : Window
     protected override void OnContentRendered(EventArgs e)
     {
         base.OnContentRendered(e);
+        if (Core.Diagnostics.StartupProfiler.Enabled)
+            _logger.LogInformation("BenchmarkTimeline SettingsFirstRender {Elapsed:0.###} ms.",
+                Core.Diagnostics.StartupProfiler.ElapsedMs());
 
         var editor = (DataTemplate)FindResource("EditorPanel");
         if (ReferenceEquals(EditorHost.ContentTemplate, editor)) return;
@@ -158,6 +197,12 @@ public partial class SettingsWindow : Window
                 var watch = global::System.Diagnostics.Stopwatch.StartNew();
                 EditorHost.ContentTemplate = editor;
                 EditorHost.UpdateLayout();
+                if (Core.Diagnostics.StartupProfiler.Enabled)
+                    Dispatcher.InvokeAsync(
+                        () => _logger.LogInformation(
+                            "BenchmarkTimeline FirstInputPriorityDispatch {Elapsed:0.###} ms.",
+                            Core.Diagnostics.StartupProfiler.ElapsedMs()),
+                        System.Windows.Threading.DispatcherPriority.Input);
 
                 Microsoft.Extensions.Logging.LoggerExtensions.LogDebug(
                     _logger, "Cột chỉnh sửa nạp trong {Elapsed:0} ms sau khung hình đầu.", watch.Elapsed.TotalMilliseconds);
@@ -204,7 +249,9 @@ public partial class SettingsWindow : Window
 
     private void UpdateVisibleTabServices()
     {
-        _viewModel.General.SetBackgroundViewActive(IsVisible && WindowState != WindowState.Minimized);
+        var visible = IsVisible && WindowState != WindowState.Minimized;
+        _viewModel.General.SetBackgroundViewActive(visible);
+        _viewModel.Editor.SetPreviewBackgroundViewActive(visible);
         UpdatePerformanceMonitor();
         UpdateStatsTimer();
     }
@@ -243,18 +290,28 @@ public partial class SettingsWindow : Window
     }
 
     /// <summary>
-    /// Cuộn tới preset vừa được chọn — kể cả khi chọn từ nơi khác (thêm từ Thư viện mẫu, tạo mới, phím tắt). Danh sách
-    /// nằm trong một ScrollViewer bao ngoài nên ListBox.ScrollIntoView không có tác dụng; BringIntoView của chính mục
-    /// thì đi ngược lên ScrollViewer đó.
+    /// Cuộn tới preset vừa được chọn, kể cả khi mục chưa được hiện thực hóa bởi danh sách ảo hóa.
     /// </summary>
     private void OnPresetSelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
     {
         if (sender is not System.Windows.Controls.ListBox { SelectedItem: { } item } list) return;
 
-        // Mục vừa thêm chưa có container cho tới lượt layout kế tiếp.
+#if BENCHMARK
+        if (Core.Diagnostics.BenchmarkPresetProbe.SkipBringIntoView) return;
+        var benchmarkSwitchId = Core.Diagnostics.BenchmarkPresetProbe.CurrentSwitchId;
+        Core.Diagnostics.BenchmarkPresetProbe.Mark("T4d.BringQueued", benchmarkSwitchId);
+        Dispatcher.InvokeAsync(() =>
+        {
+            Core.Diagnostics.BenchmarkPresetProbe.Mark("T4d.BringStart", benchmarkSwitchId);
+            list.ScrollIntoView(item);
+            Core.Diagnostics.BenchmarkPresetProbe.Mark("T4d.BringEnd", benchmarkSwitchId);
+        }, System.Windows.Threading.DispatcherPriority.Loaded);
+#else
+        // ScrollIntoView hiện thực hóa mục ngoài viewport khi danh sách đang ảo hóa.
         Dispatcher.InvokeAsync(
-            () => (list.ItemContainerGenerator.ContainerFromItem(item) as FrameworkElement)?.BringIntoView(),
+            () => list.ScrollIntoView(item),
             System.Windows.Threading.DispatcherPriority.Loaded);
+#endif
     }
 
     private void LogFirstFrame()
@@ -321,6 +378,10 @@ public partial class SettingsWindow : Window
 
         if (_hintShown) return;
         _hintShown = true;
+
+        // Isolate the cost of the one-shot toast in app-only GPU profiling. Normal
+        // launches always show it; this flag is set only by the benchmark child.
+        if (Environment.GetEnvironmentVariable("CROSSGOVERLAY_BENCHMARK_NO_TRAY_TOAST") == "1") return;
 
         // Cửa sổ biến mất mà overlay vẫn vẽ dễ khiến người dùng tưởng app đã thoát và đi tìm
         // cách tắt nó trong Task Manager.

@@ -37,6 +37,9 @@
     <SolidColorBrush po:Freeze="True" x:Key="Accent" Color="{StaticResource LG.Green.Dark1}"/>
     <SolidColorBrush po:Freeze="True" x:Key="AccentHover" Color="{StaticResource LG.Green.Base}"/>
     <SolidColorBrush po:Freeze="True" x:Key="AccentBright" Color="{StaticResource LG.Green.Base}"/>
+    <!-- Nền đặc để chip đang chọn không bị ảnh nền sáng làm nhạt chữ. -->
+    <SolidColorBrush po:Freeze="True" x:Key="FilterChipSelectedBg" Color="#FF0D4E2D"/>
+    <SolidColorBrush po:Freeze="True" x:Key="FilterChipSelectedBorder" Color="#FF1E6E38"/>
 
     <!-- Chữ trên nền xanh sáng phải là màu TỐI: xanh LeafyGreen quá chói để đặt chữ trắng lên. -->
     <SolidColorBrush po:Freeze="True" x:Key="OnAccent" Color="{StaticResource LG.Black}"/>
@@ -447,6 +450,7 @@
     </Style>
 
     <Style TargetType="ComboBox">
+        <Setter Property="ctl:PopupScrollGuard.TrackComboBox" Value="True"/>
         <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
         <Setter Property="FontFamily" Value="{StaticResource UiFont}"/>
         <Setter Property="FontSize" Value="12.5"/>
@@ -465,7 +469,7 @@
                                           ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"/>
                         <Popup x:Name="PART_Popup" AllowsTransparency="True" Placement="Bottom"
                                IsOpen="{TemplateBinding IsDropDownOpen}" Focusable="False"
-                               PopupAnimation="None">
+                               StaysOpen="False" PopupAnimation="None">
                             <Border Background="{StaticResource CardBg}"
                                     BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1"
                                     CornerRadius="{StaticResource RadiusCard}" Margin="0,4,0,0"
@@ -1111,9 +1115,9 @@
         </Setter>
     </Style>
 
-    <!-- Chip lọc danh mục: RadioButton dạng viên thuốc; đang chọn thì nền xanh nhạt, viền xanh sáng. -->
+    <!-- Chip lọc danh mục: nền tối như ô tìm kiếm; trạng thái chọn dùng xanh rừng sẫm và chữ sáng. -->
     <Style x:Key="FilterChip" TargetType="RadioButton">
-        <Setter Property="Foreground" Value="{StaticResource TextDim}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
         <Setter Property="FontFamily" Value="{StaticResource UiFont}"/>
         <Setter Property="FontSize" Value="12.5"/>
         <Setter Property="Cursor" Value="Hand"/>
@@ -1122,7 +1126,8 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="RadioButton">
-                    <Border x:Name="Root" CornerRadius="14" Padding="12,5" Background="Transparent"
+                    <Border x:Name="Root" CornerRadius="14" Padding="12,5"
+                            Background="{StaticResource WindowBg}"
                             BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1">
                         <ContentPresenter VerticalAlignment="Center">
                             <ContentPresenter.Resources>
@@ -1141,17 +1146,18 @@
                             <MultiTrigger.Conditions>
                                 <Condition Property="IsMouseOver" Value="True"/>
                                 <Condition Property="ctl:SmoothScrollBehavior.IsScrolling" Value="False"/>
+                                <Condition Property="IsChecked" Value="False"/>
                             </MultiTrigger.Conditions>
+                            <Setter TargetName="Root" Property="Background" Value="{StaticResource PanelBg}"/>
                             <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource AccentBright}"/>
-                            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
                         </MultiTrigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
                             <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource AccentBright}"/>
                         </Trigger>
                         <Trigger Property="IsChecked" Value="True">
-                            <Setter TargetName="Root" Property="Background" Value="#2600ED64"/>
-                            <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource AccentBright}"/>
-                            <Setter Property="Foreground" Value="{StaticResource AccentBright}"/>
+                            <Setter TargetName="Root" Property="Background" Value="{StaticResource FilterChipSelectedBg}"/>
+                            <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource FilterChipSelectedBorder}"/>
+                            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

@@ -34,6 +34,7 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
     private readonly ObsWebSocketService? _obs;
     private int _backgroundLoadVersion;
     private int _backgroundRenderVersion;
+    private CancellationTokenSource? _backgroundLoadCancellation;
     private CancellationTokenSource? _backgroundRenderCancellation;
     private BitmapSource? _sourceBackgroundImage;
     private (string Path, long Length, DateTime LastWriteUtc)? _backgroundCacheKey;
@@ -120,6 +121,7 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
         }
 
         Interlocked.Increment(ref _backgroundLoadVersion);
+        CancelBackgroundLoad();
         CancelBackgroundRender();
         if (_sourceBackgroundImage is null) return;
         _backgroundCacheExpiryTimer ??= CreateBackgroundCacheExpiryTimer();
@@ -221,6 +223,7 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
     private void ResetAppBackground()
     {
         Interlocked.Increment(ref _backgroundLoadVersion);
+        CancelBackgroundLoad();
         CancelBackgroundRender();
         _backgroundCacheExpiryTimer?.Stop();
         ReleaseBackgroundCache();
@@ -246,7 +249,14 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
 
     private async Task<BitmapSource?> DecodeAppBackgroundAsync(string path, bool reportError)
     {
-        try { return await Task.Run(() => AppBackgroundImageLoader.Decode(path, maxDecodedSide: 1280)); }
+        var cancellation = new CancellationTokenSource();
+        Interlocked.Exchange(ref _backgroundLoadCancellation, cancellation)?.Cancel();
+        try
+        {
+            return await AppBackgroundImageLoader.DecodeAsync(
+                path, maxDecodedSide: 1920, cancellation.Token);
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { return null; }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException
                                    or ArgumentException or InvalidOperationException
                                    or global::System.Runtime.InteropServices.COMException)
@@ -256,7 +266,15 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
                     Tr.Format("AppBg_ImageError", ex.Message), isError: true);
             return null;
         }
+        finally
+        {
+            Interlocked.CompareExchange(ref _backgroundLoadCancellation, null, cancellation);
+            cancellation.Dispose();
+        }
     }
+
+    private void CancelBackgroundLoad() =>
+        Interlocked.Exchange(ref _backgroundLoadCancellation, null)?.Cancel();
 
     private async Task RenderBackgroundAsync(bool debounce, bool reportError)
     {
@@ -753,6 +771,7 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
         if (_disposed) return;
         _disposed = true;
         Interlocked.Increment(ref _backgroundLoadVersion);
+        CancelBackgroundLoad();
         CancelBackgroundRender();
         _backgroundCacheExpiryTimer?.Stop();
         if (_backgroundCacheExpiryTimer is not null)

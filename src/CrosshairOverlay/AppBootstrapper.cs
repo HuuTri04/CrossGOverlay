@@ -29,6 +29,8 @@ internal sealed class AppBootstrapper
     private bool _fatalReported;
     private StartupArguments _arguments = StartupArguments.None;
     private bool _overlayStarted;
+    private bool _foregroundServicesStarted;
+    private bool _behaviorStarted;
     private bool _backgroundServicesStarted;
     private bool _shutdownStarted;
     private string? _restoreError;
@@ -79,6 +81,7 @@ internal sealed class AppBootstrapper
 
     public void Run(StartupEventArgs e)
     {
+        Core.Diagnostics.StartupProfiler.Begin(_constructedAt, _runtimeStartupMs);
         _appXamlMs = global::System.Diagnostics.Stopwatch.GetElapsedTime(_constructedAt).TotalMilliseconds;
         _arguments = StartupArguments.Parse(e.Args);
 
@@ -102,6 +105,9 @@ internal sealed class AppBootstrapper
             _provider = RegisterServices(paths);
             _log = _provider.GetRequiredService<ILogger<App>>();
             boot.Mark("DI");
+            if (Core.Diagnostics.StartupProfiler.Enabled)
+                _log.LogInformation("BenchmarkTimeline AppInitialized {Elapsed:0.###} ms.",
+                    Core.Diagnostics.StartupProfiler.ElapsedMs());
 
             _log.LogInformation(
                 "CrosshairOverlay {Version} khởi động. Dữ liệu: {Root}",
@@ -142,16 +148,37 @@ internal sealed class AppBootstrapper
             // Chế độ render cũng phải có trước cửa sổ đầu tiên.
             Services.Overlay.OverlayBehaviorController.ApplyRenderMode(settings.Current.UseHardwareAcceleration);
 
-            // GIAO DIỆN TRƯỚC, phần còn lại SAU. Đo trên bản publish: tạo HWND của cửa sổ WPF ĐẦU TIÊN
-            // (khởi tạo Direct3D/DWM) mất 105–580 ms, cộng khay và phím tắt thêm ~50 ms. Trước đây toàn
-            // bộ chạy xong rồi mới dựng cửa sổ Settings, nên người dùng nhìn màn hình trống suốt khoảng
-            // đó. Giờ cửa sổ hiện trước; overlay, khay và phím tắt khởi động ngay sau khung hình đầu.
+            // Overlay là đường hiển thị quan trọng nhất. Nạp preset và áp toàn bộ quy tắc
+            // hiện/ẩn trước khi dựng Splash/Settings; không cho Settings chiếm lượt render đầu.
             var showWindow = _arguments.RestoreArchive is not null || !settings.Current.StartMinimizedToTray;
 
-            // Màn hình chờ chỉ khi sắp mở cửa sổ. Khởi động vào khay (thường là lúc Windows vừa đăng nhập)
-            // mà bật lên một màn hình chờ rồi tắt thì chỉ là làm phiền. Hiện SAU khi đọc cài đặt (vì phải
-            // biết chế độ khởi động và ngôn ngữ) và SAU khi giành quyền chạy duy nhất (instance thứ hai
-            // chỉ đánh thức instance đang chạy rồi thoát, không được chớp màn hình chờ).
+            var library = _provider.GetRequiredService<IPresetLibrary>();
+            await library.InitializeAsync(settings.Current.ActivePresetId, settings.Current.PresetOrder).ConfigureAwait(true);
+            library.OrderChanged += OnPresetOrderChanged;
+            boot.Mark("preset");
+
+            StartOverlay(settings, library);
+            boot.Mark("overlay");
+            // Bộ thống kê phải nghe trước lần nhận diện foreground đầu tiên để không
+            // bỏ sót preset/profile được áp ngay khi mở ứng dụng.
+            await _provider.GetRequiredService<StatsService>().StartAsync();
+            StartForegroundDetection();
+            ApplyStreamCapturePolicy();
+
+            // Áp quy tắc hiện/ẩn ngay từ đầu, kể cả khi cửa sổ foreground lúc khởi động là của chính
+            // ứng dụng (Settings) — trường hợp bộ tự đổi không xử lý.
+            _provider.GetRequiredService<IProfileAutoSwitcher>().ApplyVisibility();
+
+            // Sau hotkey (dùng chung Raw Input) và bộ tự đổi (biết phiên test tâm ngắm).
+            _behaviorStarted = true;
+            _provider.GetRequiredService<Services.Overlay.OverlayBehaviorController>().Start();
+
+            // Render có ưu tiên cao hơn Background. Đây là điểm tách đường vẽ overlay đầu tiên
+            // khỏi chi phí dựng Visual Tree của Splash/Settings. Không ép UpdateLayout: nó chỉ
+            // tính layout đồng bộ, không xác nhận DWM đã present khung hình.
+            await global::System.Windows.Threading.Dispatcher.Yield(global::System.Windows.Threading.DispatcherPriority.Background);
+            boot.Mark("chờ overlay vẽ");
+
             if (showWindow)
             {
                 _splash = new SplashWindow();
@@ -159,53 +186,30 @@ internal sealed class AppBootstrapper
                 _splash.Show();
                 boot.Mark("màn hình chờ");
 
-                // Nhả luồng để màn hình chờ kịp lên hình trước khi phần khởi động nặng chiếm luồng.
-                await global::System.Windows.Threading.Dispatcher.Yield(global::System.Windows.Threading.DispatcherPriority.Background);
-                boot.Mark("chờ màn hình chờ vẽ");
-            }
-
-            var library = _provider.GetRequiredService<IPresetLibrary>();
-            await library.InitializeAsync(settings.Current.ActivePresetId, settings.Current.PresetOrder).ConfigureAwait(true);
-            library.OrderChanged += OnPresetOrderChanged;
-            boot.Mark("preset");
-
-            if (showWindow)
-            {
                 _provider.GetRequiredService<IDialogService>().ShowSettingsWindow();
+                // Overlay là Window đầu tiên trong đường khởi động mới, nhưng không phải
+                // cửa sổ chính của app. Các thành phần khay/dialog cần HWND Settings bình thường.
+                _app.MainWindow = _app.Windows.OfType<SettingsWindow>().FirstOrDefault();
                 boot.Mark("cửa sổ Settings");
 
-                // Màn hình chờ đóng SAU khung hình đầu của cửa sổ Settings — không có khoảnh khắc trống.
+                // Splash đóng sau khung hình đầu của Settings để không để lại khoảng trống.
                 _splash?.CloseAfterFirstFrameOf(_app.Windows.OfType<SettingsWindow>().FirstOrDefault());
                 _splash = null;
 
-                // Nhả luồng giao diện: ưu tiên Background đứng sau Render, nên khung hình đầu của cửa sổ
-                // được vẽ lên màn hình trước khi phần khởi động còn lại chiếm luồng.
                 await global::System.Windows.Threading.Dispatcher.Yield(global::System.Windows.Threading.DispatcherPriority.Background);
-                boot.Mark("chờ khung hình đầu");
+                boot.Mark("chờ khung hình Settings");
             }
-
-            StartOverlay(settings, library);
-            boot.Mark("overlay");
-
-            await _provider.GetRequiredService<StatsService>().StartAsync();
 
             StartTray();
             boot.Mark("khay");
+            InitializeBackgroundServices(settings);
+            boot.Mark("phím tắt + dịch vụ nền");
 
             if (_restoreError is not null)
                 _provider.GetRequiredService<IDialogService>().ShowMessage(
                     Tr.Get("Data_Restore"), _restoreError, isError: true);
 
             WarnIfStorageFallback(paths);
-            InitializeBackgroundServices(settings);
-            boot.Mark("phím tắt + theo dõi game");
-
-            // Áp quy tắc hiện/ẩn ngay từ đầu, kể cả khi cửa sổ foreground lúc khởi động là của chính
-            // ứng dụng (Settings) — trường hợp bộ tự đổi không xử lý.
-            _provider.GetRequiredService<IProfileAutoSwitcher>().ApplyVisibility();
-
-            // Sau hotkey (dùng chung Raw Input) và bộ tự đổi (biết phiên test tâm ngắm).
-            _provider.GetRequiredService<Services.Overlay.OverlayBehaviorController>().Start();
 
             // Bật/tắt overlay (menu khay, phím tắt, Settings) và hai tuỳ chọn của game profile đều
             // chỉ ghi vào cài đặt; phản ứng tập trung tại đây để không nơi nào tự bật overlay thẳng.
@@ -226,6 +230,8 @@ internal sealed class AppBootstrapper
             ScheduleImageCleanup();
 
             ScheduleUpdateCheck(settings);
+            Core.Diagnostics.BenchmarkScenarioRunner.TryStart(
+                library, _provider.GetRequiredService<ITrayIconController>());
         }
         catch (Exception ex)
         {
@@ -247,17 +253,22 @@ internal sealed class AppBootstrapper
 
     private void InitializeBackgroundServices(IAppSettingsService settings)
     {
+        _backgroundServicesStarted = true;
         StartHotkeys(settings);
-        var autoSwitcher = _provider!.GetRequiredService<IProfileAutoSwitcher>();
-        autoSwitcher.ExclusiveFullscreenDetected += OnExclusiveFullscreenDetected;
-        autoSwitcher.Start();
         _provider!.GetRequiredService<WeaponAutoSwitchService>().Start();
         var obs = _provider!.GetRequiredService<ObsWebSocketService>();
         obs.CaptureChanged += OnObsCaptureChanged;
         obs.Start();
         ApplyStreamCapturePolicy();
-        _backgroundServicesStarted = true;
         // Update checks are scheduled later; optional RGB/audio services are resolved on first use.
+    }
+
+    private void StartForegroundDetection()
+    {
+        var autoSwitcher = _provider!.GetRequiredService<IProfileAutoSwitcher>();
+        _foregroundServicesStarted = true;
+        autoSwitcher.ExclusiveFullscreenDetected += OnExclusiveFullscreenDetected;
+        autoSwitcher.Start();
     }
 
     /// <summary>
@@ -345,7 +356,7 @@ internal sealed class AppBootstrapper
         // cửa sổ Settings đang đóng (hotkey, tray, auto-switch theo game).
         library.ActiveChanged += OnActivePresetChanged;
 
-        // Thư viện đã chọn preset hoạt động TRƯỚC khi overlay tồn tại (để cửa sổ Settings hiện sớm),
+        // Thư viện đã chọn preset hoạt động TRƯỚC khi overlay tồn tại,
         // nên sự kiện đó đã qua mà chưa ai nghe — đẩy preset hiện tại sang overlay một lần ở đây.
         if (library.Active is not null) OnActivePresetChanged(this, EventArgs.Empty);
 
@@ -357,12 +368,12 @@ internal sealed class AppBootstrapper
     private void StartTray()
     {
         var tray = _provider!.GetRequiredService<ITrayIconController>();
-        tray.Initialize();
-
+        // COM notification activation may arrive as Register() completes. Attach first.
         tray.OpenSettingsRequested += (_, _) =>
             _provider!.GetRequiredService<IDialogService>().ShowSettingsWindow();
         tray.ToggleOverlayRequested += (_, _) => ToggleOverlay();
         tray.ExitRequested += (_, _) => App.RequestShutdown();
+        tray.Initialize();
     }
 
     private void StartHotkeys(IAppSettingsService settings)
@@ -483,10 +494,16 @@ internal sealed class AppBootstrapper
                 break;
 
             case HotkeyAction.NextPreset:
+#if BENCHMARK
+                Core.Diagnostics.BenchmarkPresetProbe.RequestReceived("HotkeyNext");
+#endif
                 _provider.GetRequiredService<IPresetLibrary>().StepActive(+1);
                 break;
 
             case HotkeyAction.PreviousPreset:
+#if BENCHMARK
+                Core.Diagnostics.BenchmarkPresetProbe.RequestReceived("HotkeyPrevious");
+#endif
                 _provider.GetRequiredService<IPresetLibrary>().StepActive(-1);
                 break;
 
@@ -588,6 +605,9 @@ internal sealed class AppBootstrapper
         var library = _provider.GetRequiredService<IPresetLibrary>();
         if (library.Active is not { } active) return;
 
+#if BENCHMARK
+        using var benchmarkScope = Core.Diagnostics.BenchmarkPresetProbe.Subscriber("T4a.Bootstrapper");
+#endif
         _provider.GetRequiredService<IOverlayController>().SetProfile(active);
         (_rgbSyncService ??= _provider.GetRequiredService<RgbSyncService>()).SetColor(active.Color);
         _provider.GetRequiredService<AudioFeedbackService>().Play();
@@ -730,9 +750,11 @@ internal sealed class AppBootstrapper
                     obs.Dispose();
                 });
                 TryDuringExit("gỡ hook vũ khí", () => services.GetRequiredService<WeaponAutoSwitchService>().Dispose());
-                TryDuringExit("dừng theo dõi game", () => services.GetRequiredService<IProfileAutoSwitcher>().Stop());
-                TryDuringExit("dừng timer hành vi", () => services.GetRequiredService<Services.Overlay.OverlayBehaviorController>().Dispose());
             }
+            if (_foregroundServicesStarted)
+                TryDuringExit("dừng theo dõi game", () => services.GetRequiredService<IProfileAutoSwitcher>().Stop());
+            if (_behaviorStarted)
+                TryDuringExit("dừng timer hành vi", () => services.GetRequiredService<Services.Overlay.OverlayBehaviorController>().Dispose());
             if (_overlayStarted)
                 TryDuringExit("dừng timer overlay", () => services.GetRequiredService<IOverlayController>().SetVisible(false));
             if (_backgroundServicesStarted)

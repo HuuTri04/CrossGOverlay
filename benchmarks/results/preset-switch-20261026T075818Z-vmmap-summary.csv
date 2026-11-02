@@ -1,0 +1,3 @@
+﻿"Stage","TimestampUtc","VMMapPrivateMB","ManagedHeapPrivateMB","ProcessPrivateMB","WorkingSetMB","GdiHandles","UserHandles","GpuSharedMB","GpuDedicatedMB"
+"before","2026-10-26T07:58:31.1323293+00:00","247.465","33.527","250.707","327.926","46","44","166.773","0"
+"after","2026-10-26T07:58:52.7465110+00:00","257.59","42.215","260.723","348.02","117","44","163.078","0"

@@ -152,5 +152,5 @@ public sealed class DialogService : IDialogService
     /// chỉ là không có owner, còn hơn ném exception.
     /// </summary>
     private Window? Owner() =>
-        _settingsWindow?.IsVisible == true ? _settingsWindow : Application.Current?.MainWindow;
+        _settingsWindow?.IsVisible == true ? _settingsWindow : null;
 }

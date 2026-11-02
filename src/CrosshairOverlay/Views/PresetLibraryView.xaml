@@ -86,7 +86,7 @@
                                      IsChecked="{Binding IsSelected, Mode=TwoWay}">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="{Binding Label, Mode=OneWay}"/>
-                                <TextBlock Text="{Binding Count, Mode=OneWay}" Margin="6,0,0,0" Opacity="0.65"/>
+                                <TextBlock Text="{Binding Count, Mode=OneWay}" Margin="6,0,0,0" Opacity="0.8"/>
                             </StackPanel>
                         </RadioButton>
                     </DataTemplate>

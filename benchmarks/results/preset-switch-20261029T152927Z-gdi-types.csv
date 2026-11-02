@@ -1,0 +1,3 @@
+﻿"Stage","Pid","Pen","ExtPen","Brush","Bitmap","Font","Palette","Region","DC","MetafileDC","EnhancedMetafileDC","OtherGdi","GdiTotal","AllGdi"
+"before","31428","0","0","3","4","3","0","12","5","0","0","0","0","47"
+"after","31428","0","0","3","4","3","0","44","5","0","0","0","0","79"

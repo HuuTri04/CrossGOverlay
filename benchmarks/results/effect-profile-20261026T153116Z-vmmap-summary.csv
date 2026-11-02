@@ -1,0 +1,3 @@
+﻿"Variant","Run","Stage","TimestampUtc","VMMapPrivateMB","PrivateDataMB","ManagedHeapPrivateMB","NativeHeapPrivateMB","ProcessPrivateMB","GdiHandles","UserHandles","OverlayVisible"
+"gif","1","start","2026-10-26T15:31:26.3407209+00:00","190.953","134.488","6.824","26.156","194.082","33","26","True"
+"gif","1","end","2026-10-26T16:31:44.0712713+00:00","194.758","133.074","15.391","23.195","198.051","33","25","True"

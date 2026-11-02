@@ -1,0 +1,13 @@
+﻿{
+    "RunId":  "20261026T074703Z",
+    "Variants":  [
+                     "standard",
+                     "background",
+                     "background-contrast",
+                     "gif"
+                 ],
+    "Runs":  3,
+    "DurationSeconds":  30,
+    "ExeSha256":  "7DA83E403D86A05D2781EE03BFEB23E34235B2598045B9A8D24F60EC2B94C310",
+    "VMMapVersion":  "3.4"
+}

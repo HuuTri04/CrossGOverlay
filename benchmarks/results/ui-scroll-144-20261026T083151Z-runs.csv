@@ -1,0 +1,4 @@
+﻿"UiTargetFps","Run","DurationSeconds","WheelMessagesSent","InitialScrollPercent","FinalScrollPercent","UniqueObservedOffsets","EtlPath","EtlCaptured","FrameTimeP95Ms","FrameTimeP99Ms","Note"
+"144","1","120","760","0","49.3243767575079","74","D:\Crosshair\benchmarks\results\etl\ui-scroll-144-20261026T083151Z-run1.etl","False",,,"Frame-time analysis requires supported WPF profiler/WPA."
+"144","2","120","759","0","62.0052744706218","74","D:\Crosshair\benchmarks\results\etl\ui-scroll-144-20261026T083151Z-run2.etl","False",,,"Frame-time analysis requires supported WPF profiler/WPA."
+"144","3","120","761","0","36.6451190569486","74","D:\Crosshair\benchmarks\results\etl\ui-scroll-144-20261026T083151Z-run3.etl","False",,,"Frame-time analysis requires supported WPF profiler/WPA."

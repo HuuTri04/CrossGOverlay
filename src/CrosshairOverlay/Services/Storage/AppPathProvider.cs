@@ -14,6 +14,15 @@ public sealed class AppPathProvider : IAppPathProvider
     /// </summary>
     public static AppPathProvider FromStorageLocation()
     {
+        // Benchmark runs must not read or modify the user's real settings/presets. The
+        // measurement script sets this only in the child process it launches.
+        var benchmarkRoot = Environment.GetEnvironmentVariable("CROSSGOVERLAY_BENCHMARK_ROOT");
+        if (!string.IsNullOrWhiteSpace(benchmarkRoot))
+        {
+            var root = Path.GetFullPath(benchmarkRoot);
+            return new AppPathProvider(root, Path.Combine(root, "logs"));
+        }
+
         var location = StorageLocation.Resolve();
         return new AppPathProvider(location.RootDirectory, DefaultLogsDirectory)
         {

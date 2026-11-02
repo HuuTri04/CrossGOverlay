@@ -1,0 +1,5 @@
+﻿{
+    "Runs":  10,
+    "ExeSha256":  "7DA83E403D86A05D2781EE03BFEB23E34235B2598045B9A8D24F60EC2B94C310",
+    "Interpretation":  "mouse_event to routed WPF PreviewMouseDown, includes OS scheduling; not display present."
+}

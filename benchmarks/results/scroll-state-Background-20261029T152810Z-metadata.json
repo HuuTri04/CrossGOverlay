@@ -1,0 +1,10 @@
+﻿{
+    "Mode":  "Background",
+    "UiTargetFps":  60,
+    "DurationSeconds":  30,
+    "ExeSha256":  "7DA83E403D86A05D2781EE03BFEB23E34235B2598045B9A8D24F60EC2B94C310",
+    "ManagedDllSha256":  "2F83AE08F720F244CFA590719FD2B349E6ED8591D35B8030CE06E633892FDD6C",
+    "Fixture":  "1600x900 PNG; blur 10; General tab",
+    "SourceCodeScrollTickCapWithBackground":  60,
+    "FrameTimeMeaning":  "P95/P99 blank until an ETL-aware WPF frame analyzer is available."
+}

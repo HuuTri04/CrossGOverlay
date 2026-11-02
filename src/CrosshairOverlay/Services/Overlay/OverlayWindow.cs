@@ -97,7 +97,8 @@ internal sealed class OverlayWindow : Window
     /// <summary>Reasserts z-order only while visible; never activates or shows a hidden overlay.</summary>
     public bool ReassertTopmost()
     {
-        if (Handle == 0 || !IsVisible) return false;
+        if (Handle == 0 || !IsVisible || !NativeMethods.IsWindow(Handle)) return false;
+        EnsureClickThroughStyles();
 #if DEBUG
         OverlayRenderDiagnostics.Positioned();
 #endif
@@ -105,7 +106,8 @@ internal sealed class OverlayWindow : Window
             Handle, Win32Constants.HWND_TOPMOST,
             0, 0, 0, 0,
             Win32Constants.SWP_NOMOVE | Win32Constants.SWP_NOSIZE
-                | Win32Constants.SWP_NOACTIVATE | Win32Constants.SWP_NOOWNERZORDER);
+                | Win32Constants.SWP_NOACTIVATE | Win32Constants.SWP_NOOWNERZORDER
+                | Win32Constants.SWP_SHOWWINDOW);
     }
 
     /// <summary>Repair click-through flags after a WPF hide/show transition if needed.</summary>

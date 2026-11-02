@@ -1,0 +1,29 @@
+﻿[
+    {
+        "Scenario":  "IdleHidden",
+        "Run":  1,
+        "Pid":  57380,
+        "FirstHwndMs":  512.01,
+        "SettingsFirstFrameMs":  796,
+        "FirstFrameLogObservedMs":  845.86,
+        "SettingsWindowVisible":  true
+    },
+    {
+        "Scenario":  "IdleHidden",
+        "Run":  2,
+        "Pid":  58456,
+        "FirstHwndMs":  664.98,
+        "SettingsFirstFrameMs":  914,
+        "FirstFrameLogObservedMs":  944.25,
+        "SettingsWindowVisible":  true
+    },
+    {
+        "Scenario":  "IdleHidden",
+        "Run":  3,
+        "Pid":  50644,
+        "FirstHwndMs":  558.98,
+        "SettingsFirstFrameMs":  885,
+        "FirstFrameLogObservedMs":  903.76,
+        "SettingsWindowVisible":  true
+    }
+]

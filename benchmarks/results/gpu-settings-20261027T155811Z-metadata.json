@@ -1,0 +1,8 @@
+﻿{
+    "ExeSha256":  "7DA83E403D86A05D2781EE03BFEB23E34235B2598045B9A8D24F60EC2B94C310",
+    "ManagedDllSha256":  "1DCE268E0CC8331DA9E4925799B250777A9D3617D73836726E928141481B88C6",
+    "SamplesPerStage":  5,
+    "SampleSeconds":  2,
+    "WarmupSeconds":  60,
+    "Metric":  "GPU Process Memory, entire process; not per-HWND or DWM compositing workload."
+}

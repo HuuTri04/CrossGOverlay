@@ -1,0 +1,17 @@
+﻿{
+    "RunId":  "20261026T040659Z",
+    "ExeSha256":  "7DA83E403D86A05D2781EE03BFEB23E34235B2598045B9A8D24F60EC2B94C310",
+    "CyclesRequested":  100,
+    "IdleSecondsRequested":  3600,
+    "TabNames":  [
+                     "Crosshair",
+                     "General",
+                     "Hotkeys",
+                     "Games",
+                     "Library",
+                     "Create Crosshair",
+                     "Stats"
+                 ],
+    "VMMapVersion":  "3.4",
+    "State1":  "StartMinimizedToTray=true, OverlayEnabled=true, ShowOnlyInMatchedGames=false"
+}

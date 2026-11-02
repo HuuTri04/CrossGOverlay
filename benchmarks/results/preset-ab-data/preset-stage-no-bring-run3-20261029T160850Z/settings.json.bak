@@ -1,0 +1,74 @@
+{
+  "SchemaVersion": 1,
+  "UiTargetFps": 144,
+  "GlobalScale": 1,
+  "AppBgOpacity": 0.18,
+  "AppBgBlurRadius": 10,
+  "Hotkeys": [
+    {
+      "Action": "ToggleOverlay",
+      "Key": "X",
+      "MouseButton": "None",
+      "Modifiers": "Alt",
+      "Enabled": true
+    },
+    {
+      "Action": "NextPreset",
+      "Key": "Oem6",
+      "MouseButton": "None",
+      "Modifiers": "Alt",
+      "Enabled": true
+    },
+    {
+      "Action": "PreviousPreset",
+      "Key": "Oem4",
+      "MouseButton": "None",
+      "Modifiers": "Alt",
+      "Enabled": true
+    },
+    {
+      "Action": "ShowSettingsWindow",
+      "Key": "C",
+      "MouseButton": "None",
+      "Modifiers": "Alt",
+      "Enabled": true
+    },
+    {
+      "Action": "ExitApplication",
+      "Key": "None",
+      "MouseButton": "None",
+      "Modifiers": "None",
+      "Enabled": false
+    }
+  ],
+  "GameProfiles": [],
+  "LastUpdateAttempt": null,
+  "PresetOrder": [],
+  "ActivePresetId": "8fd1c592-8600-42b6-953f-c3c5bfc55bfb",
+  "OverlayEnabled": true,
+  "StartWithWindows": false,
+  "StartMinimizedToTray": false,
+  "MinimizeToTrayOnClose": true,
+  "AutoSwitchByGameProfile": true,
+  "ShowOnlyInMatchedGames": false,
+  "StreamModeEnabled": false,
+  "MonitorSelectionMode": "FollowForegroundWindow",
+  "TargetMonitorDeviceName": null,
+  "WarnOnExclusiveFullscreen": true,
+  "LogLevel": "Information",
+  "Language": "en",
+  "CheckForUpdates": true,
+  "OverlayFpsLimit": 60,
+  "UseHardwareAcceleration": true,
+  "ProcessPriority": "Normal",
+  "HideOnRightClick": false,
+  "ShowOnlyWhenCursorHidden": false,
+  "ChangeColorWhileFiring": false,
+  "FiringColor": "#FFFF0000",
+  "EnableOledPixelShift": false,
+  "EnableSmartContrast": false,
+  "PreviewShowCheckerboard": true,
+  "PreviewShowDarkBackground": true,
+  "CustomPreviewBgPath": null,
+  "CustomAppBgPath": "D:\\Crosshair\\benchmarks\\results\\profiling-app-data\\effects\\background-1600x900.png"
+}

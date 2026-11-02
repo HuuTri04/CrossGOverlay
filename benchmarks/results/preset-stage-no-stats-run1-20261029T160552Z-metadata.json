@@ -1,0 +1,11 @@
+﻿{
+    "Variant":  "no-stats",
+    "Run":  1,
+    "Switches":  100,
+    "StartSignalUtc":  "2026-10-29T16:05:56.4495426+00:00",
+    "FinishedUtc":  "2026-10-29T16:06:09.6262881+00:00",
+    "BenchmarkExeSha256":  "7DA83E403D86A05D2781EE03BFEB23E34235B2598045B9A8D24F60EC2B94C310",
+    "BenchmarkDllSha256":  "204704208C2C0991035F5E598EA95055FEB0C1D6F16D3E47DB236EB6B4851BA7",
+    "ProductionDllSha256":  "2F83AE08F720F244CFA590719FD2B349E6ED8591D35B8030CE06E633892FDD6C",
+    "StageCsv":  "D:\\Crosshair\\benchmarks\\results\\preset-stage-no-stats-run1-20261029T160552Z.csv"
+}

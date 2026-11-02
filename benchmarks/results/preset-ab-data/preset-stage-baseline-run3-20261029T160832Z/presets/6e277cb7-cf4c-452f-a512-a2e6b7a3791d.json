@@ -1,0 +1,79 @@
+{
+  "SchemaVersion": 2,
+  "Id": "6e277cb7-cf4c-452f-a512-a2e6b7a3791d",
+  "Opacity": 1,
+  "Scale": 1,
+  "Rotation": 0,
+  "OffsetX": 0,
+  "OffsetY": 0,
+  "Name": "Tactical T",
+  "Type": "Standard",
+  "Shape": "TShape",
+  "Color": "#FF00E5FF",
+  "CenterDot": {
+    "Size": 3,
+    "Opacity": 1,
+    "Enabled": false,
+    "UseProfileColor": true,
+    "Color": "#FF00FF00"
+  },
+  "InnerLines": {
+    "Opacity": 1,
+    "Length": 7,
+    "VerticalLength": 10,
+    "Thickness": 2,
+    "VerticalThickness": 2,
+    "Offset": 3,
+    "Enabled": true,
+    "SeparateVerticalLength": false,
+    "SeparateVerticalThickness": false,
+    "ShowTop": true,
+    "ShowBottom": true,
+    "ShowLeft": true,
+    "ShowRight": true,
+    "RoundedCaps": false
+  },
+  "OuterLines": {
+    "Opacity": 0.35,
+    "Length": 2,
+    "VerticalLength": 2,
+    "Thickness": 2,
+    "VerticalThickness": 2,
+    "Offset": 10,
+    "Enabled": false,
+    "SeparateVerticalLength": false,
+    "SeparateVerticalThickness": false,
+    "ShowTop": true,
+    "ShowBottom": true,
+    "ShowLeft": true,
+    "ShowRight": true,
+    "RoundedCaps": false
+  },
+  "Outline": {
+    "Thickness": 1,
+    "Opacity": 1,
+    "Enabled": true,
+    "Color": "#FF000000"
+  },
+  "Ring": {
+    "Radius": 12,
+    "Thickness": 2,
+    "Enabled": false,
+    "Filled": false
+  },
+  "Image": {
+    "Scale": 1,
+    "Opacity": 1,
+    "OffsetX": 0,
+    "OffsetY": 0,
+    "FilePath": null
+  },
+  "Shadow": {
+    "BlurRadius": 4,
+    "Opacity": 0.7,
+    "Enabled": false,
+    "Color": "#FF000000"
+  },
+  "CreatedUtc": "2026-10-25T15:57:37.0781489+00:00",
+  "ModifiedUtc": "2026-10-25T15:57:37.1298341+00:00"
+}

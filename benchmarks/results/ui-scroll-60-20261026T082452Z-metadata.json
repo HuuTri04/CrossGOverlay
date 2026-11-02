@@ -1,0 +1,10 @@
+﻿{
+    "UiTargetFps":  60,
+    "DurationSeconds":  120,
+    "Runs":  3,
+    "TraceRuns":  0,
+    "ExeSha256":  "7DA83E403D86A05D2781EE03BFEB23E34235B2598045B9A8D24F60EC2B94C310",
+    "Fixture":  "1600x900 PNG; AppBgBlurRadius=10; General tab",
+    "SourceCodeScrollTickCapWithBackground":  60,
+    "FrameTimeMeaning":  "P95/P99 blank until an ETL-aware WPF frame analyzer is available."
+}
