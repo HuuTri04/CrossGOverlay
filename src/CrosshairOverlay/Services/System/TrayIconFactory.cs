@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Diagnostics;
 using CrosshairOverlay.Interop;
 
 namespace CrosshairOverlay.Services.System;
@@ -55,8 +56,9 @@ internal static class TrayIconFactory
                 return new Icon(stream, new Size(IconSize, IconSize));
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            Trace.WriteLine($"[TrayIconFactory] Could not load the embedded icon: {ex}");
             return null;
         }
     }

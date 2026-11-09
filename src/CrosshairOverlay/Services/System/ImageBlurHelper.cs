@@ -1,4 +1,5 @@
 using System.Buffers;
+using System.Diagnostics;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
@@ -8,13 +9,20 @@ namespace CrosshairOverlay.Services.System;
 internal static class ImageBlurHelper
 {
     public static Task<BitmapSource> CreatePreBlurredBitmapAsync(
-        BitmapSource source, double blurRadius, CancellationToken cancellationToken = default)
+        BitmapSource source, double blurRadius, CancellationToken cancellationToken = default,
+        Action<long, long>? timing = null)
     {
         ArgumentNullException.ThrowIfNull(source);
         if (!source.IsFrozen)
             throw new ArgumentException("Background source must be frozen before background processing.", nameof(source));
 
-        return Task.Run(() => Blur(source, blurRadius, cancellationToken), cancellationToken);
+        return Task.Run(() =>
+        {
+            var startedAt = timing is null ? 0 : Stopwatch.GetTimestamp();
+            var result = Blur(source, blurRadius, cancellationToken);
+            timing?.Invoke(startedAt, Stopwatch.GetTimestamp());
+            return result;
+        }, cancellationToken);
     }
 
     private static BitmapSource Blur(BitmapSource source, double blurRadius, CancellationToken cancellationToken)

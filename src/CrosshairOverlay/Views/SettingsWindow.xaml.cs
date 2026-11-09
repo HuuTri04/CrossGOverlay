@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -7,6 +8,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 using System.Windows.Threading;
+using System.Windows.Interop;
 using CrosshairOverlay.Core.Abstractions;
 using CrosshairOverlay.Core.Models;
 using CrosshairOverlay.Controls;
@@ -50,6 +52,11 @@ public partial class SettingsWindow : Window
     private readonly Microsoft.Extensions.Logging.ILogger<SettingsWindow> _logger;
     private PerformanceMonitorService? _performanceMonitor;
     private DispatcherTimer? _statsTimer;
+    private bool _backgroundWasRenderable;
+    private Brush? _solidWindowBackground;
+    private Brush? _normalWindowForeground;
+    private bool _micaEnabled;
+    private bool _highContrastBackgroundApplied;
 
     public PerformanceMonitorService PerformanceMonitor =>
         _performanceMonitor ??= new PerformanceMonitorService(Dispatcher);
@@ -59,16 +66,29 @@ public partial class SettingsWindow : Window
 
     /// <summary>Tab "Thư viện" đã được dựng và bắt đầu nạp dữ liệu hay chưa.</summary>
     private bool _libraryStarted;
+    private bool _initialRevealLogged;
 
     public SettingsWindow(
         SettingsViewModel viewModel, ITrayIconController tray, Microsoft.Extensions.Logging.ILogger<SettingsWindow> logger)
     {
         InitializeComponent();
 
+        // Benchmark-only A/B for the backdrop surface. Production keeps the cache.
+        if (Environment.GetEnvironmentVariable("CROSSGOVERLAY_BENCHMARK_DISABLE_BACKGROUND_CACHE") == "1")
+            AppBackgroundImageLayer.CacheMode = null;
+
+
         _viewModel = viewModel;
         _tray = tray;
         _logger = logger;
         DataContext = viewModel;
+        _viewModel.SetPresetPresentationActive(false);
+        _solidWindowBackground = Background;
+        _normalWindowForeground = Foreground;
+        SourceInitialized += (_, _) => UpdateMicaBackdrop();
+        PropertyChangedEventManager.AddHandler(_viewModel.General, OnBackgroundAvailabilityChanged,
+            nameof(GeneralSettingsViewModel.HasAppBackground));
+        SystemParameters.StaticPropertyChanged += OnSystemParametersChanged;
         // Bubble phase: label/slider/button handlers run first. Only a click that reached a
         // non-interactive surface moves keyboard focus away from the previous input control.
         MouseDown += OnBackgroundMouseDown;
@@ -85,6 +105,9 @@ public partial class SettingsWindow : Window
         // mỗi lần mở lại là một ViewModel nữa bị giữ sống mãi.
         Closed += (_, _) =>
         {
+            PropertyChangedEventManager.RemoveHandler(_viewModel.General, OnBackgroundAvailabilityChanged,
+                nameof(GeneralSettingsViewModel.HasAppBackground));
+            SystemParameters.StaticPropertyChanged -= OnSystemParametersChanged;
             _performanceMonitor?.Dispose();
             if (_statsTimer is not null)
             {
@@ -101,6 +124,115 @@ public partial class SettingsWindow : Window
         }
     }
 
+    private void OnBackgroundAvailabilityChanged(object? sender, PropertyChangedEventArgs e) => UpdateMicaBackdrop();
+
+    private void OnSystemParametersChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(SystemParameters.HighContrast)) UpdateMicaBackdrop();
+    }
+
+    internal static bool CanUseMica(int build, bool highContrast, bool hasCustomBackground) =>
+        build >= 22621 && !highContrast && !hasCustomBackground;
+
+    private void UpdateMicaBackdrop()
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            if (!Dispatcher.HasShutdownStarted)
+                Dispatcher.BeginInvoke(UpdateMicaBackdrop, DispatcherPriority.Normal);
+            return;
+        }
+        if (PresentationSource.FromVisual(this) is not HwndSource source || source.CompositionTarget is null)
+            return;
+
+        var highContrast = SystemParameters.HighContrast;
+        var build = Environment.OSVersion.Version.Build;
+        var enable = CanUseMica(build, highContrast,
+            _viewModel.General.HasAppBackground);
+        if (enable == _micaEnabled && highContrast == _highContrastBackgroundApplied) return;
+
+        var hwnd = source.Handle;
+        const int systemBackdropType = 38; // DWMWA_SYSTEMBACKDROP_TYPE, Windows 11 22H2+
+        const int immersiveDarkMode = 20;  // DWMWA_USE_IMMERSIVE_DARK_MODE
+        const int attributeSize = sizeof(int);
+        if (enable)
+        {
+            var mica = 2; // DWMSBT_MAINWINDOW
+            if (DwmSetWindowAttribute(hwnd, systemBackdropType, ref mica, attributeSize) < 0) return;
+            var dark = 1;
+            _ = DwmSetWindowAttribute(hwnd, immersiveDarkMode, ref dark, attributeSize);
+            var fullClient = new DwmMargins(-1, -1, -1, -1);
+            if (DwmExtendFrameIntoClientArea(hwnd, ref fullClient) < 0)
+            {
+                var none = 1; // DWMSBT_NONE
+                _ = DwmSetWindowAttribute(hwnd, systemBackdropType, ref none, attributeSize);
+                return;
+            }
+            source.CompositionTarget.BackgroundColor = Colors.Transparent;
+            if (_highContrastBackgroundApplied)
+                BackgroundLayer.ClearValue(VisibilityProperty);
+            Background = Brushes.Transparent;
+            SettingsTabs.Background = Brushes.Transparent;
+            _micaEnabled = true;
+            _highContrastBackgroundApplied = false;
+            _logger.LogInformation("Mica State: Active");
+            return;
+        }
+
+        if (_micaEnabled)
+        {
+            var disabled = 1;
+            _ = DwmSetWindowAttribute(hwnd, systemBackdropType, ref disabled, attributeSize);
+            var noFrame = new DwmMargins(0, 0, 0, 0);
+            _ = DwmExtendFrameIntoClientArea(hwnd, ref noFrame);
+            SettingsTabs.ClearValue(BackgroundProperty);
+        }
+
+        if (build >= 22000)
+        {
+            // Do not force a dark title bar over the system High Contrast palette.
+            var dark = highContrast ? 0 : 1;
+            _ = DwmSetWindowAttribute(hwnd, immersiveDarkMode, ref dark, attributeSize);
+        }
+
+        // High Contrast must also cover a custom image. A local Visibility value
+        // temporarily overrides the image layer's normal binding-based style.
+        if (highContrast)
+        {
+            BackgroundLayer.Visibility = Visibility.Collapsed;
+            Background = SystemColors.WindowBrush;
+            Foreground = SystemColors.WindowTextBrush;
+        }
+        else
+        {
+            if (_highContrastBackgroundApplied)
+                BackgroundLayer.ClearValue(VisibilityProperty);
+            Background = _solidWindowBackground;
+            if (_highContrastBackgroundApplied)
+                Foreground = _normalWindowForeground;
+        }
+        if (Background is SolidColorBrush solid)
+            source.CompositionTarget.BackgroundColor = solid.Color;
+        _micaEnabled = false;
+        _highContrastBackgroundApplied = highContrast;
+        _logger.LogInformation(highContrast ? "HighContrast Fallback: Active" : "Mica State: Inactive");
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct DwmMargins(int left, int right, int top, int bottom)
+    {
+        public int Left = left;
+        public int Right = right;
+        public int Top = top;
+        public int Bottom = bottom;
+    }
+
+    [DllImport("dwmapi.dll", ExactSpelling = true)]
+    private static extern int DwmSetWindowAttribute(nint hwnd, int attribute, ref int value, int valueSize);
+
+    [DllImport("dwmapi.dll", ExactSpelling = true)]
+    private static extern int DwmExtendFrameIntoClientArea(nint hwnd, ref DwmMargins margins);
+
     private void OnFirstBenchmarkMouseDown(object sender, MouseButtonEventArgs e)
     {
         PreviewMouseDown -= OnFirstBenchmarkMouseDown;
@@ -115,6 +247,7 @@ public partial class SettingsWindow : Window
         PreviewZoomSlider.Focus();
         e.Handled = true;
     }
+
 
     private void OnBackgroundMouseDown(object sender, MouseButtonEventArgs e)
     {
@@ -161,53 +294,45 @@ public partial class SettingsWindow : Window
         return false;
     }
 
-    /// <summary>
-    /// Nạp cột trình chỉnh sửa SAU khi khung hình đầu tiên đã vẽ xong.
-    /// </summary>
-    /// <remarks>
-    /// Đo trên máy thật: dựng cửa sổ Settings tốn ~1000 ms lúc khởi động, trong đó riêng cột chỉnh
-    /// sửa (mấy chục thanh trượt, ô chọn màu, nhóm gập) chiếm ~450 ms. Người dùng không cần nó ở
-    /// mili-giây đầu tiên — họ cần thấy cửa sổ. Nên cửa sổ hiện ra với danh sách preset và khung xem
-    /// trước trước, cột chỉnh sửa điền vào ngay nhịp dispatcher kế tiếp.
-    ///
-    /// <para>
-    /// <see cref="OnContentRendered"/> chạy SAU khung hình đầu tiên, và còn lùi thêm một nhịp ưu tiên
-    /// Background để khung hình đó kịp lên màn hình. Gán ContentTemplate là thứ kích hoạt việc dựng
-    /// cây giao diện từ DataTemplate.
-    /// </para>
-    /// </remarks>
+    /// <summary>Dựng tab đang chọn trước khi Settings được lộ ra; tab phụ vẫn nạp theo yêu cầu.</summary>
+    public void PrepareInitialContent()
+    {
+        var editor = (DataTemplate)FindResource("EditorPanel");
+        if (!ReferenceEquals(EditorHost.ContentTemplate, editor))
+            EditorHost.ContentTemplate = editor;
+    }
+
+    /// <summary>Ghi mốc lộ cửa sổ; đây không phải phép đo DWM Present.</summary>
+    public void MarkSettingsRevealed()
+    {
+        if (_initialRevealLogged) return;
+        _initialRevealLogged = true;
+        LogSettingsRevealed();
+        ScheduleBindingAudit();
+        if (Core.Diagnostics.StartupProfiler.Enabled)
+            Dispatcher.InvokeAsync(
+                () => _logger.LogInformation(
+                    "BenchmarkTimeline FirstInputPriorityDispatch {Elapsed:0.###} ms.",
+                    Core.Diagnostics.StartupProfiler.ElapsedMs()),
+                DispatcherPriority.Input);
+    }
+
     protected override void OnContentRendered(EventArgs e)
     {
         base.OnContentRendered(e);
         if (Core.Diagnostics.StartupProfiler.Enabled)
+        {
             _logger.LogInformation("BenchmarkTimeline SettingsFirstRender {Elapsed:0.###} ms.",
                 Core.Diagnostics.StartupProfiler.ElapsedMs());
-
-        var editor = (DataTemplate)FindResource("EditorPanel");
-        if (ReferenceEquals(EditorHost.ContentTemplate, editor)) return;
-
-        // Con số người dùng thực sự cảm nhận: từ lúc bấm mở app tới lúc cửa sổ có hình trên màn hình.
-        LogFirstFrame();
-
-        // Loaded: ngay sau khung hình đầu tiên, TRƯỚC khi xử lý chuột/bàn phím — khoảng trống chỉ
-        // kéo dài đúng thời gian dựng cây, không bị lùi thêm vì người dùng động vào cửa sổ.
-        Dispatcher.InvokeAsync(
-            () =>
-            {
-                var watch = global::System.Diagnostics.Stopwatch.StartNew();
-                EditorHost.ContentTemplate = editor;
-                EditorHost.UpdateLayout();
-                if (Core.Diagnostics.StartupProfiler.Enabled)
-                    Dispatcher.InvokeAsync(
-                        () => _logger.LogInformation(
-                            "BenchmarkTimeline FirstInputPriorityDispatch {Elapsed:0.###} ms.",
-                            Core.Diagnostics.StartupProfiler.ElapsedMs()),
-                        System.Windows.Threading.DispatcherPriority.Input);
-
-                Microsoft.Extensions.Logging.LoggerExtensions.LogDebug(
-                    _logger, "Cột chỉnh sửa nạp trong {Elapsed:0} ms sau khung hình đầu.", watch.Elapsed.TotalMilliseconds);
-            },
-            System.Windows.Threading.DispatcherPriority.Loaded);
+            _logger.LogInformation(
+                "BenchmarkBackgroundPreload CacheHit={CacheHit} DiskRead_ms={DiskRead:0.###} Decode_ms={Decode:0.###} BlurProcessing_ms={Blur:0.###} DispatcherWait_ms={DispatcherWait:0.###} FirstFrameRender_ms={FirstFrame:0.###}.",
+                Core.Diagnostics.StartupProfiler.BackgroundCacheHit,
+                Core.Diagnostics.StartupProfiler.DiskReadMs,
+                Core.Diagnostics.StartupProfiler.DecodeMs,
+                Core.Diagnostics.StartupProfiler.BlurProcessingMs,
+                Core.Diagnostics.StartupProfiler.DispatcherWaitMs,
+                Core.Diagnostics.StartupProfiler.FirstFrameRenderMs);
+        }
     }
 
     /// <summary>
@@ -222,6 +347,7 @@ public partial class SettingsWindow : Window
     {
         // TabControl phát sự kiện này cả khi ComboBox/ListBox bên trong đổi lựa chọn.
         if (!ReferenceEquals(e.OriginalSource, sender)) return;
+        UpdatePresetPresentation();
         UpdatePerformanceMonitor();
         UpdateStatsTimer();
         if (PixelArtNavigationTab?.IsSelected == true && PixelArtHost.ContentTemplate is null)
@@ -229,15 +355,39 @@ public partial class SettingsWindow : Window
             PixelArtHost.ContentTemplate = (DataTemplate)FindResource("PixelArtPanel");
             PixelArtHost.Content = _viewModel.PixelArt;
         }
-        if (_libraryStarted || !LibraryTab.IsSelected) return;
+        if (_libraryStarted || !LibraryTab.IsSelected)
+        {
+            ScheduleBindingAudit();
+            return;
+        }
 
         _libraryStarted = true;
-        LibraryHost.ContentTemplate = (DataTemplate)FindResource("LibraryPanel");
-        LibraryHost.UpdateLayout();
+        try
+        {
+            LibraryHost.ContentTemplate = (DataTemplate)FindResource("LibraryPanel");
+            LibraryHost.UpdateLayout();
 
-        FindChild<PresetLibraryView>(LibraryHost)?.FocusSearch();
+            FindChild<PresetLibraryView>(LibraryHost)?.FocusSearch();
 
-        await _viewModel.Library.LoadAsync();
+            await _viewModel.Library.LoadAsync();
+            ScheduleBindingAudit();
+        }
+        catch (Exception ex)
+        {
+            _libraryStarted = false;
+            _logger.LogError(ex, "Could not initialize the preset library tab.");
+        }
+    }
+
+    private void ScheduleBindingAudit()
+    {
+        if (!Core.Diagnostics.BindingAudit.Enabled) return;
+        Dispatcher.InvokeAsync(() =>
+        {
+            if (!IsVisible || App.IsShuttingDown) return;
+            var errors = Core.Diagnostics.BindingAudit.Scan(this, _logger);
+            _logger.LogInformation("BindingAudit completed: {Errors} materialized binding errors.", errors);
+        }, DispatcherPriority.ApplicationIdle);
     }
 
     private void UpdatePerformanceMonitor()
@@ -250,11 +400,24 @@ public partial class SettingsWindow : Window
     private void UpdateVisibleTabServices()
     {
         var visible = IsVisible && WindowState != WindowState.Minimized;
-        _viewModel.General.SetBackgroundViewActive(visible);
+        UpdatePresetPresentation();
+        // Minimize keeps the existing frozen bitmap. Only Hide() starts the 30-second
+        // cache expiry; taskbar restoration bypasses DialogService's preload path.
+        _viewModel.General.SetBackgroundViewActive(Visibility == System.Windows.Visibility.Visible);
+        if (visible && !_backgroundWasRenderable)
+            _viewModel.General.RefreshBackgroundBinding();
+        _backgroundWasRenderable = visible;
         _viewModel.Editor.SetPreviewBackgroundViewActive(visible);
         UpdatePerformanceMonitor();
         UpdateStatsTimer();
     }
+
+    internal void PreparePresetForReveal() =>
+        _viewModel.SetPresetPresentationActive(SettingsTabs.SelectedIndex == 0);
+
+    private void UpdatePresetPresentation() =>
+        _viewModel.SetPresetPresentationActive(
+            IsVisible && WindowState != WindowState.Minimized && SettingsTabs.SelectedIndex == 0);
 
     private void UpdateStatsTimer()
     {
@@ -314,14 +477,14 @@ public partial class SettingsWindow : Window
 #endif
     }
 
-    private void LogFirstFrame()
+    private void LogSettingsRevealed()
     {
         try
         {
             using var process = global::System.Diagnostics.Process.GetCurrentProcess();
             Microsoft.Extensions.Logging.LoggerExtensions.LogInformation(
                 _logger,
-                "Cửa sổ Settings có khung hình đầu sau {Elapsed:0} ms kể từ khi tiến trình khởi động.",
+                "Cửa sổ Settings được lộ ra sau {Elapsed:0} ms kể từ khi tiến trình khởi động (chưa xác nhận DWM Present).",
                 (DateTime.Now - process.StartTime).TotalMilliseconds);
         }
         catch (Exception)
@@ -385,6 +548,7 @@ public partial class SettingsWindow : Window
 
         // Cửa sổ biến mất mà overlay vẫn vẽ dễ khiến người dùng tưởng app đã thoát và đi tìm
         // cách tắt nó trong Task Manager.
-        _tray.ShowNotification(Core.AppInfo.DisplayName, Tr.Get("Tray_HiddenToTray"));
+        _tray.ShowNotification(Core.AppInfo.DisplayName, Tr.Get("Tray_HiddenToTray"),
+            category: NotificationCategory.MinimizeToTray);
     }
 }

@@ -70,9 +70,10 @@ public sealed class AppLogging : IDisposable
 
             return new AppLogging(factory, logger, levelSwitch) { LogDirectory = paths.LogsDirectory };
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             // Đĩa đầy, thư mục bị khoá quyền… — không ghi được log thì vẫn phải chạy được app.
+            global::System.Diagnostics.Trace.TraceWarning($"File logging unavailable: {ex}");
             return new AppLogging(NullLoggerFactory.Instance, null, null);
         }
     }

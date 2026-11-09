@@ -1,6 +1,9 @@
 using System.IO;
 using System.Text.Json;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -126,6 +129,37 @@ public sealed class AppBackgroundTests
     }
 
     [Fact]
+    public async Task ProcessedBackgroundCache_RoundTripsFrozenBitmap_AndInvalidatesOnInputs()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "CrossGOverlay-cache-" + Guid.NewGuid());
+        var logs = Path.Combine(root, "logs");
+        var sourcePath = Path.Combine(root, "source.png");
+        var changedAt = new DateTime(2026, 11, 3, 0, 0, 0, DateTimeKind.Utc);
+        var cachePath = AppBackgroundCache.CachePath(logs, sourcePath, 100, changedAt, 10, 0.18);
+        try
+        {
+            Assert.NotEqual(cachePath, AppBackgroundCache.CachePath(logs, sourcePath, 101, changedAt, 10, 0.18));
+            Assert.NotEqual(cachePath, AppBackgroundCache.CachePath(logs, sourcePath, 100, changedAt.AddSeconds(1), 10, 0.18));
+            Assert.NotEqual(cachePath, AppBackgroundCache.CachePath(logs, sourcePath, 100, changedAt, 11, 0.18));
+            Assert.NotEqual(cachePath, AppBackgroundCache.CachePath(logs, sourcePath, 100, changedAt, 10, 0.19));
+
+            var pixels = new byte[] { 0, 0, 255, 255, 0, 255, 0, 255,
+                                      255, 0, 0, 255, 255, 255, 255, 255 };
+            var image = BitmapSource.Create(2, 2, 96, 96, PixelFormats.Bgra32, null, pixels, 8);
+            image.Freeze();
+            await AppBackgroundCache.SaveAsync(cachePath, image, CancellationToken.None);
+            var loaded = await AppBackgroundImageLoader.DecodeAsync(cachePath);
+            Assert.True(loaded.IsFrozen);
+            Assert.Equal((2, 2), (loaded.PixelWidth, loaded.PixelHeight));
+            using var exclusive = File.Open(cachePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        }
+        finally
+        {
+            if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
     public void PreviewDoesNotPaintOverTheSeparatePhotoLayer()
     {
         Exception? failure = null;
@@ -148,8 +182,9 @@ public sealed class AppBackgroundTests
             catch (Exception ex) { failure = ex; }
         });
         thread.SetApartmentState(ApartmentState.STA);
+        thread.IsBackground = true;
         thread.Start();
-        thread.Join();
+        Assert.True(thread.Join(TimeSpan.FromSeconds(10)), "Test worker exceeded its 10-second limit.");
         if (failure is not null) throw failure;
     }
 
@@ -227,8 +262,86 @@ public sealed class AppBackgroundTests
             finally { Dispatcher.CurrentDispatcher.InvokeShutdown(); }
         });
         thread.SetApartmentState(ApartmentState.STA);
+        thread.IsBackground = true;
         thread.Start();
-        thread.Join();
+        Assert.True(thread.Join(TimeSpan.FromSeconds(10)), "Test worker exceeded its 10-second limit.");
         if (failure is not null) throw new Xunit.Sdk.XunitException(failure.ToString());
+    }
+
+    [Fact]
+    public void SliderField_ReleaseCommitsLastDelayedValue()
+    {
+        Exception? failure = null;
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                _ = ThemeFixture.Load();
+                var model = new SliderValueModel { Value = 10d };
+                var field = new SliderField { Range = new(0d, 100d) };
+                BindingOperations.SetBinding(field, SliderField.ValueProperty,
+                    new Binding(nameof(SliderValueModel.Value))
+                    {
+                        Source = model,
+                        Mode = BindingMode.TwoWay,
+                        UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged,
+                    });
+                var slider = Assert.IsType<Slider>(field.FindName("TrackSlider"));
+                slider.Value = 42d;
+                slider.RaiseEvent(new DragCompletedEventArgs(0d, 0d, false)
+                {
+                    RoutedEvent = Thumb.DragCompletedEvent,
+                });
+
+                Assert.Equal(42d, model.Value);
+            }
+            catch (Exception ex) { failure = ex; }
+            finally { Dispatcher.CurrentDispatcher.InvokeShutdown(); }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.IsBackground = true;
+        thread.Start();
+        Assert.True(thread.Join(TimeSpan.FromSeconds(10)), "Test worker exceeded its 10-second limit.");
+        if (failure is not null) throw new Xunit.Sdk.XunitException(failure.ToString());
+    }
+
+    [Fact]
+    public void ColorPicker_ReleaseCommitsLatestRgbWithoutWaitingForTimer()
+    {
+        Exception? failure = null;
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                _ = ThemeFixture.Load();
+                var picker = new ColorPickerButton();
+                var red = Assert.IsType<Slider>(picker.FindName("RedSlider"));
+                var green = Assert.IsType<Slider>(picker.FindName("GreenSlider"));
+                var blue = Assert.IsType<Slider>(picker.FindName("BlueSlider"));
+                red.Value = 20d;
+                green.Value = 30d;
+                blue.Value = 40d;
+
+                Assert.Equal(Colors.Lime, picker.SelectedColor);
+                blue.RaiseEvent(new DragCompletedEventArgs(0d, 0d, false)
+                {
+                    RoutedEvent = Thumb.DragCompletedEvent,
+                });
+
+                Assert.Equal(Color.FromRgb(20, 30, 40), picker.SelectedColor);
+            }
+            catch (Exception ex) { failure = ex; }
+            finally { Dispatcher.CurrentDispatcher.InvokeShutdown(); }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.IsBackground = true;
+        thread.Start();
+        Assert.True(thread.Join(TimeSpan.FromSeconds(10)), "Test worker exceeded its 10-second limit.");
+        if (failure is not null) throw new Xunit.Sdk.XunitException(failure.ToString());
+    }
+
+    private sealed class SliderValueModel
+    {
+        public double Value { get; set; }
     }
 }

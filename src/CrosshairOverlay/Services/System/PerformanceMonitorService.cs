@@ -7,10 +7,9 @@ namespace CrosshairOverlay.Services.System;
 /// <summary>Samples this process only while the System Info panel is visible.</summary>
 public sealed partial class PerformanceMonitorService : ObservableObject, IDisposable
 {
-    private readonly global::System.Diagnostics.Process _process = global::System.Diagnostics.Process.GetCurrentProcess();
-    private readonly DispatcherTimer _timer;
-    private TimeSpan _lastCpuTime;
-    private long _lastTimestamp;
+    private readonly Dispatcher _dispatcher;
+    private CancellationTokenSource? _samplingCancellation;
+    private int _generation;
     private bool _disposed;
 
     [ObservableProperty] private string _cpuValue = "…";
@@ -18,56 +17,84 @@ public sealed partial class PerformanceMonitorService : ObservableObject, IDispo
 
     public PerformanceMonitorService(Dispatcher dispatcher)
     {
-        _timer = new DispatcherTimer(DispatcherPriority.Background, dispatcher)
-        {
-            Interval = TimeSpan.FromSeconds(3),
-        };
-        _timer.Tick += OnTick;
+        _dispatcher = dispatcher;
     }
 
     public void Start()
     {
-        if (_disposed || _timer.IsEnabled) return;
-        Sample();
-        _timer.Start();
+        if (_disposed || _samplingCancellation is not null) return;
+        var cancellation = new CancellationTokenSource();
+        _samplingCancellation = cancellation;
+        var generation = ++_generation;
+        _ = Task.Run(() => SampleLoopAsync(generation, cancellation));
     }
 
     public void Stop()
     {
-        _timer.Stop();
-        _lastTimestamp = 0;
+        if (_samplingCancellation is null) return;
+        ++_generation;
+        try { _samplingCancellation.Cancel(); }
+        catch (ObjectDisposedException) { } // A failed worker may have already exited.
+        _samplingCancellation = null;
         CpuValue = "…";
     }
 
-    private void OnTick(object? sender, EventArgs e) => Sample();
-
-    private void Sample()
+    private async Task SampleLoopAsync(int generation, CancellationTokenSource cancellation)
     {
         try
         {
-            _process.Refresh();
-            var now = Stopwatch.GetTimestamp();
-            var cpuTime = _process.TotalProcessorTime;
-            MemoryValue = $"{_process.WorkingSet64 / (1024d * 1024d):0} MB";
-
-            if (_lastTimestamp != 0)
+            using var process = global::System.Diagnostics.Process.GetCurrentProcess();
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(3));
+            var lastTimestamp = 0L;
+            var lastCpuTime = TimeSpan.Zero;
+            do
             {
-                var elapsed = Stopwatch.GetElapsedTime(_lastTimestamp, now).TotalSeconds;
-                if (elapsed > 0)
+                cancellation.Token.ThrowIfCancellationRequested();
+                process.Refresh();
+                var now = Stopwatch.GetTimestamp();
+                var cpuTime = process.TotalProcessorTime;
+                var memory = $"{process.WorkingSet64 / (1024d * 1024d):0} MB";
+                string? cpu = null;
+                if (lastTimestamp != 0)
                 {
-                    var usage = (cpuTime - _lastCpuTime).TotalSeconds / elapsed
-                                / Environment.ProcessorCount * 100d;
-                    CpuValue = $"{Math.Clamp(usage, 0d, 100d):0.0}%";
+                    var elapsed = Stopwatch.GetElapsedTime(lastTimestamp, now).TotalSeconds;
+                    if (elapsed > 0)
+                    {
+                        var usage = (cpuTime - lastCpuTime).TotalSeconds / elapsed
+                                    / Environment.ProcessorCount * 100d;
+                        cpu = $"{Math.Clamp(usage, 0d, 100d):0.0}%";
+                    }
                 }
-            }
+                lastCpuTime = cpuTime;
+                lastTimestamp = now;
 
-            _lastCpuTime = cpuTime;
-            _lastTimestamp = now;
+                PostToUi(() =>
+                {
+                    if (_disposed || generation != _generation) return;
+                    MemoryValue = memory;
+                    if (cpu is not null) CpuValue = cpu;
+                });
+            }
+            while (await timer.WaitForNextTickAsync(cancellation.Token).ConfigureAwait(false));
         }
-        catch (Exception ex) when (ex is InvalidOperationException or global::System.ComponentModel.Win32Exception)
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { }
+        catch (Exception ex) when (ex is InvalidOperationException or global::System.ComponentModel.Win32Exception
+                                   or TaskCanceledException)
         {
-            Stop();
+            Trace.WriteLine($"[PerformanceMonitor] Sampling stopped: {ex}");
+            PostToUi(() =>
+            {
+                if (generation == _generation) Stop();
+            });
         }
+        finally { cancellation.Dispose(); }
+    }
+
+    private void PostToUi(Action update)
+    {
+        if (_dispatcher.HasShutdownStarted) return;
+        try { _ = _dispatcher.BeginInvoke(DispatcherPriority.Background, update); }
+        catch (InvalidOperationException) { } // The dispatcher may shut down after the check.
     }
 
     public void Dispose()
@@ -75,7 +102,5 @@ public sealed partial class PerformanceMonitorService : ObservableObject, IDispo
         if (_disposed) return;
         _disposed = true;
         Stop();
-        _timer.Tick -= OnTick;
-        _process.Dispose();
     }
 }

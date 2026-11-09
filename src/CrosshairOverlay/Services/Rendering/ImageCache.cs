@@ -18,8 +18,7 @@ namespace CrosshairOverlay.Services.Rendering;
 /// được trả khi không còn ai dùng ảnh đó.
 /// </para>
 /// <para>
-/// Luôn giữ ít nhất mục vừa dùng gần nhất, kể cả khi riêng nó vượt ngân sách: kéo thanh trượt trên
-/// một GIF lớn không được giải mã lại mỗi khung.
+/// Ảnh vượt ngân sách vẫn được trả về cho caller để hiển thị, nhưng không được giữ trong cache.
 /// </para>
 /// </remarks>
 internal sealed class ImageCache
@@ -35,7 +34,11 @@ internal sealed class ImageCache
     private readonly LinkedList<Entry> _recency = new();
     private readonly long _budgetBytes;
 
-    public ImageCache(long budgetBytes = DefaultBudgetBytes) => _budgetBytes = budgetBytes;
+    public ImageCache(long budgetBytes = DefaultBudgetBytes)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(budgetBytes);
+        _budgetBytes = budgetBytes;
+    }
 
     public int Count
     {
@@ -73,6 +76,10 @@ internal sealed class ImageCache
     /// <summary>Lưu kết quả giải mã (kể cả thất bại — để khỏi thử lại file hỏng mỗi lần vẽ).</summary>
     public void Set(string path, DateTime stamp, BitmapSource? source, AnimatedImage? animation)
     {
+        // Cache entries may be used from another thread after the renderer publishes them.
+        // The caller can still display a mutable image, but it must never live in this cache.
+        var canCache = source is not { IsFrozen: false } &&
+            (animation is null || animation.Frames.All(frame => frame.IsFrozen));
         var entry = new Entry(path, source, animation, stamp, EstimateBytes(source, animation));
 
         lock (_gate)
@@ -83,11 +90,15 @@ internal sealed class ImageCache
                 _bytes -= old.Value.Bytes;
             }
 
+            // An oversized GIF may still be displayed by the caller. Keeping it here would
+            // turn the nominal cache budget into an unbounded retained image allocation.
+            if (!canCache || entry.Bytes > _budgetBytes) return;
+
             _byPath[path] = _recency.AddFirst(entry);
             _bytes += entry.Bytes;
 
-            // Bỏ từ cuối (lâu không dùng nhất) cho tới khi vừa ngân sách, nhưng không bao giờ bỏ mục đầu.
-            while (_bytes > _budgetBytes && _recency.Count > 1)
+            // The new entry fits on its own; evict older entries until the hard cap holds.
+            while (_bytes > _budgetBytes)
             {
                 var last = _recency.Last!;
                 _recency.RemoveLast();

@@ -21,6 +21,16 @@
         -->
         <MenuItem Header="{Binding OverlayText, Mode=OneWay}" Command="{Binding ToggleOverlayCommand}"
                   IsChecked="{Binding IsOverlayEnabled, Mode=OneWay}"/>
+        <MenuItem Header="{Binding FavoritesText, Mode=OneWay}"
+                  ItemsSource="{Binding FavoritePresets, Mode=OneWay}"
+                  IsEnabled="{Binding HasFavorites, Mode=OneWay}">
+            <MenuItem.ItemContainerStyle>
+                <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                    <Setter Property="Header" Value="{Binding Name, Mode=OneWay}"/>
+                    <Setter Property="Command" Value="{Binding ApplyCommand, Mode=OneWay}"/>
+                </Style>
+            </MenuItem.ItemContainerStyle>
+        </MenuItem>
         <Separator/>
         <MenuItem Header="{Binding ExitText, Mode=OneWay}" Command="{Binding ExitCommand}"/>
     </ContextMenu>

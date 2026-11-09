@@ -13,6 +13,9 @@ internal static class DataBackupArchive
     private const long MaxUncompressedBytes = 256L * 1024 * 1024;
 
     public static void Create(IAppPathProvider paths, string destination)
+        => AtomicFile.RunExclusive(() => CreateCore(paths, destination));
+
+    private static void CreateCore(IAppPathProvider paths, string destination)
     {
         var temp = destination + ".tmp";
         try
@@ -152,8 +155,8 @@ internal static class DataBackupArchive
                 if (Directory.Exists(oldPresets)) Directory.Delete(oldPresets, true);
                 if (Directory.Exists(oldImages)) Directory.Delete(oldImages, true);
             }
-            catch (IOException) { }
-            catch (UnauthorizedAccessException) { }
+            catch (IOException ex) { global::System.Diagnostics.Trace.WriteLine($"[DataBackupArchive] Backup cleanup: {ex}"); }
+            catch (UnauthorizedAccessException ex) { global::System.Diagnostics.Trace.WriteLine($"[DataBackupArchive] Backup cleanup: {ex}"); }
         }
         finally
         {

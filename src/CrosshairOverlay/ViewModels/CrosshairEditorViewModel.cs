@@ -41,7 +41,7 @@ public sealed partial class CrosshairEditorViewModel : ObservableObject, IDispos
         _useDarkPreviewBackground = settings.Current.PreviewShowDarkBackground;
         Types = BuildTypes();
         Shapes = BuildShapes();
-        TranslationSource.Instance.PropertyChanged += OnLanguageChanged;
+        PropertyChangedEventManager.AddHandler(TranslationSource.Instance, OnLanguageChanged, string.Empty);
     }
 
     /// <summary>Khung preview dùng chung renderer với overlay, nên hai bên không thể lệch nhau.</summary>
@@ -351,7 +351,7 @@ public sealed partial class CrosshairEditorViewModel : ObservableObject, IDispos
         CancelPreviewBackgroundLoad();
         CustomPreviewBackgroundImage = null;
 
-        TranslationSource.Instance.PropertyChanged -= OnLanguageChanged;
+        PropertyChangedEventManager.RemoveHandler(TranslationSource.Instance, OnLanguageChanged, string.Empty);
         if (Profile is not null) ProfileNotifications.Hook(Profile, OnProfilePartChanged, subscribe: false);
     }
 }

@@ -296,8 +296,9 @@ public sealed class GameProfileActivationTests
             finally { Dispatcher.CurrentDispatcher.InvokeShutdown(); }
         });
         thread.SetApartmentState(ApartmentState.STA);
+        thread.IsBackground = true;
         thread.Start();
-        thread.Join();
+        Assert.True(thread.Join(TimeSpan.FromSeconds(10)), "Test worker exceeded its 10-second limit.");
         if (failure is not null) throw new Xunit.Sdk.XunitException(failure.ToString());
     }
 

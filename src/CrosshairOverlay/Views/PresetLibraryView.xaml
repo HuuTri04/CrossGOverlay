@@ -7,7 +7,7 @@
              d:DataContext="{d:DesignInstance Type=vm:PresetLibraryViewModel}"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="d">
+             mc:Ignorable="d" TextOptions.TextFormattingMode="Ideal">
 
     <UserControl.Resources>
         <!--
@@ -26,6 +26,13 @@
 
                     <ctl:CrosshairThumbnail Grid.Row="0" Profile="{Binding PreviewProfile, Mode=OneWay}"
                                             Renderer="{Binding Renderer, Mode=OneWay}"/>
+                    <ToggleButton Grid.Row="0" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                  Style="{StaticResource FavoriteStarToggle}"
+                                  IsChecked="{Binding IsFavorite, Mode=OneWay}"
+                                  Command="{Binding DataContext.ToggleFavoriteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                  CommandParameter="{Binding}" ToolTip="{loc:Loc Library_CatFavorites}"
+                                  AutomationProperties.Name="{Binding Name, Mode=OneWay}"
+                                  AutomationProperties.HelpText="{loc:Loc Library_CatFavorites}"/>
 
                     <TextBlock Grid.Row="1" Margin="2,7,2,6" Text="{Binding Name, Mode=OneWay}" ToolTip="{Binding Name, Mode=OneWay}"
                                FontSize="12.5" TextTrimming="CharacterEllipsis"/>

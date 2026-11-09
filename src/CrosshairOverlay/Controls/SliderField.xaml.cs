@@ -1,6 +1,8 @@
 ﻿using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Data;
 using System.Windows.Input;
 using CrosshairOverlay.Core.Models;
 
@@ -26,6 +28,8 @@ public partial class SliderField : UserControl
     public SliderField()
     {
         InitializeComponent();
+        TrackSlider.AddHandler(Thumb.DragCompletedEvent,
+            new DragCompletedEventHandler(OnSliderDragCompleted));
         UpdateSliderStep();
         SyncTextFromValue();
     }
@@ -71,6 +75,9 @@ public partial class SliderField : UserControl
     }
 
     private void OnSliderPreviewMouseDown(object sender, MouseButtonEventArgs e) => TrackSlider.Focus();
+
+    private void OnSliderDragCompleted(object sender, DragCompletedEventArgs e) =>
+        BindingOperations.GetBindingExpression(TrackSlider, Slider.ValueProperty)?.UpdateSource();
 
     private void OnLabelPreviewMouseDown(object sender, MouseButtonEventArgs e)
     {

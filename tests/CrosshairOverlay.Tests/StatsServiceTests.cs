@@ -100,7 +100,8 @@ public sealed class StatsServiceTests
                 NullLogger<StatsService>.Instance);
             await service.StartAsync();
             overlay.SetVisible(true);
-            await Task.Delay(30);
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            await Task.Delay(30, timeout.Token);
             library.SetActive(second);
             overlay.SetVisible(false);
 

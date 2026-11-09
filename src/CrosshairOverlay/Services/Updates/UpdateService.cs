@@ -2,6 +2,7 @@
 using System.IO.Compression;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using CrosshairOverlay.Core.Abstractions;
@@ -141,6 +142,8 @@ public sealed class UpdateService : IUpdateService, IDisposable
         }
 
         string? chosen = null;
+        string? sha256 = null;
+        var expectedName = $"CrossGOverlay-{latest}-win-x64.zip";
 
         foreach (var asset in assets.EnumerateArray())
         {
@@ -148,26 +151,27 @@ public sealed class UpdateService : IUpdateService, IDisposable
             var url = asset.TryGetProperty("browser_download_url", out var u) ? u.GetString() : null;
 
             if (name is null || url is null) continue;
-            if (!name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)) continue;
-
-            if (name.Contains("win-x64", StringComparison.OrdinalIgnoreCase))
-            {
-                chosen = url;
-                break;
-            }
-
-            chosen ??= url;
+            if (!name.Equals(expectedName, StringComparison.OrdinalIgnoreCase)) continue;
+            chosen = url;
+            var digest = asset.TryGetProperty("digest", out var d) ? d.GetString() : null;
+            if (digest is not null && digest.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase))
+                sha256 = digest[7..];
+            break;
         }
 
         if (chosen is null)
         {
             return (new UpdateCheck(UpdateCheckStatus.Failed),
-                $"bản {latest} không có gói .zip nào (bản phát hành dạng thư mục bắt buộc phải kèm .zip)");
+                $"bản {latest} thiếu gói {expectedName}");
         }
+
+        if (!IsValidSha256(sha256))
+            return (new UpdateCheck(UpdateCheckStatus.Failed),
+                $"gói {expectedName} không có SHA-256 hợp lệ trong GitHub Release asset");
 
         var page = release.TryGetProperty("html_url", out var h) ? h.GetString() : null;
         var notes = release.TryGetProperty("body", out var b) ? b.GetString() : null;
-        var update = new UpdateInfo(latest, chosen, page ?? chosen, (notes ?? string.Empty).Trim());
+        var update = new UpdateInfo(latest, chosen, page ?? chosen, (notes ?? string.Empty).Trim(), sha256);
 
         return (new UpdateCheck(UpdateCheckStatus.UpdateAvailable, update), $"có bản {latest}");
     }
@@ -180,6 +184,9 @@ public sealed class UpdateService : IUpdateService, IDisposable
         var text = tag.Trim().TrimStart('v', 'V');
         return Version.TryParse(text, out var version) ? version : null;
     }
+
+    private static bool IsValidSha256(string? hash) =>
+        hash is { Length: 64 } && hash.All(Uri.IsHexDigit);
 
     public async Task<bool> DownloadAndApplyAsync(
         UpdateInfo update, IProgress<double>? progress = null, CancellationToken cancellationToken = default)
@@ -195,36 +202,51 @@ public sealed class UpdateService : IUpdateService, IDisposable
         }
 
         var exeName = Path.GetFileName(currentExe);
-        var package = Path.Combine(Path.GetTempPath(), $"CrosshairOverlay-{update.Version}.zip");
+        if (!IsValidSha256(update.Sha256))
+            throw new InvalidDataException("Bản phát hành không có SHA-256 hợp lệ; không thể cập nhật an toàn.");
+
+        var package = Path.Combine(Path.GetTempPath(), $"CrossGOverlay-{update.Version}-{Guid.NewGuid():N}.zip");
         var staging = Path.Combine(Path.GetTempPath(), $"CrosshairOverlay-update-{update.Version}-{Guid.NewGuid():N}");
 
-        await DownloadAsync(update.DownloadUrl, package, progress, cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await DownloadAsync(update.DownloadUrl, package, progress, cancellationToken, update.Sha256)
+                .ConfigureAwait(false);
 
-        // Giải nén TRƯỚC khi thoát: gói hỏng thì báo lỗi ngay khi ứng dụng còn chạy, thay vì để
-        // script chép dở một thư mục hỏng đè lên bản đang dùng tốt. ExtractToDirectory tự chặn
-        // mục nén trỏ ra ngoài thư mục đích (zip slip).
-        await Task.Run(() => ZipFile.ExtractToDirectory(package, staging), cancellationToken).ConfigureAwait(false);
+            // Giải nén TRƯỚC khi thoát: gói hỏng thì báo lỗi khi ứng dụng còn chạy.
+            // ExtractToDirectory chặn mục nén trỏ ra ngoài thư mục đích (zip slip).
+            await Task.Run(() => ZipFile.ExtractToDirectory(package, staging), cancellationToken).ConfigureAwait(false);
 
-        var appRoot = FindAppRoot(staging, exeName);
-        if (appRoot is null)
+            var appRoot = FindAppRoot(staging, exeName);
+            if (appRoot is null || !File.Exists(Path.Combine(appRoot, "CrossGOverlay.dll")))
+                throw new InvalidDataException(Localization.Tr.Format("Update_ErrPackage", exeName));
+
+            // Fail while the current application is still running if the install directory is read-only.
+            var probe = Path.Combine(installDirectory, $".crossgo-update-{Guid.NewGuid():N}.tmp");
+            try { File.WriteAllBytes(probe, []); }
+            finally { TryDeleteFile(probe); }
+
+            cancellationToken.ThrowIfCancellationRequested();
+            var script = WriteSwapScript(installDirectory, appRoot, exeName, staging, package,
+                Environment.ProcessId);
+
+            using var swap = global::System.Diagnostics.Process.Start(new global::System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "cmd.exe",
+                Arguments = $"/c \"{script}\"",
+                CreateNoWindow = true,
+                UseShellExecute = false,
+            }) ?? throw new IOException("Không khởi chạy được script cập nhật.");
+
+            _logger.LogInformation("Đã bàn giao cho script cập nhật: {Script}", script);
+            return true;
+        }
+        catch
         {
             TryDeleteDirectory(staging);
             TryDeleteFile(package);
-            throw new InvalidDataException(Localization.Tr.Format("Update_ErrPackage", exeName));
+            throw;
         }
-
-        var script = WriteSwapScript(installDirectory, appRoot, exeName, staging, package);
-
-        global::System.Diagnostics.Process.Start(new global::System.Diagnostics.ProcessStartInfo
-        {
-            FileName = "cmd.exe",
-            Arguments = $"/c \"{script}\"",
-            CreateNoWindow = true,
-            UseShellExecute = false,
-        });
-
-        _logger.LogInformation("Đã bàn giao cho script cập nhật: {Script}", script);
-        return true;
     }
 
     /// <summary>
@@ -278,7 +300,8 @@ public sealed class UpdateService : IUpdateService, IDisposable
     /// không có phần trăm để báo, chỉ báo lúc xong.
     /// </remarks>
     internal async Task DownloadAsync(
-        string url, string destination, IProgress<double>? progress, CancellationToken cancellationToken)
+        string url, string destination, IProgress<double>? progress, CancellationToken cancellationToken,
+        string? expectedSha256 = null)
     {
         using var response = await _http
             .GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
@@ -292,9 +315,11 @@ public sealed class UpdateService : IUpdateService, IDisposable
         // script sau đó lại đem chép đè lên bản đang chạy tốt.
         var partial = destination + ".part";
 
-        await using (var source = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false))
-        await using (var target = File.Create(partial))
+        try
         {
+            await using var source = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+            await using var target = File.Create(partial);
+            using var hasher = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
             var buffer = new byte[81920];
             long received = 0;
             var lastPercent = -1;
@@ -305,6 +330,7 @@ public sealed class UpdateService : IUpdateService, IDisposable
                 if (read == 0) break;
 
                 await target.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
+                hasher.AppendData(buffer, 0, read);
                 received += read;
 
                 if (progress is null || total is not > 0) continue;
@@ -316,9 +342,26 @@ public sealed class UpdateService : IUpdateService, IDisposable
                 lastPercent = percent;
                 progress.Report(percent / 100d);
             }
+            if (total is { } expectedLength && received != expectedLength)
+                throw new InvalidDataException("Gói cập nhật tải chưa đủ số byte đã công bố.");
+            if (expectedSha256 is not null &&
+                (!IsValidSha256(expectedSha256) ||
+                 !CryptographicOperations.FixedTimeEquals(
+                     hasher.GetHashAndReset(), Convert.FromHexString(expectedSha256))))
+                throw new InvalidDataException("SHA-256 của gói cập nhật không khớp GitHub Release asset.");
+        }
+        catch
+        {
+            TryDeleteFile(partial);
+            throw;
         }
 
-        File.Move(partial, destination, overwrite: true);
+        try { File.Move(partial, destination, overwrite: true); }
+        catch
+        {
+            TryDeleteFile(partial);
+            throw;
+        }
         progress?.Report(1d);
     }
 
@@ -327,12 +370,12 @@ public sealed class UpdateService : IUpdateService, IDisposable
     /// nó khi đang chạy, nên phải nhờ một tiến trình khác làm việc đó sau khi ta đã thoát.
     /// </summary>
     private static string WriteSwapScript(
-        string installDirectory, string appRoot, string exeName, string staging, string package)
+        string installDirectory, string appRoot, string exeName, string staging, string package, int processId)
     {
         var scriptPath = Path.Combine(Path.GetTempPath(), $"CrosshairOverlay-update-{Guid.NewGuid():N}.bat");
         File.WriteAllText(
             scriptPath,
-            BuildSwapScript(installDirectory, appRoot, exeName, staging, package),
+            BuildSwapScript(installDirectory, appRoot, exeName, staging, package, processId),
             new UTF8Encoding(false));
         return scriptPath;
     }
@@ -352,38 +395,68 @@ public sealed class UpdateService : IUpdateService, IDisposable
     /// </list>
     /// </remarks>
     internal static string BuildSwapScript(
-        string installDirectory, string appRoot, string exeName, string staging, string package)
+        string installDirectory, string appRoot, string exeName, string staging, string package,
+        int processId = 0, int maxRetries = 10, bool launchAfterUpdate = true)
     {
         var processName = Path.GetFileNameWithoutExtension(exeName);
+        var taskFilter = processId > 0 ? $"PID eq {processId}" : $"imagename eq {processName}.exe";
+        var taskMatch = processId > 0 ? processId.ToString() : $"{processName}.exe";
 
         // robocopy hiểu dấu \ cuối trong "C:\dir\" là thoát ký tự ngoặc kép — phải bỏ đi.
         var source = appRoot.TrimEnd('\\');
         var target = installDirectory.TrimEnd('\\');
+        var backup = staging + "-backup";
+        var launchCommand = launchAfterUpdate
+            ? $"start \"\" \"{target}\\{exeName}\""
+            : "rem Launch suppressed by test fixture.";
 
         return $"""
             @echo off
             chcp 65001 >nul
             rem Chờ ứng dụng thoát hẳn trước khi đụng vào file của nó.
             :wait
-            tasklist /fi "imagename eq {processName}.exe" | find /i "{processName}.exe" >nul
+            tasklist /fi "{taskFilter}" | find /i "{taskMatch}" >nul
             if not errorlevel 1 (
                 timeout /t 1 /nobreak >nul
                 goto wait
             )
 
+            ping 127.0.0.1 -n 3 >nul
+            rem Giữ bản cũ để khôi phục nếu một file bị khóa giữa lúc sao chép.
+            robocopy "{target}" "{backup}" /E /IS /IT /XD "{target}\presets" "{target}\userdata" /XF "settings.json" "appsettings.json" /R:2 /W:1 /NFL /NDL /NJH /NJS /NP >nul
+            if errorlevel 8 goto backup_failed
             set /a tries=0
             :copy
-            robocopy "{source}" "{target}" /E /IS /IT /R:2 /W:1 /NFL /NDL /NJH /NJS /NP >nul
+            robocopy "{source}" "{target}" /E /IS /IT /XD "{source}\presets" "{source}\userdata" /XF "settings.json" "appsettings.json" /R:2 /W:1 /NFL /NDL /NJH /NJS /NP >nul
             if not errorlevel 8 goto launch
             set /a tries+=1
-            if %tries% geq 10 goto launch
+            if %tries% geq {maxRetries} goto copy_failed
             timeout /t 1 /nobreak >nul
             goto copy
 
             :launch
-            start "" "{target}\{exeName}"
+            {launchCommand}
 
+            goto cleanup
+
+            :copy_failed
+            echo CrossGOverlay update failed: robocopy could not replace all files. 1>&2
+            robocopy "{backup}" "{target}" /E /IS /IT /R:2 /W:1 /NFL /NDL /NJH /NJS /NP >nul
+            if errorlevel 8 goto restore_failed
+            goto cleanup
+
+            :backup_failed
+            echo CrossGOverlay update failed: could not back up the current installation. 1>&2
+            goto cleanup
+
+            :restore_failed
+            echo CrossGOverlay restore failed. Backup kept at {backup} 1>&2
+            del "{package}" >nul 2>&1
+            (goto) 2>nul & del "%~f0"
+
+            :cleanup
             rmdir /s /q "{staging}" >nul 2>&1
+            rmdir /s /q "{backup}" >nul 2>&1
             del "{package}" >nul 2>&1
 
             rem Tự xoá: cmd đọc file theo từng dòng nên dòng này chạy được chính nó.

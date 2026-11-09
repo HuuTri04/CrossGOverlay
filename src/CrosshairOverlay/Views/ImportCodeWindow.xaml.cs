@@ -87,8 +87,9 @@ public partial class ImportCodeWindow : Window
                 return (decoded && result is not null, result);
             });
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            global::System.Diagnostics.Trace.WriteLine($"[ImportCode] Image code parsing failed: {ex}");
             ok = false;
         }
 
@@ -125,7 +126,7 @@ public partial class ImportCodeWindow : Window
     private static readonly TimeSpan ParseDebounce = TimeSpan.FromMilliseconds(120);
 
     /// <summary>
-    /// Mã nội bộ CGO-CH. Nhẹ hơn mã ảnh rất nhiều (preset chỉ vài KB JSON) nên giải ngay tại chỗ.
+    /// Mã nội bộ CGO-CH/CGO-CH2. Payload nhỏ hơn mã ảnh nên giải ngay tại chỗ.
     /// </summary>
     private void ParseAppCode(string text)
     {

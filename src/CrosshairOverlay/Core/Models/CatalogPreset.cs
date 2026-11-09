@@ -57,6 +57,7 @@ public sealed record CatalogPreset
 public static class CatalogCategories
 {
     public const string All = "All";
+    public const string Favorites = "Favorites";
     public const string ProPlayers = "Pro Players";
     public const string Dots = "Dots";
     public const string Crosses = "Crosses";

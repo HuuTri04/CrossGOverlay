@@ -1,28 +1,17 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 
 namespace CrosshairOverlay.Services.Storage;
 
 /// <summary>Cấu hình System.Text.Json dùng chung cho mọi file của ứng dụng.</summary>
 /// <remarks>
-/// Cố tình dùng đường reflection thay vì <c>JsonSerializerContext</c> sinh sẵn lúc biên dịch.
-/// Đã thử và phải bỏ, vì hai lý do độc lập nhau, mỗi lý do đều đủ để loại:
-///
-/// <list type="number">
-///   <item>
-///     Các model ở đây dùng <c>[ObservableProperty]</c>. Mọi source generator đều chạy trên
-///     CÙNG một bản compilation gốc và không thấy output của nhau, nên bộ sinh mã JSON không
-///     hề biết những property mà CommunityToolkit.Mvvm sinh ra. Kết quả không phải lỗi biên
-///     dịch mà là mất dữ liệu im lặng: file preset ghi ra thiếu hẳn Name, Shape, Color và toàn
-///     bộ cờ bool. Đã kiểm chứng bằng cách chạy thật — chỉ những property viết tay còn sót lại.
-///   </item>
-///   <item>
-///     Lợi ích chính của source generator là bỏ reflection để trim được, mà ứng dụng WPF thì
-///     không trim được (NETSDK1168, xem .csproj). Nên cái giá phải trả không đổi lấy được gì.
-///   </item>
-/// </list>
-///
-/// Muốn quay lại hướng đó thì phải viết tay toàn bộ property của lớp model trước đã.
+/// Chỉ dùng generated metadata cho model có property viết tường minh. Các model
+/// MVVM vẫn dùng reflection metadata vì source generator JSON không nhìn thấy
+/// property do CommunityToolkit.Mvvm sinh trong cùng compilation.
+/// Cả hai generator chạy trên cùng compilation gốc, nên JSON generator không thấy
+/// các property do MVVM Toolkit sinh ra. Dùng nó cho AppSettings hoặc CrosshairProfile
+/// sẽ âm thầm bỏ sót dữ liệu; fallback reflection giữ nguyên file người dùng.
 /// </remarks>
 internal static class AppJson
 {
@@ -47,9 +36,11 @@ internal static class AppJson
         // Enum ghi bằng tên ("TShape") thay vì số — sửa tay và diff git đều dễ hơn.
         options.Converters.Add(new JsonStringEnumConverter());
 
-        // Share one immutable resolver/cache across settings and preset files. A generated
-        // context would miss properties emitted by CommunityToolkit.Mvvm for these models.
-        options.MakeReadOnly(populateMissingResolver: true);
+        // The context covers explicit DTOs; MVVM-generated properties need reflection.
+        // Keep the resolver immutable and shared across every settings/preset operation.
+        options.TypeInfoResolverChain.Add(AppJsonSerializerContext.Default);
+        options.TypeInfoResolverChain.Add(new DefaultJsonTypeInfoResolver());
+        options.MakeReadOnly();
 
         return options;
     }

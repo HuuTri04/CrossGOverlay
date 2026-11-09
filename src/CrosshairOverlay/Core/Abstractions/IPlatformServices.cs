@@ -95,6 +95,9 @@ public interface ITrayIconController : IDisposable
 {
     void Initialize();
 
+    /// <summary>Đăng ký Windows App Notifications sau khi cửa sổ đầu tiên đã hiển thị.</summary>
+    void InitializeNotifications();
+
     /// <summary>Cập nhật icon, dấu tích trong menu và tooltip.</summary>
     /// <param name="overlayEnabled">
     /// Người dùng có BẬT overlay không. Quyết định màu icon và dấu tích — KHÔNG phải overlay có
@@ -106,12 +109,15 @@ public interface ITrayIconController : IDisposable
     void UpdateState(bool overlayEnabled, bool overlayVisible, string activePresetName);
 
     /// <summary>Bong bóng thông báo, dùng cho cảnh báo Exclusive Fullscreen và lỗi hotkey.</summary>
-    void ShowNotification(string title, string message, bool isWarning = false);
+    void ShowNotification(string title, string message, bool isWarning = false,
+        NotificationCategory category = NotificationCategory.AppStatus);
 
     event EventHandler? OpenSettingsRequested;
     event EventHandler? ToggleOverlayRequested;
     event EventHandler? ExitRequested;
 }
+
+public enum NotificationCategory { MinimizeToTray, PresetChanged, AppStatus }
 
 /// <summary>Nút người dùng bấm trong hộp thoại ba lựa chọn.</summary>
 public enum DialogChoice
@@ -127,6 +133,12 @@ public enum DialogChoice
 public interface IDialogService
 {
     void ShowSettingsWindow();
+
+    /// <summary>
+    /// Prepares the saved backdrop before showing Settings. The optional callback runs on
+    /// the UI thread after preparation and immediately before the window is shown.
+    /// </summary>
+    Task ShowSettingsWindowAsync(Action<System.Windows.Window>? beforeShow = null);
 
     void ShowMessage(string title, string message);
 

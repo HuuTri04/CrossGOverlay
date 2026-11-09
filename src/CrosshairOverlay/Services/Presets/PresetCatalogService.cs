@@ -16,13 +16,6 @@ public sealed class PresetCatalogService : IPresetCatalogService
     /// <summary>Đường dẫn tương đối tới thư mục chạy, khớp mục Content trong csproj.</summary>
     public const string RelativePath = "Data/builtin_presets.json";
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        ReadCommentHandling = JsonCommentHandling.Skip,
-        AllowTrailingCommas = true,
-    };
-
     private static readonly HashSet<string> KnownShapes =
         new(["ClassicCross", "TShape", "XShape", "Dot", "Circle", "Square"], StringComparer.Ordinal);
 
@@ -97,7 +90,7 @@ public sealed class PresetCatalogService : IPresetCatalogService
         {
             await using var stream = new FileStream(
                 _filePath, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: 64 * 1024, useAsync: true);
-            raw = await JsonSerializer.DeserializeAsync<List<CatalogPreset>>(stream, JsonOptions, cancellationToken)
+            raw = await JsonSerializer.DeserializeAsync<List<CatalogPreset>>(stream, AppJson.Options, cancellationToken)
                 .ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)

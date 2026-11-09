@@ -32,7 +32,7 @@ $ErrorActionPreference = "Stop"
 $repo = Split-Path $PSScriptRoot -Parent
 $project = Join-Path $repo "src\CrosshairOverlay"
 $csproj = Join-Path $project "CrosshairOverlay.csproj"
-$publishDir = Join-Path $project "bin\Release\net8.0-windows\win-x64\publish"
+$publishDir = Join-Path $project "bin\Release\net8.0-windows10.0.19041.0\win-x64\publish"
 
 $version = ([xml](Get-Content $csproj -Raw)).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
 if (-not $version) { throw "Khong doc duoc <Version> trong $csproj" }
@@ -41,6 +41,15 @@ $name = "CrossGOverlay-$version-win-x64"
 $artifacts = Join-Path $repo "artifacts"
 $stage = Join-Path $artifacts $name
 $zip = Join-Path $artifacts "$name.zip"
+
+# These paths are recursively removed below. Resolve them before the first delete.
+$repoFull = [IO.Path]::GetFullPath($repo).TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
+foreach ($candidate in @((Join-Path $project "obj\Release"), (Join-Path $project "bin\Release"), $stage, $zip)) {
+    $resolved = [IO.Path]::GetFullPath($candidate)
+    if (-not $resolved.StartsWith($repoFull, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Refusing to delete outside workspace: $resolved"
+    }
+}
 
 Write-Host "Phien ban: $version"
 
@@ -85,6 +94,9 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
 Remove-Item -LiteralPath $stage -Recurse -Force
 
 $files = (Get-ChildItem -LiteralPath $publishDir -Recurse -File | Measure-Object Length -Sum)
+$zipInfo = Get-Item -LiteralPath $zip
+$sha256 = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash
 Write-Host ""
 Write-Host ("Thu muc publish : {0} file, {1:0.0} MB" -f $files.Count, ($files.Sum / 1MB))
-Write-Host ("Goi phat hanh   : {0} ({1:0.0} MB)" -f $zip, ((Get-Item $zip).Length / 1MB)) -ForegroundColor Green
+Write-Host ("Goi phat hanh   : {0} ({1:0.0} MB; {2} bytes)" -f $zip, ($zipInfo.Length / 1MB), $zipInfo.Length) -ForegroundColor Green
+Write-Host "SHA-256         : $sha256" -ForegroundColor Green

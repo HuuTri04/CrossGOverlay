@@ -7,14 +7,15 @@ using CrosshairOverlay.Services.Storage;
 namespace CrosshairOverlay.Services.Import;
 
 /// <summary>
-/// Mã chia sẻ NỘI BỘ của ứng dụng cho tâm ngắm vẽ: <c>CGO-CH;&lt;base64 gzip&gt;;c&lt;crc32&gt;</c>.
+/// Mã chia sẻ nội bộ: CGO-CH2 dùng binary v1; CGO-CH cũ dùng JSON/GZip.
 /// </summary>
 /// <remarks>
 /// <para>
 /// Mã Valorant và CS2 chỉ mô tả được phần giao nhau nghèo nàn giữa hai game: một lớp nhánh, chấm
 /// giữa, viền. Preset của ứng dụng còn có vòng tròn, góc xoay, hai lớp nhánh, độ dài dọc riêng,
 /// bật/tắt từng vạch, bo đầu vạch — gửi cho người dùng CrossGOverlay khác qua mã game là mất sạch.
-/// Mã này giữ ĐÚNG mọi thứ vì nó chở nguyên preset ở dạng JSON đã nén.
+/// Mã CGO-CH2 giữ các thông số preset bằng binary không giảm độ chính xác;
+/// mã CGO-CH cũ vẫn được đọc từ JSON đã nén.
 /// </para>
 /// <para>
 /// Cùng họ với <see cref="ImageCrosshairCode"/> (tâm ngắm ảnh) và dùng chung cách ký checksum, nên
@@ -23,18 +24,35 @@ namespace CrosshairOverlay.Services.Import;
 /// </remarks>
 public static class AppCrosshairCode
 {
+    /// <summary>Legacy JSON/GZip prefix, retained for existing shared codes.</summary>
     public const string Prefix = "CGO-CH;";
+    public const string BinaryPrefix = "CGO-CH2;";
+    public const string CurrentPrefix = BinaryPrefix;
 
     /// <summary>
-    /// Chặn "bom nén": một mã vài KB có thể giải ra hàng trăm MB. Preset thật chưa tới 4 KB JSON.
+    /// Chặn "bom nén" của mã cũ và giới hạn payload binary của mã mới.
     /// </summary>
     public const int MaxJsonBytes = 256 * 1024;
 
-    public static bool IsAppCode(string? text) =>
-        text is not null && text.TrimStart().StartsWith(Prefix, StringComparison.OrdinalIgnoreCase);
+    public static bool IsAppCode(string? text) => text is not null &&
+        (text.TrimStart().StartsWith(Prefix, StringComparison.OrdinalIgnoreCase) ||
+         text.TrimStart().StartsWith(BinaryPrefix, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>Dựng mã từ preset. Ảnh KHÔNG đi theo mã này — tâm ngắm ảnh dùng <see cref="ImageCrosshairCode"/>.</summary>
     public static string Encode(CrosshairProfile profile)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+
+        // Image codes use CGO-IMG. Preserve the old rejection path for callers
+        // that mistakenly request a drawn-code export from an image profile.
+        if (profile.Type != CrosshairType.Standard) return EncodeLegacy(profile);
+        var payload = BinaryCrosshairCode.Encode(profile);
+        var base64 = Convert.ToBase64String(payload).TrimEnd('=');
+        return ShareCodeChecksum.Append(BinaryPrefix + base64, BinaryPrefix);
+    }
+
+    /// <summary>Former encoder, kept for compatibility tests and old share codes.</summary>
+    public static string EncodeLegacy(CrosshairProfile profile)
     {
         ArgumentNullException.ThrowIfNull(profile);
 
@@ -71,21 +89,42 @@ public static class AppCrosshairCode
     {
         profile = null;
 
-        if (!IsAppCode(text))
+        if (!IsAppCode(text) || text!.Length > 500_000)
         {
-            reason = "Không phải mã " + Prefix;
+            reason = "Không phải mã CGO-CH hợp lệ.";
             return false;
         }
 
-        var normalized = new string([.. text!.Where(c => !char.IsWhiteSpace(c))]);
+        var normalized = new string([.. text.Where(c => !char.IsWhiteSpace(c))]);
+        var binary = normalized.StartsWith(BinaryPrefix, StringComparison.OrdinalIgnoreCase);
+        var prefix = binary ? BinaryPrefix : Prefix;
 
-        if (!ShareCodeChecksum.TryVerify(normalized.AsSpan(Prefix.Length), out var signedPart, out reason))
+        if (!ShareCodeChecksum.TryVerify(normalized.AsSpan(prefix.Length), out var signedPart, out reason))
             return false;
 
-        if (!TryFromBase64(signedPart, out var payload, out reason)) return false;
-        if (!TryGunzip(payload, out var json, out reason)) return false;
-
-        var decoded = JsonSerializer.Deserialize<CrosshairProfile>(json, AppJson.Options);
+        CrosshairProfile? decoded;
+        if (binary)
+        {
+            if (signedPart.Length % 4 == 1 || signedPart.Length > 350_000)
+            {
+                reason = "Độ dài mã binary không hợp lệ.";
+                return false;
+            }
+            var padded = signedPart.PadRight((signedPart.Length + 3) & ~3, '=');
+            if (!TryFromBase64(padded, out var payload, out reason)) return false;
+            if (payload.Length > MaxJsonBytes)
+            {
+                reason = "Mã binary vượt giới hạn kích thước.";
+                return false;
+            }
+            decoded = BinaryCrosshairCode.Decode(payload);
+        }
+        else
+        {
+            if (!TryFromBase64(signedPart, out var payload, out reason)) return false;
+            if (!TryGunzip(payload, out var json, out reason)) return false;
+            decoded = JsonSerializer.Deserialize<CrosshairProfile>(json, AppJson.Options);
+        }
         if (decoded is null)
         {
             reason = "JSON rỗng.";

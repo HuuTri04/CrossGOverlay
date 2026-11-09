@@ -33,13 +33,17 @@ internal sealed class AppBootstrapper
     private bool _behaviorStarted;
     private bool _backgroundServicesStarted;
     private bool _shutdownStarted;
+    private bool _settingsReady;
+    private bool _trayReady;
+    private bool _trayEventsAttached;
+    private bool _openSettingsWhenReady;
     private string? _restoreError;
     private RgbSyncService? _rgbSyncService;
 
     /// <summary>Từ hàm dựng tới OnStartup: đọc App.xaml (gồm các ResourceDictionary gộp) và khởi động vòng lặp.</summary>
     private double _appXamlMs;
 
-    /// <summary>Màn hình chờ, chỉ tồn tại trong lúc khởi động ở chế độ mở cửa sổ.</summary>
+    /// <summary>Loading window WPF, chỉ tồn tại trong lúc mở Settings lần đầu.</summary>
     private SplashWindow? _splash;
 
     private void OnSplashFirstFrame(object? sender, EventArgs e)
@@ -53,9 +57,9 @@ internal sealed class AppBootstrapper
                 "Màn hình chờ có khung hình đầu sau {Elapsed:0} ms kể từ khi tiến trình khởi động.",
                 (DateTime.Now - process.StartTime).TotalMilliseconds);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // Chỉ là số đo.
+            _log?.LogDebug(ex, "Không thể đo thời điểm khung hình đầu của splash.");
         }
     }
 
@@ -97,7 +101,7 @@ internal sealed class AppBootstrapper
         try
         {
             var paths = AppPathProvider.FromStorageLocation();
-            paths.EnsureCreated();
+            await Task.Run(paths.EnsureCreated, App.ShutdownToken);
 
             _logging = AppLogging.Create(paths);
             boot.Mark("log");
@@ -137,7 +141,7 @@ internal sealed class AppBootstrapper
             }
 
             var settings = _provider.GetRequiredService<IAppSettingsService>();
-            await settings.LoadAsync().ConfigureAwait(true);
+            await settings.LoadAsync(App.ShutdownToken).ConfigureAwait(true);
             UiAnimationFrameRate.TargetFps = settings.Current.UiTargetFps;
             _logging.SetLevel(settings.Current.LogLevel);
             boot.Mark("cài đặt");
@@ -153,7 +157,8 @@ internal sealed class AppBootstrapper
             var showWindow = _arguments.RestoreArchive is not null || !settings.Current.StartMinimizedToTray;
 
             var library = _provider.GetRequiredService<IPresetLibrary>();
-            await library.InitializeAsync(settings.Current.ActivePresetId, settings.Current.PresetOrder).ConfigureAwait(true);
+            await library.InitializeAsync(settings.Current.ActivePresetId, settings.Current.PresetOrder,
+                App.ShutdownToken).ConfigureAwait(true);
             library.OrderChanged += OnPresetOrderChanged;
             boot.Mark("preset");
 
@@ -179,31 +184,92 @@ internal sealed class AppBootstrapper
             await global::System.Windows.Threading.Dispatcher.Yield(global::System.Windows.Threading.DispatcherPriority.Background);
             boot.Mark("chờ overlay vẽ");
 
+            if (App.IsShuttingDown) return;
+
             if (showWindow)
             {
-                _splash = new SplashWindow();
-                _splash.FirstFrameRendered += OnSplashFirstFrame;
-                _splash.Show();
-                boot.Mark("màn hình chờ");
+                // Yêu cầu mở Settings từ instance thứ hai có thể đến trong lúc bootstrap.
+                // Không tạo một splash mới đè lên Settings đang hiển thị.
+                if (!_app.Windows.OfType<SettingsWindow>().Any(window => window.IsVisible))
+                {
+                    _splash = new SplashWindow();
+                    _splash.FirstFrameRendered += OnSplashFirstFrame;
+                    _splash.Show();
+                    boot.Mark("màn hình chờ");
 
-                _provider.GetRequiredService<IDialogService>().ShowSettingsWindow();
-                // Overlay là Window đầu tiên trong đường khởi động mới, nhưng không phải
-                // cửa sổ chính của app. Các thành phần khay/dialog cần HWND Settings bình thường.
-                _app.MainWindow = _app.Windows.OfType<SettingsWindow>().FirstOrDefault();
+                    await global::System.Windows.Threading.Dispatcher.Yield(
+                        global::System.Windows.Threading.DispatcherPriority.Background);
+                }
+
+                if (App.IsShuttingDown) return;
+
+                // Exit ở khay vẫn dùng được trong khi ảnh nền Settings đang giải mã.
+                StartTray();
+                boot.Mark("khay");
+                if (App.IsShuttingDown) return;
+
+                var openingSettings = _provider.GetRequiredService<IDialogService>().ShowSettingsWindowAsync(window =>
+                {
+                    // Gán MainWindow trước khi đóng Splash; OnExplicitShutdown giữ app sống trong tray.
+                    _app.MainWindow = window;
+                    if (_splash is { } splash)
+                    {
+                        splash.FirstFrameRendered -= OnSplashFirstFrame;
+                        splash.CloseQuietly();
+                        _splash = null;
+                    }
+                });
+                // Isolated Release fixture: exercise the same RequestShutdown path as
+                // the tray Exit command while the backdrop task is still pending.
+                if (Environment.GetEnvironmentVariable("CROSSGOVERLAY_BENCHMARK_ROOT") is not null
+                    && Environment.GetEnvironmentVariable("CROSSGOVERLAY_BENCHMARK_EXIT_DURING_PRELOAD") == "1")
+                    App.RequestShutdown();
+                await openingSettings;
+                if (App.IsShuttingDown) return;
                 boot.Mark("cửa sổ Settings");
-
-                // Splash đóng sau khung hình đầu của Settings để không để lại khoảng trống.
-                _splash?.CloseAfterFirstFrameOf(_app.Windows.OfType<SettingsWindow>().FirstOrDefault());
-                _splash = null;
 
                 await global::System.Windows.Threading.Dispatcher.Yield(global::System.Windows.Threading.DispatcherPriority.Background);
                 boot.Mark("chờ khung hình Settings");
+
+                // Shell registration can fail while Splash is the only WPF window.
+                // Retry once with the durable Settings HWND, without failing startup.
+                if (!_trayReady) StartTray();
+            }
+            else
+            {
+                StartTray();
+                boot.Mark("khay");
+                if (!_trayReady)
+                {
+                    _log?.LogError("Không thể khởi động ẩn xuống khay vì Windows Shell chưa tạo được tray icon.");
+                    App.RequestShutdown(1);
+                    return;
+                }
             }
 
-            StartTray();
-            boot.Mark("khay");
+            if (App.IsShuttingDown) return;
             InitializeBackgroundServices(settings);
             boot.Mark("phím tắt + dịch vụ nền");
+
+            if (_trayReady)
+            {
+                var tray = _provider.GetRequiredService<ITrayIconController>();
+                if (showWindow)
+                    _ = _app.Dispatcher.InvokeAsync(() => tray.InitializeNotifications(),
+                        global::System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+                else
+                    tray.InitializeNotifications(); // Overlay has already had a render turn.
+            }
+
+            // A second-instance signal can arrive while presets/services are still loading.
+            // Queue that request until both overlay and tray are ready, then use the same
+            // coalesced singleton window path as toast, hotkeys and the tray icon.
+            _settingsReady = true;
+            if (_openSettingsWhenReady)
+            {
+                _openSettingsWhenReady = false;
+                RequestOpenSettings();
+            }
 
             if (_restoreError is not null)
                 _provider.GetRequiredService<IDialogService>().ShowMessage(
@@ -218,7 +284,8 @@ internal sealed class AppBootstrapper
             if (!showWindow)
             {
                 _provider.GetRequiredService<ITrayIconController>()
-                    .ShowNotification(Core.AppInfo.DisplayName, Tr.Get("Tray_RunningInTray"));
+                    .ShowNotification(Core.AppInfo.DisplayName, Tr.Get("Tray_RunningInTray"),
+                        category: NotificationCategory.MinimizeToTray);
                 boot.Mark("thông báo khay");
             }
 
@@ -232,6 +299,13 @@ internal sealed class AppBootstrapper
             ScheduleUpdateCheck(settings);
             Core.Diagnostics.BenchmarkScenarioRunner.TryStart(
                 library, _provider.GetRequiredService<ITrayIconController>());
+            Core.Diagnostics.StressScenarioRunner.TryStart(
+                library, _provider.GetRequiredService<IDialogService>());
+        }
+        catch (OperationCanceledException) when (App.IsShuttingDown)
+        {
+            _splash?.CloseQuietly();
+            _splash = null;
         }
         catch (Exception ex)
         {
@@ -328,10 +402,28 @@ internal sealed class AppBootstrapper
             return false;
         }
 
-        guard.SecondInstanceLaunched += (_, _) =>
-            _provider!.GetRequiredService<IDialogService>().ShowSettingsWindow();
+        guard.SecondInstanceLaunched += (_, _) => RequestOpenSettings();
 
         return true;
+    }
+
+    private void RequestOpenSettings()
+    {
+        if (_shutdownStarted || App.IsShuttingDown || _app.Dispatcher.HasShutdownStarted) return;
+        if (!_app.Dispatcher.CheckAccess())
+        {
+            try { _ = _app.Dispatcher.BeginInvoke(new Action(RequestOpenSettings)); }
+            catch (InvalidOperationException) { } // The dispatcher began shutting down meanwhile.
+            return;
+        }
+
+        if (!_settingsReady)
+        {
+            _openSettingsWhenReady = true;
+            return;
+        }
+
+        _provider?.GetRequiredService<IDialogService>().ShowSettingsWindow();
     }
 
     /// <summary>
@@ -367,13 +459,25 @@ internal sealed class AppBootstrapper
 
     private void StartTray()
     {
+        if (_trayReady) return;
         var tray = _provider!.GetRequiredService<ITrayIconController>();
-        // COM notification activation may arrive as Register() completes. Attach first.
-        tray.OpenSettingsRequested += (_, _) =>
-            _provider!.GetRequiredService<IDialogService>().ShowSettingsWindow();
-        tray.ToggleOverlayRequested += (_, _) => ToggleOverlay();
-        tray.ExitRequested += (_, _) => App.RequestShutdown();
-        tray.Initialize();
+        if (!_trayEventsAttached)
+        {
+            // COM notification activation may arrive as Register() completes. Attach first.
+            tray.OpenSettingsRequested += (_, _) => RequestOpenSettings();
+            tray.ToggleOverlayRequested += (_, _) => ToggleOverlay();
+            tray.ExitRequested += (_, _) => App.RequestShutdown();
+            _trayEventsAttached = true;
+        }
+        try
+        {
+            tray.Initialize();
+            _trayReady = true;
+        }
+        catch (InvalidOperationException ex)
+        {
+            _log?.LogWarning(ex, "Không tạo được biểu tượng khay; sẽ thử lại khi Settings hiển thị.");
+        }
     }
 
     private void StartHotkeys(IAppSettingsService settings)
@@ -508,7 +612,7 @@ internal sealed class AppBootstrapper
                 break;
 
             case HotkeyAction.ShowSettingsWindow:
-                _provider.GetRequiredService<IDialogService>().ShowSettingsWindow();
+                RequestOpenSettings();
                 break;
 
             case HotkeyAction.ExitApplication:
@@ -617,6 +721,10 @@ internal sealed class AppBootstrapper
         settings.RequestSave();
 
         RefreshTrayState();
+        if (_settingsReady && settings.Current.NotifyOnPresetChanged)
+            _provider.GetRequiredService<ITrayIconController>().ShowNotification(
+                Core.AppInfo.DisplayName, Tr.Format("Tray_PresetChanged", active.Name),
+                category: NotificationCategory.PresetChanged);
     }
 
     /// <summary>
@@ -738,6 +846,19 @@ internal sealed class AppBootstrapper
         provider = _provider;
         var services = provider;
 
+        // Cancel image decode/blur before awaiting disk flushes. An unshown Settings
+        // window can already own a ViewModel while its backdrop is being prepared.
+        TryDuringExit("hủy preload Settings", () =>
+        {
+            foreach (var window in _app.Windows.OfType<SettingsWindow>().ToArray())
+            {
+                (window.DataContext as IDisposable)?.Dispose();
+                window.Close();
+            }
+            _splash?.CloseQuietly();
+            _splash = null;
+        });
+
         if (services is not null)
         {
             // Stop producers before flushing. No new callbacks may enqueue writes after this point.
@@ -766,6 +887,14 @@ internal sealed class AppBootstrapper
 
     private void FinishShutdown(ServiceProvider? provider, bool closeApplication)
     {
+        // Close while DI services are still alive. Closed disposes the Settings ViewModel
+        // and its tab-scoped performance monitor before the container is torn down.
+        TryDuringExit("đóng cửa sổ Settings", () =>
+        {
+            foreach (var window in _app.Windows.OfType<SettingsWindow>().ToArray())
+                window.Close();
+        });
+
         if (provider is not null)
         {
             if (_rgbSyncService is not null)
@@ -773,8 +902,10 @@ internal sealed class AppBootstrapper
 
             TryDuringExit("gỡ đăng ký sự kiện", () =>
             {
+                provider.GetRequiredService<IAppSettingsService>().Current.PropertyChanged -= OnVisibilitySettingChanged;
                 provider.GetRequiredService<IPresetLibrary>().ActiveChanged -= OnActivePresetChanged;
                 provider.GetRequiredService<IPresetLibrary>().OrderChanged -= OnPresetOrderChanged;
+                provider.GetRequiredService<IProfileAutoSwitcher>().ExclusiveFullscreenDetected -= OnExclusiveFullscreenDetected;
                 if (_backgroundServicesStarted)
                     provider.GetRequiredService<IHotkeyService>().HotkeyPressed -= OnHotkeyPressed;
             });

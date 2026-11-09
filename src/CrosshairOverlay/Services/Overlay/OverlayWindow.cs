@@ -115,8 +115,10 @@ internal sealed class OverlayWindow : Window
     {
         if (Handle == 0) return;
         var style = (long)NativeMethods.GetWindowLongPtr(Handle, Win32Constants.GWL_EXSTYLE);
-        const long required = Win32Constants.WS_EX_LAYERED | Win32Constants.WS_EX_TRANSPARENT;
-        if ((style & required) != required) ApplyOverlayExtendedStyles(Handle);
+        const long required = Win32Constants.WS_EX_LAYERED | Win32Constants.WS_EX_TRANSPARENT
+            | Win32Constants.WS_EX_TOOLWINDOW | Win32Constants.WS_EX_NOACTIVATE;
+        if ((style & required) != required || (style & Win32Constants.WS_EX_APPWINDOW) != 0)
+            ApplyOverlayExtendedStyles(Handle);
     }
 
     private static void ApplyOverlayExtendedStyles(nint hwnd)

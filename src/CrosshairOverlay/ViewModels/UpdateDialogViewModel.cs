@@ -28,8 +28,8 @@ public sealed partial class UpdateDialogViewModel : ObservableObject
         _update = update;
         _logger = logger;
 
-        CurrentVersionText = "v" + Core.AppInfo.Short(updates.CurrentVersion);
-        LatestVersionText = "v" + Core.AppInfo.Short(update.Version);
+        CurrentVersionText = Core.AppInfo.Short(updates.CurrentVersion);
+        LatestVersionText = Core.AppInfo.Short(update.Version);
 
         HasChangelog = !string.IsNullOrWhiteSpace(update.Changelog);
         Changelog = HasChangelog ? update.Changelog : Tr.Get("Update_NoNotes");
@@ -55,14 +55,34 @@ public sealed partial class UpdateDialogViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(LaterCommand))]
     private bool _isDownloading;
 
-    /// <summary>0..100 cho ProgressBar.</summary>
-    [ObservableProperty] private double _progressPercent;
+    private sealed record ProgressState(double Percent, string Text, string Status);
+    private readonly object _progressSync = new();
+    private ProgressState _progress = new(0, string.Empty, string.Empty);
 
-    /// <summary>Chữ bên trái dưới thanh tiến trình: "Đang tải xuống bản cài đặt..." / "Đang khởi động lại...".</summary>
-    [ObservableProperty] private string _downloadStatus = string.Empty;
+    /// <summary>0..100 cho ProgressBar.</summary>
+    public double ProgressPercent => Volatile.Read(ref _progress).Percent;
+
+    /// <summary>Chữ bên trái dưới thanh tiến trình.</summary>
+    public string DownloadStatus => Volatile.Read(ref _progress).Status;
 
     /// <summary>Chữ bên phải: "45%".</summary>
-    [ObservableProperty] private string _progressText = string.Empty;
+    public string ProgressText => Volatile.Read(ref _progress).Text;
+
+    private void SetProgress(ProgressState next, bool reset = false)
+    {
+        // Progress<T> posts callbacks asynchronously; a late 25% report must not
+        // overwrite a 100% snapshot that was already delivered.
+        lock (_progressSync)
+        {
+            var current = _progress;
+            if (!reset && next.Percent < current.Percent) return;
+            if (current == next) return;
+            Volatile.Write(ref _progress, next); // Publish all three values together.
+        }
+        OnPropertyChanged(nameof(ProgressPercent));
+        OnPropertyChanged(nameof(ProgressText));
+        OnPropertyChanged(nameof(DownloadStatus));
+    }
 
     /// <summary>Lỗi khi tải; rỗng khi không có lỗi.</summary>
     [ObservableProperty] private string _errorText = string.Empty;
@@ -74,16 +94,15 @@ public sealed partial class UpdateDialogViewModel : ObservableObject
     {
         IsDownloading = true;
         ErrorText = string.Empty;
-        ProgressPercent = 0;
-        DownloadStatus = Tr.Get("Update_Downloading");
-        ProgressText = "0%";
+        SetProgress(new ProgressState(0, "0%", Tr.Get("Update_Downloading")), reset: true);
 
         // IProgress bắt SynchronizationContext lúc tạo, nên Report từ luồng nền vẫn chạy trên luồng giao diện.
         var progress = new Progress<double>(fraction =>
         {
-            ProgressPercent = Math.Clamp(fraction, 0d, 1d) * 100d;
-            ProgressText = $"{(int)ProgressPercent}%";
-            DownloadStatus = ProgressPercent >= 100d ? Tr.Get("Update_Restarting") : Tr.Get("Update_Downloading");
+            if (!IsDownloading) return;
+            var percent = Math.Clamp(fraction, 0d, 1d) * 100d;
+            SetProgress(new ProgressState(percent, $"{(int)percent}%",
+                percent >= 100d ? Tr.Get("Update_Restarting") : Tr.Get("Update_Downloading")));
         });
 
         // Ghi lại TRƯỚC khi bàn giao cho script: sau đó ứng dụng thoát ngay, không còn lúc nào để ghi nữa.
@@ -96,7 +115,7 @@ public sealed partial class UpdateDialogViewModel : ObservableObject
             var applied = await _updates.DownloadAndApplyAsync(_update, progress).ConfigureAwait(true);
             if (applied)
             {
-                DownloadStatus = Tr.Get("Update_Restarting");
+                SetProgress(_progress with { Status = Tr.Get("Update_Restarting") });
                 CloseRequested?.Invoke(this, true);
                 return;
             }
@@ -114,8 +133,7 @@ public sealed partial class UpdateDialogViewModel : ObservableObject
     private void Fail(string detail)
     {
         ErrorText = Tr.Format("Update_FailedBody", detail);
-        DownloadStatus = string.Empty;
-        ProgressText = string.Empty;
+        SetProgress(_progress with { Status = string.Empty, Text = string.Empty });
         IsDownloading = false;
     }
 

@@ -10,6 +10,7 @@
         Icon="pack://application:,,,/images/app.ico"
         Width="1180" Height="760" MinWidth="960" MinHeight="620"
         UseLayoutRounding="True" SnapsToDevicePixels="True"
+        TextOptions.TextFormattingMode="Ideal"
         Background="{StaticResource WindowBg}"
         ctl:WheelScrollAssist.IsEnabled="True"
         WindowStartupLocation="CenterScreen">
@@ -323,7 +324,7 @@
         </DataTemplate>
     </Window.Resources>
 
-    <Grid x:Name="MainRootGrid" ClipToBounds="True" Focusable="True"
+    <Grid x:Name="MainRootGrid" Background="Transparent" ClipToBounds="True" Focusable="True"
           FocusVisualStyle="{x:Null}" KeyboardNavigation.IsTabStop="False">
         <!-- The source is pre-blurred and frozen off-thread; no effect or extra bitmap cache in the visual tree. -->
         <Grid x:Name="BackgroundLayer" IsHitTestVisible="False" Focusable="False">
@@ -350,10 +351,15 @@
                     </Style.Triggers>
                 </Style>
             </Grid.Style>
-            <Image Source="{Binding General.AppBackgroundImage, Mode=OneWay}"
+            <Image x:Name="AppBackgroundImageLayer" Source="{Binding General.AppBackgroundImage, Mode=OneWay}"
                    IsHitTestVisible="False" Focusable="False"
                    Opacity="{Binding General.Settings.AppBgOpacity, Mode=OneWay}"
-                   Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
+                   Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality">
+                <!-- Cache only the static photo. Caching the scrolling controls would rasterize text. -->
+                <Image.CacheMode>
+                    <BitmapCache RenderAtScale="1"/>
+                </Image.CacheMode>
+            </Image>
         </Grid>
     <Grid Margin="18">
         <Grid.RowDefinitions>
@@ -376,11 +382,11 @@
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="{x:Static core:AppInfo.DisplayName}"
                                    FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                        <Border Background="#2600ED64" BorderBrush="{StaticResource Accent}"
+                        <Border Background="{StaticResource FilterChipSelectedBg}" BorderBrush="{StaticResource FilterChipSelectedBorder}"
                                 BorderThickness="1" CornerRadius="{StaticResource RadiusInput}"
-                                Padding="7,1" Margin="10,0,0,0" VerticalAlignment="Center">
+                                Padding="6,2" Margin="8,0,0,0" VerticalAlignment="Center">
                             <TextBlock Text="{x:Static core:AppInfo.DisplayVersion}"
-                                       FontSize="10.5" FontWeight="SemiBold"
+                                       FontSize="11" FontWeight="SemiBold"
                                        Foreground="{StaticResource AccentBright}"/>
                         </Border>
                     </StackPanel>
@@ -406,7 +412,7 @@
             </StackPanel>
         </Grid>
 
-        <TabControl Grid.Row="1" SelectionChanged="OnTabChanged">
+        <TabControl x:Name="SettingsTabs" Grid.Row="1" SelectionChanged="OnTabChanged">
 
             <!-- ============================================ TAB CROSSHAIR -->
             <TabItem Header="{loc:Loc Tab_Crosshair}">
@@ -458,7 +464,6 @@
                             <!-- ListBox tự cuộn trong viewport hữu hạn để tái sử dụng các dòng preset. -->
                             <ListBox ItemsSource="{Binding Presets, Mode=OneWay}"
                                      SelectedItem="{Binding SelectedPreset, Mode=TwoWay}"
-                                     DisplayMemberPath="Name"
                                      ScrollViewer.CanContentScroll="True"
                                      ScrollViewer.VerticalScrollBarVisibility="Auto"
                                      VirtualizingPanel.IsVirtualizing="True"
@@ -469,6 +474,19 @@
                                 <ListBox.InputBindings>
                                     <KeyBinding Key="Delete" Command="{Binding DeletePresetCommand}"/>
                                 </ListBox.InputBindings>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type lim:CrosshairProfile}">
+                                        <DockPanel LastChildFill="True">
+                                            <ToggleButton DockPanel.Dock="Right" Style="{StaticResource FavoriteStarToggle}"
+                                                          IsChecked="{Binding IsFavorite, Mode=TwoWay}"
+                                                          ToolTip="{loc:Loc Library_CatFavorites}"
+                                                          AutomationProperties.Name="{Binding Name, Mode=OneWay}"
+                                                          AutomationProperties.HelpText="{loc:Loc Library_CatFavorites}"/>
+                                            <TextBlock Text="{Binding Name, Mode=OneWay}" VerticalAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                        </DockPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
                             </ListBox>
                         </DockPanel>
                     </Border>
@@ -491,7 +509,7 @@
                                     <Slider x:Name="PreviewZoomSlider" Grid.Column="1" Margin="12,0"
                                             Minimum="1" Maximum="16" SmallChange="1"
                                             VerticalAlignment="Center"
-                                            Value="{Binding Editor.PreviewZoom, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=15}"/>
+                                            Value="{Binding Editor.PreviewZoom, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=16}"/>
 
                                     <StackPanel Grid.Column="2" Orientation="Horizontal">
                                         <CheckBox Content="{loc:Loc Preview_Checkerboard}" Margin="0,0,16,0"
@@ -665,7 +683,7 @@
                                             Minimum="60" Maximum="144" TickFrequency="1"
                                             IsSnapToTickEnabled="True" SmallChange="1" LargeChange="10"
                                             Focusable="True" IsTabStop="True" VerticalAlignment="Center"
-                                            Value="{Binding General.UiTargetFps, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=15}"/>
+                                            Value="{Binding General.UiTargetFps, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=16}"/>
                                     <Border Grid.Column="2" Background="#111D27" BorderBrush="#1F2D37"
                                             BorderThickness="1" CornerRadius="4" Height="28" Margin="8,0,0,0">
                                         <TextBlock FontSize="12" FontWeight="SemiBold" Foreground="#00ED64"
@@ -886,6 +904,22 @@
                                     <Button Content="{loc:Loc Update_CheckNow}" Margin="0,8,0,0"
                                             HorizontalAlignment="Left"
                                             Command="{Binding General.CheckForUpdatesCommand}"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource Card}" Margin="0,14,0,0">
+                                <StackPanel>
+                                    <TextBlock Text="{loc:Loc Notifications_Header}" Style="{StaticResource SectionHeader}"
+                                               Margin="0,0,0,8"/>
+                                    <CheckBox Content="{loc:Loc Notifications_Minimize}" Margin="0,4"
+                                              IsChecked="{Binding General.Settings.NotifyOnMinimizeToTray, Mode=TwoWay}"
+                                              Command="{Binding General.PersistSettingsCommand}"/>
+                                    <CheckBox Content="{loc:Loc Notifications_Preset}" Margin="0,4"
+                                              IsChecked="{Binding General.Settings.NotifyOnPresetChanged, Mode=TwoWay}"
+                                              Command="{Binding General.PersistSettingsCommand}"/>
+                                    <CheckBox Content="{loc:Loc Notifications_Status}" Margin="0,4"
+                                              IsChecked="{Binding General.Settings.NotifyOnAppStatus, Mode=TwoWay}"
+                                              Command="{Binding General.PersistSettingsCommand}"/>
                                 </StackPanel>
                             </Border>
 

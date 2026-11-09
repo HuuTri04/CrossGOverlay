@@ -40,6 +40,9 @@ Competitive gaming demands visual consistency. However, native in-game crosshair
 - **On-Demand Rendering**: Small WPF layered overlay surface; static crosshairs redraw on changes, while animated content follows the configured frame-rate limit.
 - **Per-Monitor V2 DPI Awareness**: Seamless dynamic scaling across multi-monitor setups with disparate scale factors (e.g., 100% vs. 150% scaling) and hot-plug display recovery.
 - **Automatic Game Profile Matching**: Dynamically switches reticle presets when specified game processes or window titles enter the foreground via low-overhead `SetWinEventHook` notifications.
+- **Pixel Art Editor**: Draw and erase on a 16–1024 pixel grid with a scrollable viewport and bounded stroke-based Undo/Redo (`Ctrl+Z`, `Ctrl+Y`, `Ctrl+Shift+Z`). Small drawings retain PX1 share codes; larger drawings use compressed PX2 codes generated on demand.
+- **Favorites**: Star built-in templates for filtering; star saved presets for quick access from the system tray (up to 12 entries).
+- **Notification Preferences**: Independently control Windows notifications for hiding to tray, preset changes, and application status in General settings.
 - **Passive Global Hotkeys & Raw Input**: Global shortcuts using `RegisterHotKey` and auxiliary mouse buttons (Mouse 3, 4, 5) mapped via `WM_INPUT` (`RIDEV_INPUTSINK`).
 - **Engineered Dark Design Language**: Handcrafted UI built on the MongoDB LeafyGreen aesthetic (`#001E2B` deep slate, `#00ED64` neon accents) with hot-swappable English and Vietnamese localization.
 
@@ -121,7 +124,7 @@ Process deduplication is managed via an operating-system-level `System.Threading
 
 | Component | Minimum Requirement | Recommended |
 |---|---|---|
-| **OS** | Windows 10 (Version 1607+) x64 | Windows 11 x64 (Latest Build) |
+| **OS** | Windows 10 (Version 1809+) x64 | Windows 11 x64 (Latest Build) |
 | **Execution** | None (Self-contained release) | [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) |
 | **Building** | [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) | Visual Studio 2022 (v17.8+) |
 | **Execution Level** | Standard User (`asInvoker`) | Standard User (`asInvoker`) |
@@ -173,6 +176,14 @@ To run the automated packaging pipeline that executes clean builds, embedded dep
 .\build\publish.ps1 -PfxPath "C:\certs\code_signing.pfx" -PfxPassword (Read-Host -AsSecureString)
 ```
 The distribution directory and standalone archive will be placed in `artifacts\CrossGOverlay-<version>-win-x64.zip`.
+
+### Automatic Updates
+
+The updater downloads the version-matched release `.zip` and verifies its SHA-256 against the GitHub Release asset digest before extracting it into a temporary staging directory. After CrossGOverlay exits, a detached script uses `robocopy /E /IS /IT` to replace the installed application files while preserving files in the destination that are absent from the archive. User presets and settings remain in their separate user data directory. A release asset without a valid SHA-256 digest cannot be installed automatically.
+
+### Automated Tests
+
+Run `dotnet test Crosshair.sln -c Release`. The current suite has **846 passing tests and 1 skipped test** (847 discovered) as of November 6, 2026.
 
 ### Default Keybindings
 

@@ -31,19 +31,12 @@ public sealed class PresetRepository : IPresetRepository
     public async Task<IReadOnlyList<CrosshairProfile>> GetAllAsync(
         CancellationToken cancellationToken = default)
     {
-        Directory.CreateDirectory(_paths.PresetsDirectory);
-        AtomicFile.CleanupTemporaries(_paths.PresetsDirectory);
-
         var results = new List<CrosshairProfile>();
         var skipped = false;
-
-        var files = Directory.EnumerateFiles(_paths.PresetsDirectory, "*.json").ToList();
-        // Recover a preset even if the primary disappeared during a failed replacement.
-        foreach (var backup in Directory.EnumerateFiles(_paths.PresetsDirectory, "*.json.bak"))
-        {
-            var primary = backup[..^4];
-            if (!File.Exists(primary)) files.Add(primary);
-        }
+        // Directory scans and recovery cleanup use synchronous filesystem APIs. Keep
+        // them off the dispatcher, especially on the first launch or a slow disk.
+        var files = await Task.Run(() => EnumeratePresetPaths(cancellationToken), cancellationToken)
+            .ConfigureAwait(false);
 
         foreach (var file in files)
         {
@@ -71,6 +64,24 @@ public sealed class PresetRepository : IPresetRepository
 
         results.Sort(static (a, b) => string.Compare(a.Name, b.Name, StringComparison.CurrentCultureIgnoreCase));
         return results;
+    }
+
+    private List<string> EnumeratePresetPaths(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        Directory.CreateDirectory(_paths.PresetsDirectory);
+        AtomicFile.CleanupTemporaries(_paths.PresetsDirectory);
+
+        var files = Directory.EnumerateFiles(_paths.PresetsDirectory, "*.json").ToList();
+        // Recover a preset even if the primary disappeared during a failed replacement.
+        foreach (var backup in Directory.EnumerateFiles(_paths.PresetsDirectory, "*.json.bak"))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var primary = backup[..^4];
+            if (!File.Exists(primary)) files.Add(primary);
+        }
+
+        return files;
     }
 
     public async Task<CrosshairProfile?> GetAsync(Guid id, CancellationToken cancellationToken = default)
@@ -103,16 +114,14 @@ public sealed class PresetRepository : IPresetRepository
         PresetsChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    public Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var path = PathFor(id);
 
         try
         {
-            if (File.Exists(path) || File.Exists(path + ".bak"))
+            if (await AtomicFile.DeleteJsonAsync(path, cancellationToken))
             {
-                if (File.Exists(path)) File.Delete(path);
-                if (File.Exists(path + ".bak")) File.Delete(path + ".bak");
                 _logger.LogDebug("Đã xoá preset {Id}.", id);
                 PresetsChanged?.Invoke(this, EventArgs.Empty);
             }
@@ -122,8 +131,6 @@ public sealed class PresetRepository : IPresetRepository
             _logger.LogError(ex, "Không xoá được preset {Id}.", id);
             throw;
         }
-
-        return Task.CompletedTask;
     }
 
     /// <summary>

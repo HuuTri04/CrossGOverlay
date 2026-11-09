@@ -14,8 +14,11 @@ namespace CrosshairOverlay.Services.System;
 public sealed class TrayIconController : ITrayIconController
 {
     private readonly ILogger<TrayIconController> _logger;
+    private readonly IPresetLibrary _library;
+    private readonly IAppSettingsService _settings;
 
     private TaskbarIcon? _icon;
+    private ContextMenu? _contextMenu;
     private TrayMenuViewModel? _menu;
     private global::System.Drawing.Icon? _currentIcon;
     private WindowsNotificationService? _notifications;
@@ -27,7 +30,13 @@ public sealed class TrayIconController : ITrayIconController
     private bool _disposed;
     private int _iconCleanupStarted;
 
-    public TrayIconController(ILogger<TrayIconController> logger) => _logger = logger;
+    public TrayIconController(ILogger<TrayIconController> logger,
+        IPresetLibrary library, IAppSettingsService settings)
+    {
+        _logger = logger;
+        _library = library;
+        _settings = settings;
+    }
 
     public event EventHandler? OpenSettingsRequested;
     public event EventHandler? ToggleOverlayRequested;
@@ -50,6 +59,8 @@ public sealed class TrayIconController : ITrayIconController
 
         var menu = (ContextMenu)Application.Current.FindResource("TrayContextMenu");
         menu.DataContext = _menu;
+        menu.Opened += OnMenuOpened;
+        _contextMenu = menu;
 
         // Tooltip của icon cũng phải đổi ngôn ngữ; nhãn menu thì ViewModel tự lo.
         TranslationSource.Instance.PropertyChanged += OnLanguageChanged;
@@ -70,15 +81,45 @@ public sealed class TrayIconController : ITrayIconController
         };
 
         _icon.TrayMouseDoubleClick += (_, _) => OpenSettingsRequested?.Invoke(this, EventArgs.Empty);
-        _icon.ForceCreate();
-        _notifications = new WindowsNotificationService(_logger,
-            () => OpenSettingsRequested?.Invoke(this, EventArgs.Empty));
-        _notifications.Initialize();
-
+        try { _icon.ForceCreate(); }
+        catch
+        {
+            // The shell may not be ready (or may be absent in a benchmark session).
+            // Roll back so the same controller can retry once Settings is visible.
+            _icon.Dispose();
+            _icon = null;
+            _currentIcon?.Dispose();
+            _currentIcon = null;
+            _menu.Dispose();
+            _menu = null;
+            menu.Opened -= OnMenuOpened;
+            _contextMenu = null;
+            TranslationSource.Instance.PropertyChanged -= OnLanguageChanged;
+            throw;
+        }
         AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
         AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
 
         _logger.LogInformation("Tray icon đã khởi tạo.");
+    }
+
+    public void InitializeNotifications()
+    {
+        if (_disposed || _icon is null || _notifications is not null) return;
+        var notifications = new WindowsNotificationService(_logger,
+            () => OpenSettingsRequested?.Invoke(this, EventArgs.Empty));
+        notifications.Initialize();
+        _notifications = notifications;
+    }
+
+    private void OnMenuOpened(object? sender, RoutedEventArgs e)
+    {
+        _menu?.SetFavorites(_library.Presets.Where(preset => preset.IsFavorite)
+            .Select(preset => (preset.Id, preset.Name)), id =>
+            {
+                var preset = _library.Presets.FirstOrDefault(item => item.Id == id && item.IsFavorite);
+                if (preset is not null) _library.SetActive(preset);
+            });
     }
 
     public void UpdateState(bool overlayEnabled, bool overlayVisible, string activePresetName)
@@ -127,15 +168,24 @@ public sealed class TrayIconController : ITrayIconController
     private void OnLanguageChanged(object? sender, global::System.ComponentModel.PropertyChangedEventArgs e) =>
         UpdateState(_overlayEnabled, _overlayVisible, _activePresetName);
 
-    public void ShowNotification(string title, string message, bool isWarning = false)
+    public void ShowNotification(string title, string message, bool isWarning = false,
+        NotificationCategory category = NotificationCategory.AppStatus)
     {
         if (_icon is null || _disposed) return;
+
+        var options = _settings.Current;
+        if (category switch
+            {
+                NotificationCategory.MinimizeToTray => !options.NotifyOnMinimizeToTray,
+                NotificationCategory.PresetChanged => !options.NotifyOnPresetChanged,
+                _ => !options.NotifyOnAppStatus,
+            }) return;
 
         var dispatcher = Application.Current?.Dispatcher;
         if (dispatcher is null || dispatcher.HasShutdownStarted) return;
         if (!dispatcher.CheckAccess())
         {
-            dispatcher.BeginInvoke(new Action(() => ShowNotification(title, message, isWarning)));
+            dispatcher.BeginInvoke(new Action(() => ShowNotification(title, message, isWarning, category)));
             return;
         }
 
@@ -180,6 +230,9 @@ public sealed class TrayIconController : ITrayIconController
 
         TranslationSource.Instance.PropertyChanged -= OnLanguageChanged;
 
+        if (_contextMenu is not null) _contextMenu.Opened -= OnMenuOpened;
+        _contextMenu = null;
+
         _notifications?.Dispose();
         _notifications = null;
 
@@ -204,9 +257,9 @@ public sealed class TrayIconController : ITrayIconController
             // H.NotifyIcon uses Visibility rather than NotifyIcon.Visible. Dispose sends
             // NIM_DELETE even when ProcessExit arrives on a background thread.
             try { icon.Visibility = Visibility.Collapsed; }
-            catch (Exception) { /* The dispatcher may already have stopped. */ }
+            catch (Exception ex) { global::System.Diagnostics.Trace.WriteLine($"[TrayIcon] Hide failed during cleanup: {ex}"); }
             try { icon.Dispose(); }
-            catch (Exception) { /* Do not interrupt shutdown. */ }
+            catch (Exception ex) { global::System.Diagnostics.Trace.WriteLine($"[TrayIcon] Dispose failed during cleanup: {ex}"); }
         }
 
         Interlocked.Exchange(ref _currentIcon, null)?.Dispose();

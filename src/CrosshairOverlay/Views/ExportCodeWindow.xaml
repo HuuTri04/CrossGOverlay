@@ -112,6 +112,25 @@
                                    TextWrapping="Wrap" Margin="0,8,0,0"/>
                     </StackPanel>
                 </Border>
+
+                <!-- PIXEL ART EDITOR -->
+                <Border Style="{StaticResource Card}" Margin="0,14,0,0">
+                    <StackPanel>
+                        <TextBlock Text="{loc:Loc Export_PixelArt}" Style="{StaticResource SectionHeader}"/>
+                        <Grid Margin="0,8,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="PixelArtBox" Style="{StaticResource CodeBox}"/>
+                            <Button x:Name="PixelArtCopy" Grid.Column="1" Margin="10,0,0,0" MinWidth="92"
+                                    VerticalAlignment="Top" Content="{loc:Loc Export_Copy}"
+                                    Click="OnCopyPixelArt"/>
+                        </Grid>
+                        <TextBlock x:Name="PixelArtNote" Style="{StaticResource FieldLabel}"
+                                   TextWrapping="Wrap" Margin="0,8,0,0"/>
+                    </StackPanel>
+                </Border>
             </StackPanel>
         </ScrollViewer>
 

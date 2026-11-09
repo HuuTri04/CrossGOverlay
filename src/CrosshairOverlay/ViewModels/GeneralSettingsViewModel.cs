@@ -88,7 +88,7 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
         RefreshMonitors();
 
         _monitors.DisplayConfigurationChanged += OnDisplayConfigurationChanged;
-        TranslationSource.Instance.PropertyChanged += OnLanguageChanged;
+        PropertyChangedEventManager.AddHandler(TranslationSource.Instance, OnLanguageChanged, string.Empty);
     }
 
     /// <summary>View bind thẳng vào đây cho các toggle đơn giản (checkbox).</summary>
@@ -99,7 +99,41 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
 
     public bool HasAppBackground => AppBackgroundImage is not null && _settings.Current.AppBgOpacity > 0d;
 
-    /// <summary>Keep one processed backdrop briefly while Settings is hidden, without rendering it.</summary>
+    /// <summary>Prepare the frozen backdrop before Settings becomes visible.</summary>
+    public async Task PrepareBackgroundForShowAsync()
+    {
+        if (_disposed) return;
+        _backgroundViewActive = true;
+        _backgroundCacheExpiryTimer?.Stop();
+
+        var path = _settings.Current.CustomAppBgPath;
+        var key = GetBackgroundCacheKey(path);
+        if (key is null)
+        {
+            CancelBackgroundLoad();
+            CancelBackgroundRender();
+            ReleaseBackgroundCache();
+            return;
+        }
+
+        if (_backgroundCacheKey == key && AppBackgroundImage is not null
+            && _processedBlurRadius == _settings.Current.AppBgBlurRadius)
+            return;
+
+        if (_sourceBackgroundImage is not null && _backgroundCacheKey == key)
+        {
+            await RenderBackgroundAsync(debounce: false, reportError: false);
+            return;
+        }
+
+        Interlocked.Increment(ref _backgroundLoadVersion);
+        CancelBackgroundLoad();
+        CancelBackgroundRender();
+        ReleaseBackgroundCache();
+        await LoadSavedAppBackgroundAsync(path);
+    }
+
+    /// <summary>Keep the processed backdrop for instant tray restore; release its decode source after idle.</summary>
     public void SetBackgroundViewActive(bool active)
     {
         if (_disposed || _backgroundViewActive == active) return;
@@ -107,16 +141,6 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
         if (active)
         {
             _backgroundCacheExpiryTimer?.Stop();
-            var path = _settings.Current.CustomAppBgPath;
-            if (_sourceBackgroundImage is not null && _backgroundCacheKey is not null
-                && _backgroundCacheKey == GetBackgroundCacheKey(path))
-            {
-                if (AppBackgroundImage is null || _processedBlurRadius != _settings.Current.AppBgBlurRadius)
-                    _ = RenderBackgroundAsync(debounce: false, reportError: false);
-                return;
-            }
-            ReleaseBackgroundCache();
-            _ = LoadSavedAppBackgroundAsync(_settings.Current.CustomAppBgPath);
             return;
         }
 
@@ -142,7 +166,13 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
     private void OnBackgroundCacheExpired(object? sender, EventArgs e)
     {
         _backgroundCacheExpiryTimer?.Stop();
-        if (!_backgroundViewActive) ReleaseBackgroundCache();
+        ExpireBackgroundSourceCache();
+    }
+
+    /// <summary>Drop the intermediate decode, while retaining the frozen bitmap bound to Settings.</summary>
+    internal void ExpireBackgroundSourceCache()
+    {
+        if (!_backgroundViewActive) _sourceBackgroundImage = null;
     }
 
     private static (string Path, long Length, DateTime LastWriteUtc)? GetBackgroundCacheKey(string? path)
@@ -153,7 +183,7 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
             var file = new FileInfo(path);
             return file.Exists ? (path, file.Length, file.LastWriteTimeUtc) : null;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
         {
             return null;
         }
@@ -170,6 +200,17 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
     partial void OnAppBackgroundImageChanged(BitmapSource? value) =>
         OnPropertyChanged(nameof(HasAppBackground));
 
+    /// <summary>
+    /// Re-evaluate the same frozen bitmap after WPF recreates a minimized/hidden window's
+    /// render surface. Do not clear Source: that would expose the fallback for a frame.
+    /// </summary>
+    public void RefreshBackgroundBinding()
+    {
+        if (_disposed || AppBackgroundImage is null) return;
+        OnPropertyChanged(nameof(AppBackgroundImage));
+        OnPropertyChanged(nameof(HasAppBackground));
+    }
+
     public double AppBgOpacityPercent
     {
         get => _settings.Current.AppBgOpacity * 100d;
@@ -181,6 +222,8 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
             _settings.RequestSave();
             OnPropertyChanged();
             OnPropertyChanged(nameof(HasAppBackground));
+            if (AppBackgroundImage is { } image && _backgroundCacheKey is { } key)
+                _ = SaveBackgroundCacheLaterAsync(image, key, _processedBlurRadius, opacity);
         }
     }
 
@@ -194,7 +237,13 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
             _settings.Current.AppBgBlurRadius = radius;
             _settings.RequestSave();
             OnPropertyChanged();
-            _ = RenderBackgroundAsync(debounce: true, reportError: true);
+            if (_sourceBackgroundImage is not null)
+                _ = RenderBackgroundAsync(debounce: true, reportError: true);
+            else if (_settings.Current.CustomAppBgPath is { } path)
+            {
+                Interlocked.Increment(ref _backgroundLoadVersion);
+                _ = LoadSavedAppBackgroundAsync(path);
+            }
         }
     }
 
@@ -237,6 +286,26 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
     {
         if (string.IsNullOrWhiteSpace(path)) return;
         var version = _backgroundLoadVersion;
+        var key = GetBackgroundCacheKey(path);
+        if (key is { } sourceKey)
+        {
+            var cachePath = AppBackgroundCache.CachePath(_paths.LogsDirectory, path,
+                sourceKey.Length, sourceKey.LastWriteUtc,
+                _settings.Current.AppBgBlurRadius, _settings.Current.AppBgOpacity);
+            if (File.Exists(cachePath))
+            {
+                var cached = await DecodeAppBackgroundAsync(cachePath, reportError: false);
+                if (cached is not null && !_disposed && _backgroundViewActive
+                    && version == _backgroundLoadVersion && _settings.Current.CustomAppBgPath == path)
+                {
+                    _backgroundCacheKey = sourceKey;
+                    _processedBlurRadius = _settings.Current.AppBgBlurRadius;
+                    AppBackgroundImage = cached;
+                    Core.Diagnostics.StartupProfiler.BackgroundCacheHit = true;
+                    return;
+                }
+            }
+        }
         var image = await DecodeAppBackgroundAsync(path, reportError: false);
         if (image is not null && !_disposed && _backgroundViewActive && version == _backgroundLoadVersion
             && _settings.Current.CustomAppBgPath == path)
@@ -249,16 +318,22 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
 
     private async Task<BitmapSource?> DecodeAppBackgroundAsync(string path, bool reportError)
     {
-        var cancellation = new CancellationTokenSource();
+        var cancellation = CancellationTokenSource.CreateLinkedTokenSource(App.ShutdownToken);
         Interlocked.Exchange(ref _backgroundLoadCancellation, cancellation)?.Cancel();
         try
         {
-            return await AppBackgroundImageLoader.DecodeAsync(
-                path, maxDecodedSide: 1920, cancellation.Token);
+            AppBackgroundImageLoader.DecodeTiming? timing = null;
+            var image = await AppBackgroundImageLoader.DecodeAsync(
+                path, maxDecodedSide: 1920, cancellation.Token,
+                Core.Diagnostics.StartupProfiler.Enabled ? value => timing = value : null);
+            if (timing is { } measured)
+                Core.Diagnostics.StartupProfiler.RecordDecode(
+                    measured.DiskReadMs, measured.DecodeMs, measured.CompletedAt);
+            return image;
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { return null; }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException
-                                   or ArgumentException or InvalidOperationException
+                                   or ArgumentException or InvalidOperationException or FileFormatException
                                    or global::System.Runtime.InteropServices.COMException)
         {
             if (reportError && !_disposed)
@@ -282,18 +357,26 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
         if (_disposed || !_backgroundViewActive || source is null) return;
 
         var version = Interlocked.Increment(ref _backgroundRenderVersion);
-        var cancellation = new CancellationTokenSource();
+        var cancellation = CancellationTokenSource.CreateLinkedTokenSource(App.ShutdownToken);
         Interlocked.Exchange(ref _backgroundRenderCancellation, cancellation)?.Cancel();
         try
         {
             if (debounce) await Task.Delay(200, cancellation.Token);
+            (long StartedAt, long CompletedAt)? timing = null;
             var rendered = await ImageBlurHelper.CreatePreBlurredBitmapAsync(
-                source, _settings.Current.AppBgBlurRadius, cancellation.Token);
+                source, _settings.Current.AppBgBlurRadius, cancellation.Token,
+                Core.Diagnostics.StartupProfiler.Enabled
+                    ? (started, completed) => timing = (started, completed) : null);
+            if (timing is { } measured)
+                Core.Diagnostics.StartupProfiler.RecordBlur(measured.StartedAt, measured.CompletedAt);
             if (!_disposed && _backgroundViewActive && !cancellation.IsCancellationRequested
                 && version == _backgroundRenderVersion && ReferenceEquals(source, _sourceBackgroundImage))
             {
                 AppBackgroundImage = rendered;
                 _processedBlurRadius = _settings.Current.AppBgBlurRadius;
+                if (_backgroundCacheKey is { } key)
+                    _ = SaveBackgroundCacheLaterAsync(rendered, key,
+                        _processedBlurRadius, _settings.Current.AppBgOpacity);
             }
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { }
@@ -314,6 +397,30 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
     {
         Interlocked.Increment(ref _backgroundRenderVersion);
         Interlocked.Exchange(ref _backgroundRenderCancellation, null)?.Cancel();
+    }
+
+    private async Task SaveBackgroundCacheLaterAsync(BitmapSource image,
+        (string Path, long Length, DateTime LastWriteUtc) key, double radius, double opacity)
+    {
+        try
+        {
+            // Do not compete with the first Settings frame or write stale slider values.
+            await Task.Delay(350, App.ShutdownToken);
+            if (_disposed || App.IsShuttingDown || !ReferenceEquals(image, AppBackgroundImage)
+                || radius != _settings.Current.AppBgBlurRadius || opacity != _settings.Current.AppBgOpacity)
+                return;
+            var cachePath = AppBackgroundCache.CachePath(_paths.LogsDirectory, key.Path,
+                key.Length, key.LastWriteUtc, radius, opacity);
+            await AppBackgroundCache.SaveAsync(cachePath, image, App.ShutdownToken);
+        }
+        catch (OperationCanceledException) when (App.IsShuttingDown) { }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException
+                                   or InvalidOperationException or NotSupportedException
+                                   or ArgumentException or FileFormatException
+                                   or global::System.Runtime.InteropServices.COMException)
+        {
+            global::System.Diagnostics.Trace.WriteLine($"Background cache write failed: {ex}");
+        }
     }
 
     /// <summary>OBS credential entered for this window/session; never persisted to AppSettings.</summary>
@@ -782,6 +889,6 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, IDispos
         IsPasswordVisible = false;
 
         _monitors.DisplayConfigurationChanged -= OnDisplayConfigurationChanged;
-        TranslationSource.Instance.PropertyChanged -= OnLanguageChanged;
+        PropertyChangedEventManager.RemoveHandler(TranslationSource.Instance, OnLanguageChanged, string.Empty);
     }
 }

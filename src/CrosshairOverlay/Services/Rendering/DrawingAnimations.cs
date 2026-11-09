@@ -115,8 +115,8 @@ internal static class DrawingAnimations
                     _ = Task.Run(() =>
                     {
                         try { File.WriteAllText(path, $"FrameTicks,ElapsedSeconds{Environment.NewLine}{count},{elapsed:R}{Environment.NewLine}"); }
-                        catch (IOException) { }
-                        catch (UnauthorizedAccessException) { }
+                        catch (IOException ex) { global::System.Diagnostics.Trace.WriteLine($"[GIF benchmark] {ex}"); }
+                        catch (UnauthorizedAccessException ex) { global::System.Diagnostics.Trace.WriteLine($"[GIF benchmark] {ex}"); }
                     });
                 }
             }

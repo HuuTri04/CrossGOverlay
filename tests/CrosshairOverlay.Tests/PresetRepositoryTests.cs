@@ -99,7 +99,8 @@ public class PresetRepositoryTests : IDisposable
         var preset = CrosshairProfile.CreateDefault();
         var truoc = preset.ModifiedUtc;
 
-        await Task.Delay(10);
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await Task.Delay(10, timeout.Token);
         await _repository.SaveAsync(preset);
 
         Assert.True(preset.ModifiedUtc > truoc);

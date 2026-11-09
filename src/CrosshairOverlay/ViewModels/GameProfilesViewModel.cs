@@ -55,7 +55,7 @@ public sealed partial class GameProfilesViewModel : ObservableObject, IDisposabl
         Behaviors = BuildBehaviors();
 
         _watcher.ForegroundChanged += OnForegroundChanged;
-        TranslationSource.Instance.PropertyChanged += OnLanguageChanged;
+        PropertyChangedEventManager.AddHandler(TranslationSource.Instance, OnLanguageChanged, string.Empty);
 
         UpdateDiagnostics(_watcher.LastExternal);
     }
@@ -439,6 +439,6 @@ public sealed partial class GameProfilesViewModel : ObservableObject, IDisposabl
 
         // Watcher là singleton sống suốt phiên; ViewModel thì chết theo cửa sổ.
         _watcher.ForegroundChanged -= OnForegroundChanged;
-        TranslationSource.Instance.PropertyChanged -= OnLanguageChanged;
+        PropertyChangedEventManager.RemoveHandler(TranslationSource.Instance, OnLanguageChanged, string.Empty);
     }
 }

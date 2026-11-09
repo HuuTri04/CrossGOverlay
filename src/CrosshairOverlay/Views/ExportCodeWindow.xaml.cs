@@ -6,7 +6,7 @@ using CrosshairOverlay.Localization;
 namespace CrosshairOverlay.Views;
 
 /// <summary>
-/// Hộp thoại "Xuất mã tâm ngắm": hiện mã Valorant, CS2 và mã nội bộ của ứng dụng cùng lúc.
+/// Hộp thoại "Xuất mã tâm ngắm": hiện mã Valorant, CS2, mã nội bộ và mã Pixel Art khi có ảnh PNG phù hợp.
 /// </summary>
 /// <remarks>
 /// Trước đây nút "Xuất mã" chép thẳng MỘT mã vào clipboard, nên người dùng không biết mình vừa
@@ -29,6 +29,8 @@ public partial class ExportCodeWindow : Window
         Fill(ValorantBox, ValorantCopy, ValorantNote, codes.Valorant);
         Fill(Cs2Box, Cs2Copy, Cs2Note, codes.Cs2);
         Fill(AppBox, AppCopy, AppNote, codes.App);
+        Fill(PixelArtBox, PixelArtCopy, PixelArtNote,
+            codes.PixelArt ?? new CrosshairExportCode(Tr.Get("Export_PixelArt"), null, Tr.Get("Export_PixelArtUnavailable")));
 
         if (codes.Cs2Console?.Code is { Length: > 0 } commands)
             Cs2ConsoleBox.Text = commands;
@@ -61,6 +63,8 @@ public partial class ExportCodeWindow : Window
     private void OnCopyCs2Console(object sender, RoutedEventArgs e) => Copy(_codes.Cs2Console);
 
     private void OnCopyApp(object sender, RoutedEventArgs e) => Copy(_codes.App);
+
+    private void OnCopyPixelArt(object sender, RoutedEventArgs e) => Copy(_codes.PixelArt);
 
     /// <summary>
     /// Chép vào clipboard rồi báo ngay tại chỗ.

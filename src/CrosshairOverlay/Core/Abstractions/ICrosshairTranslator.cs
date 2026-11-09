@@ -27,6 +27,9 @@ public sealed record CrosshairExportCodes(
     /// dùng muốn dán vào autoexec.cfg hoặc chỉnh tay từng thông số.
     /// </remarks>
     public CrosshairExportCode? Cs2Console { get; init; }
+
+    /// <summary>Pixel Art code for a square stored PNG; omitted for unsupported presets.</summary>
+    public CrosshairExportCode? PixelArt { get; init; }
 }
 
 /// <summary>Dịch preset của ứng dụng sang mã chia sẻ của từng game.</summary>

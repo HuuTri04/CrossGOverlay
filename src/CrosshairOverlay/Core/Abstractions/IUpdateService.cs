@@ -4,7 +4,8 @@ namespace CrosshairOverlay.Core.Abstractions;
 /// <param name="DownloadUrl">Liên kết tải gói .zip chứa cả thư mục ứng dụng.</param>
 /// <param name="ReleaseUrl">Trang phát hành, để người dùng tự tải nếu tự động thất bại.</param>
 /// <param name="Changelog">Phần mô tả của bản phát hành (khoá <c>body</c>); rỗng nếu người phát hành không ghi gì.</param>
-public sealed record UpdateInfo(Version Version, string DownloadUrl, string ReleaseUrl, string Changelog = "");
+/// <param name="Sha256">SHA-256 từ trường digest của GitHub Release asset.</param>
+public sealed record UpdateInfo(Version Version, string DownloadUrl, string ReleaseUrl, string Changelog = "", string? Sha256 = null);
 
 /// <summary>Kết quả một lần kiểm tra cập nhật.</summary>
 public enum UpdateCheckStatus

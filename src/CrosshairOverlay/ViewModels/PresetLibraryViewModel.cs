@@ -1,5 +1,9 @@
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.IO;
+using System.Windows;
+using System.Windows.Data;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CrosshairOverlay.Core.Abstractions;
@@ -33,11 +37,17 @@ public sealed partial class PresetLibraryViewModel : ObservableObject, IDisposab
 
     private readonly IPresetCatalogService _catalog;
     private readonly IPresetLibrary _library;
+    private readonly IAppSettingsService? _settings;
+    private readonly HashSet<Guid> _favoriteCatalogIds;
     private readonly ILogger<PresetLibraryViewModel> _logger;
     private readonly ITrayIconController? _tray;
 
     private readonly Dictionary<Guid, CatalogItemViewModel> _items = [];
-    private IReadOnlyList<CatalogItemViewModel> _filtered = [];
+    private readonly ObservableCollection<CatalogRow> _rows = [];
+    private ICollectionView? _itemsView;
+    private HashSet<Guid> _matchingIds = [];
+    private bool _refreshingView;
+    private int _favoriteCount;
     private string _selectedCategory = CatalogCategories.All;
     private LibraryColorFilter _selectedColorFilter;
     private int _columnCount = 4;
@@ -49,9 +59,20 @@ public sealed partial class PresetLibraryViewModel : ObservableObject, IDisposab
         ICrosshairRenderer renderer,
         ILogger<PresetLibraryViewModel> logger,
         ITrayIconController? tray = null)
+        : this(catalog, library, renderer, logger, settings: null, tray) { }
+
+    public PresetLibraryViewModel(
+        IPresetCatalogService catalog,
+        IPresetLibrary library,
+        ICrosshairRenderer renderer,
+        ILogger<PresetLibraryViewModel> logger,
+        IAppSettingsService? settings,
+        ITrayIconController? tray = null)
     {
         _catalog = catalog;
         _library = library;
+        _settings = settings;
+        _favoriteCatalogIds = settings?.Current.FavoriteCatalogPresetIds.ToHashSet() ?? [];
         _logger = logger;
         _tray = tray;
         Renderer = renderer;
@@ -67,11 +88,12 @@ public sealed partial class PresetLibraryViewModel : ObservableObject, IDisposab
 
         // Dịch vụ luôn trả danh sách cố định, nhưng ViewModel không được sập nếu nó trả rỗng.
         var keys = catalog.GetCategories() is { Count: > 0 } fromService ? fromService : CatalogCategories.Ordered;
-        Categories = [.. keys.Select(key => new CategoryChipViewModel(key, CategoryLabel(key), this))];
+        Categories = [.. keys.Take(1).Concat([CatalogCategories.Favorites]).Concat(keys.Skip(1))
+            .Select(key => new CategoryChipViewModel(key, CategoryLabel(key), this))];
 
         // Chip đầu tiên ("Tất cả") ứng với bộ lọc mặc định; đánh dấu thẳng, không đi vòng qua SelectCategory.
         Categories[0].SetSelectedSilently(true);
-        TranslationSource.Instance.PropertyChanged += OnLanguageChanged;
+        PropertyChangedEventManager.AddHandler(TranslationSource.Instance, OnLanguageChanged, string.Empty);
     }
 
     /// <summary>Renderer dùng chung với overlay, cho ảnh thu nhỏ của từng thẻ.</summary>
@@ -93,7 +115,8 @@ public sealed partial class PresetLibraryViewModel : ObservableObject, IDisposab
     /// <summary>Thông báo "Đã thêm …" ở góc dưới; người dùng ở lại tab để chọn tiếp mẫu khác.</summary>
     public ToastViewModel Toast { get; } = new();
 
-    [ObservableProperty] private IReadOnlyList<CatalogRow> _rows = [];
+    /// <summary>Stable row source: the recycling panel never receives a new ItemsSource on filter changes.</summary>
+    public ObservableCollection<CatalogRow> Rows => _rows;
 
     [ObservableProperty] private string _searchText = string.Empty;
 
@@ -127,14 +150,46 @@ public sealed partial class PresetLibraryViewModel : ObservableObject, IDisposab
     public async Task LoadAsync()
     {
         IsLoading = true;
-        var presets = await _catalog.LoadAsync().ConfigureAwait(true);
+        IReadOnlyList<CatalogPreset> presets;
+        try { presets = await _catalog.LoadAsync().ConfigureAwait(true); }
+        catch
+        {
+            IsLoading = false;
+            throw;
+        }
         if (_disposed) return;
 
+        if (_itemsView is INotifyCollectionChanged oldView)
+            oldView.CollectionChanged -= OnViewCollectionChanged;
+        _items.Clear();
+        var source = new List<CatalogItemViewModel>(presets.Count);
         foreach (var preset in presets)
-            _items[preset.Id] = new CatalogItemViewModel(preset, Renderer);
+        {
+            var item = new CatalogItemViewModel(preset, Renderer)
+            {
+                IsFavorite = _favoriteCatalogIds.Contains(preset.Id),
+            };
+            _items[preset.Id] = item;
+            source.Add(item);
+        }
 
+        _itemsView = CollectionViewSource.GetDefaultView(source);
+        _itemsView.Filter = IsVisibleItem;
+        // LiveShapingList owns DispatcherObjects. Only enable it for a real WPF
+        // window; headless async consumers may resume on a different thread.
+        if (Application.Current is { } app && app.Dispatcher.CheckAccess() &&
+            _itemsView is ICollectionViewLiveShaping { CanChangeLiveFiltering: true } live)
+        {
+            live.LiveFilteringProperties.Add(nameof(CatalogItemViewModel.IsFavorite));
+            live.IsLiveFiltering = true;
+        }
+        if (_itemsView is INotifyCollectionChanged viewChanges)
+            viewChanges.CollectionChanged += OnViewCollectionChanged;
+
+        _favoriteCount = source.Count(item => item.IsFavorite);
         foreach (var chip in Categories)
-            chip.Count = _catalog.CountIn(chip.Key);
+            chip.Count = chip.Key == CatalogCategories.Favorites
+                ? _favoriteCount : _catalog.CountIn(chip.Key);
 
         IsLoading = false;
         ApplyFilter();
@@ -145,6 +200,7 @@ public sealed partial class PresetLibraryViewModel : ObservableObject, IDisposab
     private void OnLanguageChanged(object? sender, PropertyChangedEventArgs e)
     {
         foreach (var option in ColorFilters) option.Refresh();
+        foreach (var chip in Categories) chip.RefreshLabel();
         ApplyFilter();
     }
 
@@ -161,17 +217,28 @@ public sealed partial class PresetLibraryViewModel : ObservableObject, IDisposab
 
     private void ApplyFilter()
     {
-        if (IsLoading) return;
+        if (IsLoading || _itemsView is null) return;
 
-        _filtered = [.. _catalog.FilterPresets(SearchText, _selectedCategory)
-            .Where(p => MatchesColor(p.Color, _selectedColorFilter))
-            .Select(p => _items.TryGetValue(p.Id, out var item) ? item : null)
-            .OfType<CatalogItemViewModel>()];
-
-        ResultText = Tr.Format("Library_Count", _filtered.Count);
-        IsEmpty = _filtered.Count == 0;
-        EmptyText = _items.Count == 0 ? Tr.Get("Library_Missing") : Tr.Get("Library_Empty");
+        // Search/category/color criteria are recalculated only when those inputs
+        // change. A star toggle is handled by WPF live filtering instead.
+        _matchingIds = _catalog.FilterPresets(SearchText,
+                _selectedCategory == CatalogCategories.Favorites ? CatalogCategories.All : _selectedCategory)
+            .Where(preset => MatchesColor(preset.Color, _selectedColorFilter))
+            .Select(preset => preset.Id)
+            .ToHashSet();
+        _refreshingView = true;
+        try { _itemsView.Refresh(); }
+        finally { _refreshingView = false; }
         RebuildRows();
+    }
+
+    private bool IsVisibleItem(object value) =>
+        value is CatalogItemViewModel item && _matchingIds.Contains(item.Preset.Id)
+        && (_selectedCategory != CatalogCategories.Favorites || item.IsFavorite);
+
+    private void OnViewCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (!_disposed && !_refreshingView) RebuildRows();
     }
 
     internal static bool MatchesColor(string hex, LibraryColorFilter filter)
@@ -193,16 +260,68 @@ public sealed partial class PresetLibraryViewModel : ObservableObject, IDisposab
 
     private void RebuildRows()
     {
-        var rows = new List<CatalogRow>((_filtered.Count + _columnCount - 1) / _columnCount);
-        for (var start = 0; start < _filtered.Count; start += _columnCount)
+        var rowIndex = 0;
+        var visibleCount = 0;
+        var cells = new CatalogItemViewModel[_columnCount];
+        var cellCount = 0;
+
+        void CommitRow()
         {
-            var count = Math.Min(_columnCount, _filtered.Count - start);
-            var cells = new CatalogItemViewModel[count];
-            for (var i = 0; i < count; i++) cells[i] = _filtered[start + i];
-            rows.Add(new CatalogRow(cells));
+            if (cellCount == 0) return;
+            if (cellCount != cells.Length) Array.Resize(ref cells, cellCount);
+
+            var same = rowIndex < _rows.Count && _rows[rowIndex].Items.Count == cellCount;
+            if (same)
+                for (var index = 0; index < cellCount; index++)
+                    if (!ReferenceEquals(_rows[rowIndex].Items[index], cells[index]))
+                    {
+                        same = false;
+                        break;
+                    }
+            if (!same)
+            {
+                var row = new CatalogRow(cells);
+                if (rowIndex < _rows.Count) _rows[rowIndex] = row;
+                else _rows.Add(row);
+            }
+            rowIndex++;
+            cells = new CatalogItemViewModel[_columnCount];
+            cellCount = 0;
         }
 
-        Rows = rows;
+        if (_itemsView is not null)
+            foreach (CatalogItemViewModel item in _itemsView)
+            {
+                cells[cellCount++] = item;
+                visibleCount++;
+                if (cellCount == _columnCount) CommitRow();
+            }
+        CommitRow();
+        while (_rows.Count > rowIndex) _rows.RemoveAt(_rows.Count - 1);
+
+        ResultText = Tr.Format("Library_Count", visibleCount);
+        IsEmpty = visibleCount == 0;
+        EmptyText = _items.Count == 0 ? Tr.Get("Library_Missing") : Tr.Get("Library_Empty");
+    }
+
+    [RelayCommand]
+    private void ToggleFavorite(CatalogItemViewModel? item)
+    {
+        if (item is null) return;
+        item.IsFavorite = !item.IsFavorite;
+        if (item.IsFavorite) _favoriteCatalogIds.Add(item.Preset.Id);
+        else _favoriteCatalogIds.Remove(item.Preset.Id);
+        _favoriteCount += item.IsFavorite ? 1 : -1;
+        if (_settings is not null)
+        {
+            _settings.Current.FavoriteCatalogPresetIds = [.. _favoriteCatalogIds];
+            _settings.RequestSave();
+        }
+        var chip = Categories.First(category => category.Key == CatalogCategories.Favorites);
+        chip.Count = _favoriteCount;
+        if (_selectedCategory == CatalogCategories.Favorites &&
+            _itemsView is ICollectionViewLiveShaping { IsLiveFiltering: not true })
+            _itemsView.Refresh();
     }
 
     /// <summary>
@@ -217,6 +336,7 @@ public sealed partial class PresetLibraryViewModel : ObservableObject, IDisposab
         try
         {
             var profile = CatalogPresetMapper.ToProfile(item.Preset);
+            profile.IsFavorite = item.IsFavorite;
             var added = await _library.AddAsync(profile).ConfigureAwait(true);
 
             _logger.LogInformation("Thêm mẫu '{Template}' từ thư viện thành preset '{Name}'.", item.Name, added.Name);
@@ -233,6 +353,7 @@ public sealed partial class PresetLibraryViewModel : ObservableObject, IDisposab
     internal static string CategoryLabel(string key) => key switch
     {
         CatalogCategories.All => Tr.Get("Library_CatAll"),
+        CatalogCategories.Favorites => Tr.Get("Library_CatFavorites"),
         CatalogCategories.ProPlayers => Tr.Get("Library_CatPro"),
         CatalogCategories.Dots => Tr.Get("Library_CatDots"),
         CatalogCategories.Crosses => Tr.Get("Library_CatCrosses"),
@@ -246,7 +367,9 @@ public sealed partial class PresetLibraryViewModel : ObservableObject, IDisposab
         if (_disposed) return;
         _disposed = true;
 
-        TranslationSource.Instance.PropertyChanged -= OnLanguageChanged;
+        if (_itemsView is INotifyCollectionChanged viewChanges)
+            viewChanges.CollectionChanged -= OnViewCollectionChanged;
+        PropertyChangedEventManager.RemoveHandler(TranslationSource.Instance, OnLanguageChanged, string.Empty);
         Toast.Dispose();
     }
 }
@@ -278,9 +401,11 @@ public sealed record CatalogRow(IReadOnlyList<CatalogItemViewModel> Items)
 }
 
 /// <summary>Một thẻ mẫu. Preset xem trước chỉ được dựng khi thẻ thật sự hiện lên (ảo hoá).</summary>
-public sealed class CatalogItemViewModel(CatalogPreset preset, ICrosshairRenderer renderer)
+public sealed partial class CatalogItemViewModel(CatalogPreset preset, ICrosshairRenderer renderer) : ObservableObject
 {
     private CrosshairProfile? _previewProfile;
+
+    [ObservableProperty] private bool _isFavorite;
 
     public CatalogPreset Preset { get; } = preset;
 
@@ -298,10 +423,14 @@ public sealed class CatalogItemViewModel(CatalogPreset preset, ICrosshairRendere
 public sealed partial class CategoryChipViewModel(string key, string label, PresetLibraryViewModel owner) : ObservableObject
 {
     private bool _isSelected;
+    private string _label = label;
 
     public string Key { get; } = key;
 
-    public string Label { get; } = label;
+    public string Label => _label;
+
+    internal void RefreshLabel() =>
+        SetProperty(ref _label, PresetLibraryViewModel.CategoryLabel(Key), nameof(Label));
 
     [ObservableProperty] private int _count;
 

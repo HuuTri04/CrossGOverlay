@@ -45,7 +45,7 @@ public sealed partial class HotkeysViewModel : ObservableObject, IDisposable
         _hotkeys = hotkeys;
 
         _rows = BuildRows();
-        TranslationSource.Instance.PropertyChanged += OnLanguageChanged;
+        PropertyChangedEventManager.AddHandler(TranslationSource.Instance, OnLanguageChanged, string.Empty);
     }
 
     /// <summary>Dựng lại khi đổi ngôn ngữ để nhãn hành động đọc lại resource.</summary>
@@ -169,6 +169,6 @@ public sealed partial class HotkeysViewModel : ObservableObject, IDisposable
         if (_disposed) return;
         _disposed = true;
 
-        TranslationSource.Instance.PropertyChanged -= OnLanguageChanged;
+        PropertyChangedEventManager.RemoveHandler(TranslationSource.Instance, OnLanguageChanged, string.Empty);
     }
 }

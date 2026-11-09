@@ -12,7 +12,7 @@ public sealed class PresetLibrary : IPresetLibrary
     /// <summary>
     /// Kéo một slider bắn hàng trăm <c>PropertyChanged</c> mỗi giây. Gom lại rồi mới ghi đĩa.
     /// </summary>
-    private static readonly TimeSpan SaveDebounce = TimeSpan.FromMilliseconds(600);
+    private static readonly TimeSpan SaveDebounce = TimeSpan.FromMilliseconds(500);
 
     private readonly IPresetRepository _repository;
     private readonly ILogger<PresetLibrary> _logger;

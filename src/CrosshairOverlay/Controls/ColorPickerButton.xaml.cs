@@ -1,7 +1,9 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using CrosshairOverlay.Services.Storage;
 
 namespace CrosshairOverlay.Controls;
@@ -15,6 +17,10 @@ public partial class ColorPickerButton : UserControl
 {
     private static readonly IReadOnlyList<SwatchItem> SharedSwatches = CreateSwatches();
     private readonly SolidColorBrush _previewBrush = new(Colors.Lime);
+    private readonly DispatcherTimer _channelUpdateTimer = new(DispatcherPriority.Input)
+    {
+        Interval = TimeSpan.FromMilliseconds(16),
+    };
 
     /// <summary>Chặn vòng lặp khi slider cập nhật màu rồi màu lại cập nhật ngược slider.</summary>
     private bool _updating;
@@ -22,9 +28,18 @@ public partial class ColorPickerButton : UserControl
     public ColorPickerButton()
     {
         InitializeComponent();
+        _channelUpdateTimer.Tick += OnChannelUpdateTick;
+        RedSlider.AddHandler(Thumb.DragCompletedEvent, new DragCompletedEventHandler(OnChannelDragCompleted));
+        GreenSlider.AddHandler(Thumb.DragCompletedEvent, new DragCompletedEventHandler(OnChannelDragCompleted));
+        BlueSlider.AddHandler(Thumb.DragCompletedEvent, new DragCompletedEventHandler(OnChannelDragCompleted));
         Swatch.Background = _previewBrush;
         SwatchList.ItemsSource = SharedSwatches;
         Loaded += (_, _) => Refresh();
+        Unloaded += (_, _) =>
+        {
+            if (_channelUpdateTimer.IsEnabled) CommitChannelColor();
+            _channelUpdateTimer.Stop();
+        };
     }
 
     private void OnChannelLabelMouseDown(object sender, MouseButtonEventArgs e)
@@ -95,11 +110,29 @@ public partial class ColorPickerButton : UserControl
     {
         if (_updating) return;
 
+        UpdateChannelLabels();
+        if (!_channelUpdateTimer.IsEnabled) _channelUpdateTimer.Start();
+    }
+
+    private void OnChannelUpdateTick(object? sender, EventArgs e)
+    {
+        _channelUpdateTimer.Stop();
+        CommitChannelColor();
+    }
+
+    private void OnChannelDragCompleted(object sender, DragCompletedEventArgs e)
+    {
+        _channelUpdateTimer.Stop();
+        CommitChannelColor();
+    }
+
+    private void CommitChannelColor()
+    {
+        if (_updating) return;
+
         _updating = true;
         try
         {
-            UpdateChannelLabels();
-
             SelectedColor = Color.FromRgb(
                 (byte)RedSlider.Value,
                 (byte)GreenSlider.Value,

@@ -1,14 +1,39 @@
+using System.IO;
+using System.Runtime;
 using System.Windows;
 
 namespace CrosshairOverlay;
 
 public partial class App : Application
 {
+    private static readonly CancellationTokenSource ShutdownCancellation = new();
     private readonly long _constructedAt = global::System.Diagnostics.Stopwatch.GetTimestamp();
     private readonly double _runtimeStartupMs = MeasureRuntimeStartup();
     private AppBootstrapper? _bootstrapper;
 
+    public App()
+    {
+        try
+        {
+            var benchmarkRoot = Environment.GetEnvironmentVariable("CROSSGOVERLAY_BENCHMARK_ROOT");
+            var root = string.IsNullOrWhiteSpace(benchmarkRoot)
+                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "CrosshairOverlay", "cache")
+                : Path.Combine(Path.GetFullPath(benchmarkRoot), "cache");
+            Directory.CreateDirectory(root);
+            ProfileOptimization.SetProfileRoot(root);
+            ProfileOptimization.StartProfile("Startup.profile");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            // The profile only helps subsequent launches; a read-only profile location
+            // must not break the first launch.
+            global::System.Diagnostics.Trace.TraceWarning($"JIT startup profile unavailable: {ex.Message}");
+        }
+    }
+
     public static bool IsShuttingDown { get; private set; }
+    public static CancellationToken ShutdownToken => ShutdownCancellation.Token;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -20,6 +45,7 @@ public partial class App : Application
     {
         if (IsShuttingDown) return;
         IsShuttingDown = true;
+        ShutdownCancellation.Cancel();
         if (Current is not App app) return;
 
         if (!app.Dispatcher.CheckAccess())
@@ -48,6 +74,7 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         IsShuttingDown = true;
+        ShutdownCancellation.Cancel();
         _bootstrapper?.Shutdown(closeApplication: false);
         base.OnExit(e);
     }

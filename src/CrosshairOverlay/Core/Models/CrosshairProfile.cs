@@ -29,6 +29,9 @@ public sealed partial class CrosshairProfile : ObservableObject
 
     [ObservableProperty] private string _name = "New Crosshair";
 
+    /// <summary>Favorite state belongs to this saved preset and travels with its JSON file.</summary>
+    [ObservableProperty] private bool _isFavorite;
+
     /// <summary>Vẽ bằng hình học (<see cref="CrosshairType.Standard"/>) hay bằng ảnh.</summary>
     [ObservableProperty] private CrosshairType _type = CrosshairType.Standard;
 
@@ -188,6 +191,7 @@ public sealed partial class CrosshairProfile : ObservableObject
         SchemaVersion = SchemaVersion,
         Id = newIdentity ? Guid.NewGuid() : Id,
         Name = newIdentity ? $"{Name} {Localization.Tr.Get("Preset_CopySuffix")}" : Name,
+        IsFavorite = IsFavorite,
         Type = Type,
         Shape = Shape,
         Color = Color,

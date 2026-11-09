@@ -36,6 +36,10 @@ public sealed partial class AppSettings : ObservableObject
     /// </remarks>
     [ObservableProperty] private bool _minimizeToTrayOnClose = true;
 
+    [ObservableProperty] private bool _notifyOnMinimizeToTray = true;
+    [ObservableProperty] private bool _notifyOnPresetChanged;
+    [ObservableProperty] private bool _notifyOnAppStatus = true;
+
     /// <summary>Tự đổi preset theo tiến trình foreground.</summary>
     [ObservableProperty] private bool _autoSwitchByGameProfile = true;
 
@@ -163,6 +167,9 @@ public sealed partial class AppSettings : ObservableObject
     /// đúng lúc nó đang được đọc để ghi sẽ ném "Collection was modified".
     /// </remarks>
     public List<Guid> PresetOrder { get; set; } = [];
+
+    /// <summary>Favorites from the immutable built-in catalog; saved presets use their own IsFavorite.</summary>
+    public List<Guid> FavoriteCatalogPresetIds { get; set; } = [];
 
     public static AppSettings CreateDefault()
     {

@@ -118,7 +118,7 @@ Quản lý tiến trình đơn nhất thông qua `System.Threading.Mutex` cấp 
 
 | Thành phần | Yêu cầu tối thiểu | Khuyến nghị |
 |---|---|---|
-| **Hệ điều hành** | Windows 10 (Bản 1607+) x64 | Windows 11 x64 (Bản mới nhất) |
+| **Hệ điều hành** | Windows 10 (Bản 1809+) x64 | Windows 11 x64 (Bản mới nhất) |
 | **Khi chạy** | Đã tích hợp sẵn trong bản publish | [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) |
 | **Khi build mã nguồn** | [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) | Visual Studio 2022 (v17.8 trở lên) |
 | **Quyền thực thi** | Quyền Người dùng thường (`asInvoker`) | Quyền Người dùng thường (`asInvoker`) |
@@ -170,6 +170,14 @@ dotnet run --project src/CrosshairOverlay/CrosshairOverlay.csproj -c Release
 .\build\publish.ps1 -PfxPath "C:\certs\code_signing.pfx" -PfxPassword (Read-Host -AsSecureString)
 ```
 Kết quả đóng gói sẽ được xuất tại thư mục: `artifacts\CrossGOverlay-<version>-win-x64.zip`.
+
+### Tự động cập nhật
+
+Ứng dụng tải đúng gói `CrossGOverlay-<version>-win-x64.zip` từ GitHub Releases và xác minh SHA-256 với `digest` của asset trước khi giải nén. Sau khi ứng dụng cũ thoát, script sao lưu thư mục cài đặt, dùng `robocopy /E /IS /IT` chép toàn bộ bản mới và thử khôi phục nếu chép lỗi. Cài đặt và preset của người dùng ở thư mục dữ liệu riêng không bị thay thế. Bản phát hành thiếu SHA-256 hợp lệ sẽ không được tự động cài.
+
+### Kiểm thử tự động
+
+Chạy `dotnet test Crosshair.sln -c Release`. Tính đến 06/11/2026, bộ test có **846 bài qua, 1 bài bỏ qua** (847 bài được phát hiện).
 
 ### Phím tắt mặc định
 

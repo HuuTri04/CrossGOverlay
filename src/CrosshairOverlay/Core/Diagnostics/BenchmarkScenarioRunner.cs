@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO;
 using CrosshairOverlay.Core.Abstractions;
 
@@ -95,8 +96,8 @@ internal static class BenchmarkScenarioRunner
         catch (Exception ex)
         {
             try { await File.WriteAllTextAsync(Path.Combine(directory, "error.txt"), ex.ToString()); }
-            catch (IOException) { /* Diagnostic path can disappear when the benchmark ends. */ }
-            catch (UnauthorizedAccessException) { }
+            catch (IOException writeError) { Trace.WriteLine($"[Benchmark] Could not write error marker: {writeError}; original error: {ex}"); }
+            catch (UnauthorizedAccessException writeError) { Trace.WriteLine($"[Benchmark] Could not write error marker: {writeError}; original error: {ex}"); }
         }
     }
 }

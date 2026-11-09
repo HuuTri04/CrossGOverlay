@@ -26,7 +26,7 @@ public sealed partial class SystemInfoViewModel : ObservableObject, IDisposable
         _monitors = monitors;
         _displayModes = displayModes;
 
-        TranslationSource.Instance.PropertyChanged += OnLanguageChanged;
+        PropertyChangedEventManager.AddHandler(TranslationSource.Instance, OnLanguageChanged, string.Empty);
         _monitors.DisplayConfigurationChanged += OnDisplayConfigurationChanged;
 
         _ = LoadAsync(hardware);
@@ -134,7 +134,7 @@ public sealed partial class SystemInfoViewModel : ObservableObject, IDisposable
         if (_disposed) return;
         _disposed = true;
 
-        TranslationSource.Instance.PropertyChanged -= OnLanguageChanged;
+        PropertyChangedEventManager.RemoveHandler(TranslationSource.Instance, OnLanguageChanged, string.Empty);
         _monitors.DisplayConfigurationChanged -= OnDisplayConfigurationChanged;
     }
 }

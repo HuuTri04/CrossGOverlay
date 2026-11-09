@@ -5,6 +5,7 @@ using CrosshairOverlay.Core.Abstractions;
 using CrosshairOverlay.Core.Models;
 using CrosshairOverlay.Localization;
 using CrosshairOverlay.Services.Display;
+using CrosshairOverlay.Services.Export;
 using CrosshairOverlay.Services.System;
 using Microsoft.Extensions.Logging;
 
@@ -29,6 +30,7 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
     private readonly Lazy<PixelArtViewModel> _pixelArtTab;
 
     private bool _syncingSelection;
+    private bool _presetPresentationActive = true;
     private bool _disposed;
 
     public SettingsViewModel(
@@ -76,13 +78,14 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
         _gamesTab = new Lazy<GameProfilesViewModel>(() => new GameProfilesViewModel(settings, library, watcher, matcher, scanner));
         _systemInfo = new Lazy<SystemInfoViewModel>(() => new SystemInfoViewModel(hardware, monitors, displayModes));
         _statsTab = new Lazy<StatsViewModel>(() => new StatsViewModel(usageStats, dialogs));
-        _pixelArtTab = new Lazy<PixelArtViewModel>(() => new PixelArtViewModel(library, images, overlay));
+        _pixelArtTab = new Lazy<PixelArtViewModel>(() => new PixelArtViewModel(library, images, overlay, dialogs));
 
         // Ô "Bật overlay" là lựa chọn của người dùng, không phải overlay có đang hiện hay không —
         // xem App.ToggleOverlay. Đồng bộ hai chiều với menu khay và phím tắt qua cài đặt.
         _overlayEnabled = settings.Current.OverlayEnabled;
         _settings.Current.PropertyChanged += OnSettingsChanged;
-        TranslationSource.Instance.PropertyChanged += OnLanguageChanged;
+        global::System.ComponentModel.PropertyChangedEventManager.AddHandler(
+            TranslationSource.Instance, OnLanguageChanged, string.Empty);
 
         Library = catalogTab;
         _library.ActiveChanged += OnLibraryActiveChanged;
@@ -193,7 +196,17 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
 #if BENCHMARK
         using var benchmarkScope = Core.Diagnostics.BenchmarkPresetProbe.Subscriber("T4b.SettingsViewModel");
 #endif
+        // The hidden Settings visual tree still owns dozens of Editor.Profile bindings.
+        // Rebinding them for a hotkey/game switch wastes allocations until the window is shown.
+        if (!_presetPresentationActive) return;
         SyncFromLibrary();
+    }
+
+    public void SetPresetPresentationActive(bool active)
+    {
+        if (_disposed || _presetPresentationActive == active) return;
+        _presetPresentationActive = active;
+        if (active) SyncFromLibrary();
     }
 
     private void SyncFromLibrary()
@@ -334,7 +347,45 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
         if (snapshot.Type == CrosshairType.Image)
             (imageCode, imageError) = await BuildImageCodeAsync(snapshot);
 
-        _dialogs.ShowExportCodes(_translator.BuildCodes(snapshot, imageCode, imageError));
+        var pixelArtCode = snapshot.Type == CrosshairType.Image
+            ? await BuildPixelArtCodeAsync(snapshot)
+            : new CrosshairExportCode(Tr.Get("Export_PixelArt"), null, Tr.Get("Export_PixelArtUnavailable"));
+        _dialogs.ShowExportCodes(_translator.BuildCodes(snapshot, imageCode, imageError) with
+        {
+            PixelArt = pixelArtCode,
+        });
+    }
+
+    private async Task<CrosshairExportCode> BuildPixelArtCodeAsync(CrosshairProfile preset)
+    {
+        var title = Tr.Get("Export_PixelArt");
+        var path = _images.Resolve(preset.Image.FilePath);
+        if (path is null || !path.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
+            return new CrosshairExportCode(title, null, Tr.Get("Export_PixelArtUnavailable"));
+
+        try
+        {
+            var result = await Task.Run(() =>
+            {
+                if (!global::System.IO.File.Exists(path)) return (Code: (string?)null, Size: 0);
+                using var stream = new global::System.IO.FileStream(path, global::System.IO.FileMode.Open,
+                    global::System.IO.FileAccess.Read, global::System.IO.FileShare.Read);
+                if (stream.Length is <= 0 or > Services.Storage.CustomImageStore.MaxFileBytes)
+                    return (Code: (string?)null, Size: 0);
+                var bytes = new byte[(int)stream.Length];
+                stream.ReadExactly(bytes);
+                return PixelArtImageCodeExporter.TryEncodePng(bytes, out var code, out var size)
+                    ? (Code: code, Size: size)
+                    : (Code: (string?)null, Size: 0);
+            });
+            return new CrosshairExportCode(title, result.Code,
+                result.Code is null ? Tr.Get("Export_PixelArtUnavailable") : Tr.Format("Export_PixelArtNote", result.Size));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not export stored PNG as Pixel Art code.");
+            return new CrosshairExportCode(title, null, Tr.Get("Export_PixelArtUnavailable"));
+        }
     }
 
     /// <summary>
@@ -543,13 +594,15 @@ public sealed partial class SettingsViewModel : ObservableObject, IDisposable
         Library.Dispose();
         Toast.Dispose();
         _settings.Current.PropertyChanged -= OnSettingsChanged;
-        TranslationSource.Instance.PropertyChanged -= OnLanguageChanged;
+        global::System.ComponentModel.PropertyChangedEventManager.RemoveHandler(
+            TranslationSource.Instance, OnLanguageChanged, string.Empty);
 
         Editor.Dispose();
         General.Dispose();
         if (_hotkeysTab.IsValueCreated) _hotkeysTab.Value.Dispose();
         if (_gamesTab.IsValueCreated) _gamesTab.Value.Dispose();
         if (_systemInfo.IsValueCreated) _systemInfo.Value.Dispose();
+        if (_pixelArtTab.IsValueCreated) _pixelArtTab.Value.Dispose();
     }
 
     private void Report(Exception ex, string message)

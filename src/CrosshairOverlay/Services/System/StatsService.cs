@@ -197,7 +197,7 @@ public sealed class StatsService : IDisposable
                     names.GetValueOrDefault(p.Key, "—"), p.Value)).ToArray())).ToArray();
             long size = 0;
             try { if (File.Exists(_filePath)) size = new FileInfo(_filePath).Length; }
-            catch (IOException) { }
+            catch (IOException ex) { global::System.Diagnostics.Trace.WriteLine($"[StatsService] Could not read history size: {ex}"); }
             return new StatsHistorySnapshot(_library.Active?.Name ?? "—", _data.AutoCleanupOldData, size, days);
         }
     }

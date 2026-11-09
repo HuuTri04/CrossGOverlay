@@ -10,6 +10,7 @@ public enum StatsRange { Last7Days, Last30Days, Monthly }
 
 public sealed partial class StatsViewModel(StatsService? service, IDialogService dialogs) : ObservableObject
 {
+    private bool? _lastAutoCleanupOldData;
     public IReadOnlyList<LocalizedOption<StatsRange>> RangeOptions { get; } =
     [
         new(StatsRange.Last7Days, "Stats_Last7"),
@@ -32,7 +33,6 @@ public sealed partial class StatsViewModel(StatsService? service, IDialogService
         {
             if (service is null || service.AutoCleanupOldData == value) return;
             service.AutoCleanupOldData = value;
-            OnPropertyChanged();
             Refresh();
         }
     }
@@ -49,7 +49,11 @@ public sealed partial class StatsViewModel(StatsService? service, IDialogService
         SwitchCount = todayUsage?.SwitchCount ?? 0;
         ActivePreset = snapshot.ActiveName;
         FileSizeText = $"{snapshot.FileSizeBytes / 1024d:0.#} KB";
-        OnPropertyChanged(nameof(AutoCleanupOldData));
+        if (_lastAutoCleanupOldData != snapshot.AutoCleanupOldData)
+        {
+            _lastAutoCleanupOldData = snapshot.AutoCleanupOldData;
+            OnPropertyChanged(nameof(AutoCleanupOldData));
+        }
 
         var firstDay = SelectedRange switch
         {
@@ -74,16 +78,18 @@ public sealed partial class StatsViewModel(StatsService? service, IDialogService
                 chart.Add((day.ToString("dd/MM"), daysByDate.GetValueOrDefault(day)?.TotalSeconds ?? 0));
         }
         var max = Math.Max(1d, chart.Max(c => c.Seconds));
-        DailyRows = [.. chart.Select(c => new DailyUsageRow(c.Label, c.Seconds / max * 100d,
+        IReadOnlyList<DailyUsageRow> dailyRows = [.. chart.Select(c => new DailyUsageRow(c.Label, c.Seconds / max * 100d,
             FormatDuration(c.Seconds)))];
+        if (!DailyRows.SequenceEqual(dailyRows)) DailyRows = dailyRows;
 
         var distribution = filtered.SelectMany(d => d.Presets)
             .GroupBy(p => p.PresetId)
             .Select(g => new { Name = g.Last().Name, Seconds = g.Sum(p => p.Seconds) })
             .OrderByDescending(p => p.Seconds).ToArray();
         var total = distribution.Sum(p => p.Seconds);
-        Rows = [.. distribution.Select(p => new PresetUsageRow(p.Name,
+        IReadOnlyList<PresetUsageRow> rows = [.. distribution.Select(p => new PresetUsageRow(p.Name,
             total > 0 ? p.Seconds / total * 100d : 0d, FormatDuration(p.Seconds)))];
+        if (!Rows.SequenceEqual(rows)) Rows = rows;
     }
 
     [RelayCommand]

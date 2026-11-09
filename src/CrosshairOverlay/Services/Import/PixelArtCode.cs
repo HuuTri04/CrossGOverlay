@@ -1,71 +1,172 @@
+using System.Buffers;
 using System.Buffers.Binary;
+using System.Globalization;
+using System.IO;
+using System.IO.Compression;
+using System.Runtime.InteropServices;
 
 namespace CrosshairOverlay.Services.Import;
 
-/// <summary>Compact, bounded share format for a 16/24/32-pixel ARGB drawing.</summary>
+/// <summary>Bounded legacy RLE (PX1) and GZip pixel data (PX2) share codes.</summary>
 public static class PixelArtCode
 {
     public const string Prefix = "PX1";
+    public const string CompressedPrefix = "PX2";
     public const int MaxCodeLength = 9000;
+    public const int MaxCompressedCodeLength = 6_000_000;
+    public const int MaxSize = 1024;
 
-    public static bool IsSupportedSize(int size) => size is 16 or 24 or 32;
+    public static bool IsSupportedSize(int size) => size is >= 16 and <= MaxSize;
 
     public static string Encode(int size, ReadOnlySpan<uint> pixels)
     {
         if (!IsSupportedSize(size) || pixels.Length != size * size)
             throw new ArgumentException("Invalid pixel canvas dimensions.", nameof(pixels));
+        return size <= 32 ? EncodeLegacy(size, pixels) : EncodeCompressed(size, pixels);
+    }
 
-        // Each run is uint16 count + uint32 ARGB, little-endian. The worst case is 6 KiB.
+    private static string EncodeLegacy(int size, ReadOnlySpan<uint> pixels)
+    {
         var bytes = new byte[pixels.Length * 6];
         var written = 0;
         for (var index = 0; index < pixels.Length;)
         {
             var color = pixels[index];
             var count = 1;
-            while (index + count < pixels.Length && pixels[index + count] == color)
+            while (count < ushort.MaxValue && index + count < pixels.Length && pixels[index + count] == color)
                 count++;
-
             BinaryPrimitives.WriteUInt16LittleEndian(bytes.AsSpan(written, 2), (ushort)count);
             BinaryPrimitives.WriteUInt32LittleEndian(bytes.AsSpan(written + 2, 4), color);
             written += 6;
             index += count;
         }
+        return CreateCode(Prefix, size, bytes, written);
+    }
 
-        return $"{Prefix}|{size}|{Convert.ToBase64String(bytes, 0, written)}";
+    private static string EncodeCompressed(int size, ReadOnlySpan<uint> pixels)
+    {
+        var rawLength = checked(pixels.Length * sizeof(uint));
+        // Deflate's worst case is slightly larger than its input. A pooled fixed buffer
+        // avoids MemoryStream's repeated LOH-sized growth on noisy 1024x1024 canvases.
+        var rented = ArrayPool<byte>.Shared.Rent(checked(rawLength + rawLength / 1000 + 1024));
+        try
+        {
+            using var output = new MemoryStream(rented, 0, rented.Length, writable: true, publiclyVisible: true);
+            using (var gzip = new GZipStream(output, CompressionLevel.Fastest, leaveOpen: true))
+                gzip.Write(MemoryMarshal.AsBytes(pixels));
+            return CreateCode(CompressedPrefix, size, rented, (int)output.Position);
+        }
+        finally { ArrayPool<byte>.Shared.Return(rented); }
+    }
+
+    private static string CreateCode(string prefix, int size, byte[] bytes, int count)
+    {
+        var sizeText = size.ToString(CultureInfo.InvariantCulture);
+        var base64Length = checked(((count + 2) / 3) * 4);
+        return string.Create(prefix.Length + sizeText.Length + 2 + base64Length,
+            (prefix, sizeText, bytes, count), static (destination, state) =>
+            {
+                var offset = 0;
+                state.prefix.AsSpan().CopyTo(destination);
+                offset += state.prefix.Length;
+                destination[offset++] = '|';
+                state.sizeText.AsSpan().CopyTo(destination[offset..]);
+                offset += state.sizeText.Length;
+                destination[offset++] = '|';
+                if (!Convert.TryToBase64Chars(state.bytes.AsSpan(0, state.count),
+                        destination[offset..], out var written) || written != destination.Length - offset)
+                    throw new InvalidOperationException("Could not encode pixel data as Base64.");
+            });
     }
 
     public static bool TryDecode(string? code, out int size, out uint[] pixels)
     {
         size = 0;
         pixels = [];
-        if (string.IsNullOrWhiteSpace(code) || code.Length > MaxCodeLength) return false;
+        if (string.IsNullOrWhiteSpace(code) || code.Length > MaxCompressedCodeLength) return false;
+        var input = code.AsSpan().Trim();
+        var first = input.IndexOf('|');
+        if (first != Prefix.Length) return false;
+        var prefix = input[..first];
+        var compressed = prefix.SequenceEqual(CompressedPrefix);
+        if (!compressed && !prefix.SequenceEqual(Prefix)) return false;
+        if (!compressed && input.Length > MaxCodeLength) return false;
 
-        var parts = code.Trim().Split('|');
-        if (parts.Length != 3 || parts[0] != Prefix ||
-            !int.TryParse(parts[1], out var parsedSize) || !IsSupportedSize(parsedSize))
-            return false;
-
-        byte[] bytes;
-        try { bytes = Convert.FromBase64String(parts[2]); }
-        catch (FormatException) { return false; }
-
-        if (bytes.Length == 0 || bytes.Length % 6 != 0 || bytes.Length > parsedSize * parsedSize * 6)
-            return false;
-
-        var decoded = new uint[parsedSize * parsedSize];
-        var index = 0;
-        for (var offset = 0; offset < bytes.Length; offset += 6)
+        // PX codes generated by this app have no checksum. Accept an optional
+        // ;c<8 hex> suffix from signed PX exports, but verify it before removing
+        // it. A CGO-CH/CGO-IMG code is a different format and stays rejected.
+        if (input.IndexOf(';') >= 0 && !TryStripVerifiedChecksum(ref input)) return false;
+        var afterPrefix = first < 0 ? ReadOnlySpan<char>.Empty : input[(first + 1)..];
+        var second = afterPrefix.IndexOf('|');
+        var payload = second < 0 ? ReadOnlySpan<char>.Empty : afterPrefix[(second + 1)..];
+        if (first < 0 || second < 0 || payload.IndexOf('|') >= 0 ||
+            !int.TryParse(afterPrefix[..second], NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsedSize) ||
+            !IsSupportedSize(parsedSize)) return false;
+        if (payload.IsEmpty) return false;
+        var rented = ArrayPool<byte>.Shared.Rent(checked(((payload.Length + 3) / 4) * 3));
+        try
         {
-            var count = BinaryPrimitives.ReadUInt16LittleEndian(bytes.AsSpan(offset, 2));
-            if (count == 0 || count > decoded.Length - index) return false;
-            var color = BinaryPrimitives.ReadUInt32LittleEndian(bytes.AsSpan(offset + 2, 4));
-            decoded.AsSpan(index, count).Fill(color);
-            index += count;
+            if (!Convert.TryFromBase64Chars(payload, rented, out var byteCount)) return false;
+            var bytes = rented.AsSpan(0, byteCount);
+            var decoded = new uint[parsedSize * parsedSize];
+            if (compressed)
+            {
+                try
+                {
+                    using var compressedInput = new MemoryStream(rented, 0, byteCount, writable: false);
+                    using var gzip = new GZipStream(compressedInput, CompressionMode.Decompress);
+                    gzip.ReadExactly(MemoryMarshal.AsBytes(decoded.AsSpan()));
+                    if (gzip.ReadByte() != -1) return false;
+                }
+                catch (InvalidDataException) { return false; }
+                catch (IOException) { return false; }
+            }
+            else
+            {
+                if (bytes.IsEmpty || bytes.Length % 6 != 0 || bytes.Length > decoded.Length * 6)
+                    return false;
+                var index = 0;
+                for (var offset = 0; offset < bytes.Length; offset += 6)
+                {
+                    var runLength = BinaryPrimitives.ReadUInt16LittleEndian(bytes.Slice(offset, 2));
+                    if (runLength == 0 || runLength > decoded.Length - index) return false;
+                    var color = BinaryPrimitives.ReadUInt32LittleEndian(bytes.Slice(offset + 2, 4));
+                    decoded.AsSpan(index, runLength).Fill(color);
+                    index += runLength;
+                }
+                if (index != decoded.Length) return false;
+            }
+            size = parsedSize;
+            pixels = decoded;
+            return true;
         }
+        finally { ArrayPool<byte>.Shared.Return(rented); }
+    }
 
-        if (index != decoded.Length) return false;
-        size = parsedSize;
-        pixels = decoded;
-        return true;
+    private static bool TryStripVerifiedChecksum(ref ReadOnlySpan<char> input)
+    {
+        var separator = input.LastIndexOf(';');
+        if (separator <= Prefix.Length || input.Length - separator != 10 ||
+            input[separator + 1] is not ('c' or 'C') ||
+            !uint.TryParse(input[(separator + 2)..], NumberStyles.AllowHexSpecifier,
+                CultureInfo.InvariantCulture, out var expected)) return false;
+
+        // The shared checksum covers the ASCII body after the three-character
+        // prefix, including the leading '|'. Rent instead of allocating a large
+        // temporary array for a signed 1024x1024 PX2 code.
+        var body = input.Slice(Prefix.Length, separator - Prefix.Length);
+        var rented = ArrayPool<byte>.Shared.Rent(body.Length);
+        try
+        {
+            for (var index = 0; index < body.Length; index++)
+            {
+                if (body[index] > 0x7F) return false;
+                rented[index] = (byte)body[index];
+            }
+            if (ShareCodeChecksum.Crc32.Compute(rented.AsSpan(0, body.Length)) != expected) return false;
+            input = input[..separator];
+            return true;
+        }
+        finally { ArrayPool<byte>.Shared.Return(rented); }
     }
 }

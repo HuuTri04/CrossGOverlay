@@ -11,6 +11,14 @@ internal static class StartupProfiler
 {
     private static long _constructedAt;
     private static double _runtimeStartupMs;
+    private static long _settingsShowAt;
+    public static double DiskReadMs { get; private set; }
+    public static double DecodeMs { get; private set; }
+    public static double BlurProcessingMs { get; private set; }
+    public static double DispatcherWaitMs { get; private set; }
+    public static bool BackgroundCacheHit { get; set; }
+    public static double FirstFrameRenderMs => _settingsShowAt == 0 ? 0 :
+        Stopwatch.GetElapsedTime(_settingsShowAt).TotalMilliseconds;
 
     public static bool Enabled { get; } =
         Environment.GetEnvironmentVariable("CROSSGOVERLAY_BENCHMARK_TIMELINE") == "1";
@@ -20,7 +28,27 @@ internal static class StartupProfiler
         if (!Enabled) return;
         _constructedAt = constructedAt;
         _runtimeStartupMs = runtimeStartupMs;
+        _settingsShowAt = 0;
+        DiskReadMs = DecodeMs = BlurProcessingMs = DispatcherWaitMs = 0;
+        BackgroundCacheHit = false;
     }
+
+    public static void RecordDecode(double diskReadMs, double decodeMs, long workerCompletedAt)
+    {
+        if (!Enabled) return;
+        DiskReadMs += diskReadMs;
+        DecodeMs += decodeMs;
+        DispatcherWaitMs += Stopwatch.GetElapsedTime(workerCompletedAt).TotalMilliseconds;
+    }
+
+    public static void RecordBlur(long workerStartedAt, long workerCompletedAt)
+    {
+        if (!Enabled) return;
+        BlurProcessingMs += Stopwatch.GetElapsedTime(workerStartedAt, workerCompletedAt).TotalMilliseconds;
+        DispatcherWaitMs += Stopwatch.GetElapsedTime(workerCompletedAt).TotalMilliseconds;
+    }
+
+    public static void MarkSettingsShow() { if (Enabled) _settingsShowAt = Stopwatch.GetTimestamp(); }
 
     public static double ElapsedMs(long? timestamp = null)
     {

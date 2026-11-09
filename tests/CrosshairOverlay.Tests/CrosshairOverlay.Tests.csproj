@@ -34,4 +34,8 @@
     <ProjectReference Include="..\..\src\CrosshairOverlay\CrosshairOverlay.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

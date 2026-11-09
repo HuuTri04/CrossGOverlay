@@ -4,6 +4,11 @@
              xmlns:ctl="clr-namespace:CrosshairOverlay.Controls"
              xmlns:loc="clr-namespace:CrosshairOverlay.Localization"
              xmlns:po="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options">
+    <UserControl.InputBindings>
+        <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}"/>
+        <KeyBinding Key="Y" Modifiers="Control" Command="{Binding RedoCommand}"/>
+        <KeyBinding Key="Z" Modifiers="Control+Shift" Command="{Binding RedoCommand}"/>
+    </UserControl.InputBindings>
     <UserControl.Resources>
         <SolidColorBrush x:Key="PixelGreen" Color="#00FF00" po:Freeze="True"/>
         <SolidColorBrush x:Key="PixelRed" Color="#FF0000" po:Freeze="True"/>
@@ -58,16 +63,47 @@
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="125"/>
+                                <ColumnDefinition Width="80"/>
+                                <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="{loc:Loc Pixel_GridSize}" Style="{StaticResource FieldLabel}"
                                        VerticalAlignment="Center" Margin="0,0,10,0"/>
-                            <ComboBox Grid.Column="1" ItemsSource="{Binding GridSizes, Mode=OneWay}"
-                                      SelectedItem="{Binding GridSize, Mode=TwoWay}"/>
-                            <TextBlock Grid.Column="2" Text="{loc:Loc Pixel_GridHint}" Style="{StaticResource FieldLabel}"
+                            <TextBox Grid.Column="1" MaxLength="4"
+                                     Text="{Binding GridSizeInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                     PreviewKeyDown="OnGridSizePreviewKeyDown"
+                                     VerticalContentAlignment="Center"/>
+                            <Button Grid.Column="2" Content="{loc:Loc Pixel_ApplySize}"
+                                    Command="{Binding ApplyGridSizeCommand}" Margin="8,0,0,0"/>
+                            <TextBlock Grid.Column="3" Text="{loc:Loc Pixel_GridHint}" Style="{StaticResource FieldLabel}"
                                        VerticalAlignment="Center" Margin="12,0,0,0" TextWrapping="Wrap"/>
                         </Grid>
+                        <DockPanel Margin="0,12,0,0" LastChildFill="False">
+                            <TextBlock Text="{loc:Loc Pixel_InputDevice}" Style="{StaticResource FieldLabel}"
+                                       VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <RadioButton GroupName="PixelDrawingInput" Style="{StaticResource FilterChip}"
+                                         Command="{Binding UseMouseInputCommand}"
+                                         IsChecked="{Binding IsMouseInputSelected, Mode=OneWay}"
+                                         AutomationProperties.Name="{loc:Loc Pixel_InputMouse}">
+                                <StackPanel Orientation="Horizontal">
+                                    <Path Data="M 9,1 C 5,1 3,4 3,8 L 3,13 C 3,17 5,20 9,20 C 13,20 15,17 15,13 L 15,8 C 15,4 13,1 9,1 Z M 9,2 L 9,8"
+                                          Stroke="{StaticResource TextPrimary}" StrokeThickness="1.5"
+                                          Width="18" Height="20" Stretch="Uniform"/>
+                                    <TextBlock Text="{loc:Loc Pixel_InputMouse}" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </RadioButton>
+                            <RadioButton GroupName="PixelDrawingInput" Style="{StaticResource FilterChip}"
+                                         Command="{Binding UseStylusInputCommand}"
+                                         IsChecked="{Binding IsStylusInputSelected, Mode=OneWay}"
+                                         AutomationProperties.Name="{loc:Loc Pixel_InputStylus}">
+                                <StackPanel Orientation="Horizontal">
+                                    <Path Data="M 3,17 L 5,12 L 13,3 L 16,6 L 8,15 Z M 12,4 L 15,7"
+                                          Stroke="{StaticResource TextPrimary}" StrokeThickness="1.5"
+                                          Width="18" Height="20" Stretch="Uniform"/>
+                                    <TextBlock Text="{loc:Loc Pixel_InputStylus}" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </RadioButton>
+                        </DockPanel>
                         <WrapPanel Margin="0,14,0,0">
                             <Button Content="{loc:Loc Pixel_Brush}" Command="{Binding UseBrushCommand}" Margin="0,0,8,8">
                                 <Button.Style>
@@ -94,6 +130,22 @@
                                 </Button.Style>
                             </Button>
                             <Button Content="{loc:Loc Pixel_Clear}" Command="{Binding ClearCanvasCommand}" Margin="0,0,8,8"/>
+                            <Button Command="{Binding UndoCommand}" ToolTip="Ctrl+Z" Margin="0,0,8,8"
+                                    AutomationProperties.Name="{loc:Loc Pixel_Undo}">
+                                <StackPanel Orientation="Horizontal">
+                                    <Path Data="M 5,3 L 1,7 L 5,11 M 2,7 C 12,-1 20,7 17,15" Stroke="{StaticResource TextPrimary}"
+                                          StrokeThickness="1.5" Width="18" Height="16" Stretch="None"/>
+                                    <TextBlock Text="{loc:Loc Pixel_Undo}" Margin="5,0,0,0"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Command="{Binding RedoCommand}" ToolTip="Ctrl+Y / Ctrl+Shift+Z" Margin="0,0,8,8"
+                                    AutomationProperties.Name="{loc:Loc Pixel_Redo}">
+                                <StackPanel Orientation="Horizontal">
+                                    <Path Data="M 13,3 L 17,7 L 13,11 M 16,7 C 6,-1 -2,7 1,15" Stroke="{StaticResource TextPrimary}"
+                                          StrokeThickness="1.5" Width="18" Height="16" Stretch="None"/>
+                                    <TextBlock Text="{loc:Loc Pixel_Redo}" Margin="5,0,0,0"/>
+                                </StackPanel>
+                            </Button>
                             <Button Content="{loc:Loc Pixel_CenterGuide}" Command="{Binding ToggleCenterGuideCommand}" Margin="0,0,0,8">
                                 <Button.Style>
                                     <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
@@ -115,13 +167,25 @@
                         <TextBlock Text="{loc:Loc Pixel_Canvas}" Style="{StaticResource SectionHeader}" Margin="0,0,0,10"/>
                         <Border BorderBrush="{StaticResource BorderBrushSoft}" BorderThickness="1" CornerRadius="4"
                                 Padding="8" HorizontalAlignment="Center">
-                            <ctl:PixelArtCanvas Width="384" Height="384"
-                                                Bitmap="{Binding Bitmap, Mode=OneWay}"
-                                                GridSize="{Binding GridSize, Mode=OneWay}"
-                                                ShowCenterGuide="{Binding ShowCenterGuide, Mode=OneWay}"/>
+                            <ScrollViewer x:Name="CanvasScrollViewer" Width="384" Height="384" CanContentScroll="False"
+                                          HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                                <ctl:PixelArtCanvas x:Name="DrawingCanvas" Loaded="OnCanvasLoaded"
+                                                    SizeChanged="OnCanvasSizeChanged"
+                                                    Width="{Binding CanvasDisplaySize, Mode=OneWay}"
+                                                    Height="{Binding CanvasDisplaySize, Mode=OneWay}"
+                                                    RenderOptions.BitmapScalingMode="NearestNeighbor"
+                                                    Stylus.IsFlicksEnabled="False"
+                                                    Stylus.IsPressAndHoldEnabled="False"
+                                                    Stylus.IsTapFeedbackEnabled="False"
+                                                    Stylus.IsTouchFeedbackEnabled="False"
+                                                    Bitmap="{Binding Bitmap, Mode=OneWay}"
+                                                    GridSize="{Binding GridSize, Mode=OneWay}"
+                                                    ShowCenterGuide="{Binding ShowCenterGuide, Mode=OneWay}"/>
+                            </ScrollViewer>
                         </Border>
                         <TextBlock Text="{loc:Loc Pixel_DrawHint}" Style="{StaticResource FieldLabel}"
-                                   HorizontalAlignment="Center" Margin="0,10,0,0"/>
+                                   HorizontalAlignment="Center" MaxWidth="384" TextWrapping="Wrap"
+                                   Margin="0,10,0,0"/>
                     </StackPanel>
                 </Border>
             </StackPanel>
@@ -167,13 +231,23 @@
                 <Border Style="{StaticResource Card}" Margin="0,0,0,14">
                     <StackPanel>
                         <TextBlock Text="{loc:Loc Pixel_ShareTitle}" Style="{StaticResource SectionHeader}" Margin="0,0,0,10"/>
-                        <TextBox Text="{Binding ShareCode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                 Height="125" MaxLength="9000" TextWrapping="Wrap" AcceptsReturn="False"
+                        <TextBox x:Name="ShareCodeTextBox"
+                                 Text="{Binding VisibleShareCode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 GotKeyboardFocus="OnShareCodeFocused" LostKeyboardFocus="OnShareCodeLostFocus"
+                                 Height="125" MaxLength="32768" TextWrapping="Wrap" AcceptsReturn="True"
+                                 VerticalAlignment="Top" VerticalContentAlignment="Top"
                                  VerticalScrollBarVisibility="Auto"/>
+                        <TextBlock Text="{Binding GeneratedCodeStatus, Mode=OneWay}"
+                                   Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                        <TextBlock Text="{loc:Loc Pixel_CodeHint}" Style="{StaticResource FieldLabel}"
+                                   TextWrapping="Wrap" Margin="0,6,0,0"/>
                         <WrapPanel Margin="0,10,0,0">
                             <Button Content="{loc:Loc Pixel_CopyCode}" Command="{Binding CopyCodeCommand}" Margin="0,0,8,0"/>
-                            <Button Content="{loc:Loc Pixel_LoadCode}" Command="{Binding LoadCodeCommand}"/>
+                            <Button Content="{loc:Loc Pixel_LoadCode}" Command="{Binding LoadCodeCommand}"
+                                    CommandParameter="{Binding Text, ElementName=ShareCodeTextBox}"/>
                         </WrapPanel>
+                        <TextBlock Text="{Binding CodeLoadMessage, Mode=OneWay}"
+                                   Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,6,0,0"/>
                     </StackPanel>
                 </Border>
 

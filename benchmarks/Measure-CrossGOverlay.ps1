@@ -28,7 +28,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path $PSScriptRoot -Parent
 if (-not $ExePath) {
-    $ExePath = Join-Path $repoRoot 'src\CrosshairOverlay\bin\x64\Release\net8.0-windows\win-x64\CrossGOverlay.exe'
+    $ExePath = Join-Path $repoRoot 'src\CrosshairOverlay\bin\x64\Release\net8.0-windows10.0.19041.0\win-x64\CrossGOverlay.exe'
 }
 if (-not $OutputDirectory) {
     $OutputDirectory = Join-Path $PSScriptRoot 'results'
@@ -88,7 +88,9 @@ function Wait-FirstWindow([Diagnostics.Process]$process, [int]$timeoutMs = 20000
 function Wait-FirstFrameLog([Diagnostics.Process]$process, [string]$logPath, [long]$originalLength,
     [int]$timeoutMs = 30000) {
     $timer = [Diagnostics.Stopwatch]::StartNew()
-    $pattern = 'CrosshairOverlay\.Views\.SettingsWindow:.*?(\d+)\s+ms'
+    # Match only the reveal log. Generic matches can accidentally capture the
+    # fractional part of BenchmarkTimeline SettingsInitialized (e.g. .158 ms).
+    $pattern = 'CrosshairOverlay\.Views\.SettingsWindow: [^\r\n]*? sau (\d+)\s+ms'
     while ($timer.ElapsedMilliseconds -lt $timeoutMs) {
         if ($process.HasExited) { break }
         if (Test-Path -LiteralPath $logPath -PathType Leaf) {

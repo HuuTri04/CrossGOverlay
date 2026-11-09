@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.Input;
 using CrosshairOverlay.Localization;
 
@@ -25,7 +26,7 @@ public sealed partial class TrayMenuViewModel : ObservableObject, IDisposable
         _exit = exit ?? throw new ArgumentNullException(nameof(exit));
 
         // Menu khay nằm ngoài mọi cửa sổ nên {loc:Loc} không với tới; tự báo nhãn đổi khi đổi ngôn ngữ.
-        TranslationSource.Instance.PropertyChanged += OnLanguageChanged;
+        PropertyChangedEventManager.AddHandler(TranslationSource.Instance, OnLanguageChanged, string.Empty);
     }
 
     /// <summary>
@@ -49,6 +50,20 @@ public sealed partial class TrayMenuViewModel : ObservableObject, IDisposable
 
     public string ExitText => Tr.Get("Tray_Exit");
 
+    public string FavoritesText => Tr.Get("Tray_Favorites");
+
+    public ObservableCollection<FavoritePresetMenuItem> FavoritePresets { get; } = [];
+
+    public bool HasFavorites => FavoritePresets.Count > 0;
+
+    public void SetFavorites(IEnumerable<(Guid Id, string Name)> presets, Action<Guid> apply)
+    {
+        FavoritePresets.Clear();
+        foreach (var (id, name) in presets.Take(12))
+            FavoritePresets.Add(new FavoritePresetMenuItem(name, new RelayCommand(() => apply(id))));
+        OnPropertyChanged(nameof(HasFavorites));
+    }
+
     [RelayCommand]
     private void ToggleOverlay() => _toggleOverlay();
 
@@ -63,6 +78,7 @@ public sealed partial class TrayMenuViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(OverlayText));
         OnPropertyChanged(nameof(OpenSettingsText));
         OnPropertyChanged(nameof(ExitText));
+        OnPropertyChanged(nameof(FavoritesText));
     }
 
     public void Dispose()
@@ -70,6 +86,8 @@ public sealed partial class TrayMenuViewModel : ObservableObject, IDisposable
         if (_disposed) return;
         _disposed = true;
 
-        TranslationSource.Instance.PropertyChanged -= OnLanguageChanged;
+        PropertyChangedEventManager.RemoveHandler(TranslationSource.Instance, OnLanguageChanged, string.Empty);
     }
 }
+
+public sealed record FavoritePresetMenuItem(string Name, IRelayCommand ApplyCommand);

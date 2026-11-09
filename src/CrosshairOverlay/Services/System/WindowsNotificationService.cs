@@ -102,8 +102,15 @@ internal sealed class WindowsNotificationService : IDisposable
     {
         if (!args.Argument.Contains("action=open-settings", StringComparison.Ordinal)) return;
         var dispatcher = Application.Current?.Dispatcher;
-        if (dispatcher is null || dispatcher.HasShutdownStarted) return;
-        dispatcher.BeginInvoke(_openSettings);
+        if (dispatcher is null || dispatcher.HasShutdownStarted || App.IsShuttingDown) return;
+        try
+        {
+            _ = dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (!App.IsShuttingDown) _openSettings();
+            }));
+        }
+        catch (InvalidOperationException) { } // Activation arrived during dispatcher shutdown.
     }
 
     internal static Uri? GetExistingLogoUri(string baseDirectory)
