@@ -775,11 +775,14 @@ public sealed class ReliabilityRegressionTests : IDisposable
             Assert.StartsWith("PX1|32|", vm.ShareCode);
             vm.GridSize = 64;
             Assert.Contains(ReadPixels(vm), pixel => pixel != 0);
+            Assert.StartsWith("PX1|32|", vm.ShareCode);
+            vm.DrawLine(19, 18, 19, 18, erase: false);
+            vm.FinishStroke();
             WaitForPixelCode(vm);
             Assert.StartsWith("PX2|64|", vm.ShareCode);
             Assert.True(PixelArtCode.TryDecode(vm.ShareCode, out var resizedSize, out var resizedPixels));
             Assert.Equal(64, resizedSize);
-            Assert.Equal(0xFF00FF00u, resizedPixels[19 * resizedSize + 18]);
+            Assert.Equal(0xFF00FF00u, resizedPixels[18 * resizedSize + 19]);
             vm.ClearCanvasCommand.Execute(null);
             Assert.Empty(vm.ShareCode);
             Assert.All(ReadPixels(vm), pixel => Assert.Equal(0u, pixel));
@@ -787,7 +790,7 @@ public sealed class ReliabilityRegressionTests : IDisposable
     }
 
     [Fact]
-    public void ResizingColoredPixelCanvasUpdatesShareCodeWithoutCopy()
+    public void ResizingColoredPixelCanvasKeepsOldCodeAndBlocksCopyUntilNewStroke()
     {
         RunSta(() =>
         {
@@ -797,22 +800,34 @@ public sealed class ReliabilityRegressionTests : IDisposable
                 TestCrosshairTests.StubFor<IOverlayController>());
             vm.DrawLine(12, 12, 12, 12, erase: false);
             vm.FinishStroke();
+            var originalCode = vm.ShareCode;
 
             vm.GridSizeInput = "32";
             vm.ApplyGridSizeCommand.Execute(null);
-            Assert.StartsWith("PX1|32|", vm.ShareCode);
+            Assert.Equal(originalCode, vm.ShareCode);
             Assert.Equal(vm.ShareCode, vm.VisibleShareCode);
+            vm.CopyCodeCommand.Execute(null);
+            Assert.Equal(vm.GeneratedCodeStatus, vm.StatusMessage);
+            vm.DrawLine(17, 17, 17, 17, erase: false);
+            Assert.Equal(originalCode, vm.ShareCode); // No encode before stroke commit.
+            vm.FinishStroke();
+            Assert.StartsWith("PX1|32|", vm.ShareCode);
             Assert.True(PixelArtCode.TryDecode(vm.ShareCode, out var size, out var pixels));
             Assert.Equal(0xFF00FF00u, pixels[16 * size + 16]);
 
             vm.GridSizeInput = "1024";
             vm.ApplyGridSizeCommand.Execute(null);
             vm.CopyCodeCommand.Execute(null); // Copy must not encode or publish code.
+            Assert.StartsWith("PX1|32|", vm.ShareCode);
+            Assert.Equal(vm.GeneratedCodeStatus, vm.StatusMessage);
+            vm.DrawLine(514, 514, 514, 514, erase: false);
+            vm.FinishStroke();
             Assert.Empty(vm.ShareCode);
             WaitForPixelCode(vm);
             Assert.StartsWith("PX2|1024|", vm.ShareCode);
             Assert.True(PixelArtCode.TryDecode(vm.ShareCode, out size, out pixels));
             Assert.Equal(0xFF00FF00u, pixels[512 * size + 512]);
+            Assert.Equal(0xFF00FF00u, pixels[514 * size + 514]);
         });
     }
 

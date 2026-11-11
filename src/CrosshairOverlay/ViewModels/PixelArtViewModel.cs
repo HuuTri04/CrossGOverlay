@@ -56,6 +56,7 @@ public sealed partial class PixelArtViewModel : ObservableObject, IDisposable
     private long _generatedLargeCodeRevision = -1;
     private bool _settingGeneratedShareCode;
     private bool _shareCodeClearedByUser;
+    private bool _shareCodeStaleAfterResize;
     internal bool IsEditingShareCode { get; set; }
 
     public PixelArtViewModel(IPresetLibrary library, ICustomImageStore images, IOverlayController overlay,
@@ -120,10 +121,13 @@ public sealed partial class PixelArtViewModel : ObservableObject, IDisposable
             OnPropertyChanged(nameof(CanvasDisplaySize));
             ResetHistory();
             _canvasRevision++;
-            // Resizing is an explicit edit: publish the resized canvas even if
-            // the code box had focus before the Apply action.
+            // Keep the previous code visible, but never copy it for this canvas.
+            // The first committed stroke will publish a code for the new size.
+            StopCodeGeneration(clearText: false);
             IsEditingShareCode = false;
-            RefreshShareCode(immediate: true);
+            _shareCodeStaleAfterResize = ShareCode.Length != 0;
+            if (_shareCodeStaleAfterResize)
+                GeneratedCodeStatus = Tr.Get("Pixel_CodeStaleAfterResize");
         }
     }
     [ObservableProperty] private PixelTool _tool = PixelTool.Brush;
@@ -313,7 +317,6 @@ public sealed partial class PixelArtViewModel : ObservableObject, IDisposable
             Bitmap.WritePixels(new Int32Rect(minX, minY, maxX - minX + 1, maxY - minY + 1),
                 _pixels, GridSize * 4, minX, minY);
             _canvasRevision++;
-            if (GridSize > 32) QueueLiveCodeRefresh();
         }
     }
 
@@ -435,10 +438,14 @@ public sealed partial class PixelArtViewModel : ObservableObject, IDisposable
         _generatedLargeCode = null;
         _generatedLargeCodeRevision = -1;
         GeneratedCodeStatus = string.Empty;
-        if (clearText) SetGeneratedShareCode(string.Empty);
+        if (clearText)
+        {
+            _shareCodeStaleAfterResize = false;
+            SetGeneratedShareCode(string.Empty);
+        }
     }
 
-    private void RefreshShareCode(bool immediate = false)
+    private void RefreshShareCode()
     {
         _shareCodeClearedByUser = false;
         if (_coloredPixelCount == 0)
@@ -449,9 +456,6 @@ public sealed partial class PixelArtViewModel : ObservableObject, IDisposable
         if (GridSize > 32)
         {
             QueueLiveCodeRefresh();
-            // A committed resize must start encoding right away. Only rapid
-            // drawing uses the 250 ms debounce to avoid redundant snapshots.
-            if (immediate) OnCodeUpdateTimerTick(this, EventArgs.Empty);
             return;
         }
 
@@ -460,6 +464,7 @@ public sealed partial class PixelArtViewModel : ObservableObject, IDisposable
         _generatedLargeCodeRevision = -1;
         GeneratedCodeStatus = string.Empty;
         SetGeneratedShareCode(PixelArtCode.Encode(GridSize, _pixels));
+        _shareCodeStaleAfterResize = false;
     }
 
     private void QueueLiveCodeRefresh()
@@ -500,7 +505,10 @@ public sealed partial class PixelArtViewModel : ObservableObject, IDisposable
             _generatedLargeCode = code;
             _generatedLargeCodeRevision = revision;
             if (!IsEditingShareCode)
+            {
                 SetGeneratedShareCode(code);
+                _shareCodeStaleAfterResize = false;
+            }
             GeneratedCodeStatus = code.Length <= 32_768
                 ? string.Empty
                 : Tr.Format("Pixel_CodeReadyForCopy", code.Length);
@@ -526,6 +534,11 @@ public sealed partial class PixelArtViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void CopyCode()
     {
+        if (_shareCodeStaleAfterResize)
+        {
+            StatusMessage = Tr.Get("Pixel_CodeStaleAfterResize");
+            return;
+        }
         if (_coloredPixelCount == 0)
         {
             StatusMessage = Tr.Get("Pixel_EmptyCanvas");
@@ -674,6 +687,8 @@ public sealed partial class PixelArtViewModel : ObservableObject, IDisposable
             if (_coloredPixelCount != 0)
             {
                 SetGeneratedShareCode(code);
+                _shareCodeStaleAfterResize = false;
+                if (size > 32) _generatedLargeCodeRevision = _canvasRevision;
                 if (code.Length > 32_768)
                 {
                     _generatedLargeCode = code;

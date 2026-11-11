@@ -3,6 +3,7 @@ obj/
 .vs/
 *.user
 *.suo
+*.md
 artifacts/
 publish/
 TestResults/
@@ -55,5 +56,6 @@ tests/CrosshairOverlay.Tests/
 /StressTest_Report.txt
 /BenchmarkDotNet.Artifacts/
 benchmarks/results/rc2-native-*/
-!/UAT_CHECKLIST.md
+/UAT_CHECKLIST.md
 /LOG.md
+/RC2_ALLOCATION_REPORT.md

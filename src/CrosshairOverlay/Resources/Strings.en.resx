@@ -505,6 +505,7 @@ The app will restart to apply the change.</value></data>
   <data name="Pixel_CodeStale"><value>The canvas changed. Copy the code again.</value></data>
   <data name="Pixel_CodeHint"><value>Large grids update PX2 after drawing pauses. Long codes stay ready for Copy; leave the box empty when loading from the Clipboard.</value></data>
   <data name="Pixel_CodeGenerating"><value>Updating share code…</value></data>
+  <data name="Pixel_CodeStaleAfterResize"><value>Draw a new stroke to update the code before copying.</value></data>
   <data name="Pixel_CodeReadyForCopy"><value>PX2 code is ready ({0} characters). Click Copy to get the full code.</value></data>
   <data name="Pixel_InputDevice"><value>Input device:</value></data>
   <data name="Pixel_InputMouse"><value>Mouse</value></data>

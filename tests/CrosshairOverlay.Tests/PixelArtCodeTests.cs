@@ -2,11 +2,61 @@ using System.Buffers.Binary;
 using System.Runtime.InteropServices;
 using CrosshairOverlay.Services.Import;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace CrosshairOverlay.Tests;
 
 public sealed class PixelArtCodeTests
 {
+    private readonly ITestOutputHelper _output;
+
+    public PixelArtCodeTests(ITestOutputHelper output) => _output = output;
+
+    [Fact]
+    public void ContentBoundsFindsSparsePixelsAndIgnoresZeroAlpha()
+    {
+        const int size = 1024;
+        var pixels = new uint[size * size];
+        pixels[492 * size + 490] = 0xFF00FF00;
+        pixels[531 * size + 529] = 0x7F004000;
+        pixels[0] = 0x0000FF00;
+
+        Assert.True(PixelArtCode.TryFindContentBounds(size, pixels, out var bounds));
+        Assert.Equal(new PixelArtCode.PixelBounds(490, 492, 40, 40), bounds);
+        Assert.Equal(6_400, bounds.Width * bounds.Height * sizeof(uint));
+    }
+
+    [Fact]
+    public void ContentBoundsRejectsEmptyAndIncorrectCanvas()
+    {
+        Assert.False(PixelArtCode.TryFindContentBounds(1024, new uint[1024 * 1024], out _));
+        Assert.False(PixelArtCode.TryFindContentBounds(1024, new uint[24 * 24], out _));
+    }
+
+    [Fact]
+    public void SparseBoundsReportCurrentPx2AndHypotheticalCroppedSize()
+    {
+        const int size = 1024;
+        const int side = 40;
+        const int offset = (size - side) / 2;
+        var pixels = new uint[size * size];
+        var random = new Random(21);
+        for (var y = 0; y < side; y++)
+            for (var x = 0; x < side; x++)
+                pixels[(offset + y) * size + offset + x] = 0xFF000000u | (uint)random.Next(0x1000000);
+
+        Assert.True(PixelArtCode.TryFindContentBounds(size, pixels, out var bounds));
+        var cropped = new uint[bounds.Width * bounds.Height];
+        for (var y = 0; y < bounds.Height; y++)
+            Array.Copy(pixels, (bounds.Y + y) * size + bounds.X,
+                cropped, y * bounds.Width, bounds.Width);
+
+        var fullCode = PixelArtCode.Encode(size, pixels);
+        var croppedCode = PixelArtCode.Encode(side, cropped);
+        _output.WriteLine($"PX2 full={fullCode.Length} chars; cropped={croppedCode.Length} chars; bounds={bounds}");
+        Assert.True(croppedCode.Length < fullCode.Length);
+    }
+
     [Theory]
     [InlineData(24, "PX1|")]
     [InlineData(64, "PX2|")]

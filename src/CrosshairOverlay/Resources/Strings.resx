@@ -518,6 +518,7 @@ Dữ liệu ở thư mục cũ luôn được giữ nguyên.</value></data>
   <data name="Pixel_CodeStale"><value>Bảng vẽ đã thay đổi. Hãy sao chép lại mã.</value></data>
   <data name="Pixel_CodeHint"><value>Lưới lớn tự tạo mã PX2 sau khi ngừng vẽ. Mã quá dài được giữ để Sao chép; để trống ô khi Tải từ mã để đọc Clipboard.</value></data>
   <data name="Pixel_CodeGenerating"><value>Đang cập nhật mã chia sẻ…</value></data>
+  <data name="Pixel_CodeStaleAfterResize"><value>Hãy vẽ một nét mới để cập nhật mã trước khi sao chép.</value></data>
   <data name="Pixel_CodeReadyForCopy"><value>Mã PX2 đã sẵn sàng ({0} ký tự). Bấm Sao chép để lấy toàn bộ mã.</value></data>
   <data name="Pixel_InputDevice"><value>Thiết bị vẽ:</value></data>
   <data name="Pixel_InputMouse"><value>Chuột</value></data>

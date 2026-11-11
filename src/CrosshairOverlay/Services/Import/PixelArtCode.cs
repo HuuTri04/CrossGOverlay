@@ -10,6 +10,8 @@ namespace CrosshairOverlay.Services.Import;
 /// <summary>Bounded legacy RLE (PX1) and GZip pixel data (PX2) share codes.</summary>
 public static class PixelArtCode
 {
+    public readonly record struct PixelBounds(int X, int Y, int Width, int Height);
+
     public const string Prefix = "PX1";
     public const string CompressedPrefix = "PX2";
     public const int MaxCodeLength = 9000;
@@ -17,6 +19,32 @@ public static class PixelArtCode
     public const int MaxSize = 1024;
 
     public static bool IsSupportedSize(int size) => size is >= 16 and <= MaxSize;
+
+    /// <summary>Find the smallest rectangle containing pixels with nonzero alpha.</summary>
+    public static bool TryFindContentBounds(int size, ReadOnlySpan<uint> pixels, out PixelBounds bounds)
+    {
+        bounds = default;
+        if (!IsSupportedSize(size) || pixels.Length != size * size) return false;
+
+        var minX = size;
+        var minY = size;
+        var maxX = -1;
+        var maxY = -1;
+        for (var index = 0; index < pixels.Length; index++)
+        {
+            if ((pixels[index] >> 24) == 0) continue;
+            var x = index % size;
+            var y = index / size;
+            minX = Math.Min(minX, x);
+            minY = Math.Min(minY, y);
+            maxX = Math.Max(maxX, x);
+            maxY = Math.Max(maxY, y);
+        }
+
+        if (maxX < 0) return false;
+        bounds = new PixelBounds(minX, minY, maxX - minX + 1, maxY - minY + 1);
+        return true;
+    }
 
     public static string Encode(int size, ReadOnlySpan<uint> pixels)
     {
